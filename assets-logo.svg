@@ -1,0 +1,8 @@
+﻿<svg width="300" height="58" viewBox="0 0 300 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="1" width="56" height="56" rx="14" fill="#06B6D4"/>
+  <circle cx="29" cy="29" r="14" stroke="#E0F2FE" stroke-width="3"/>
+  <circle cx="29" cy="29" r="4" fill="#E0F2FE"/>
+  <path d="M29 15V6M29 52V43M43 29H52M6 29H15" stroke="#E0F2FE" stroke-width="3" stroke-linecap="round"/>
+  <text x="70" y="26" fill="#E2E8F0" font-family="Outfit, sans-serif" font-size="20" font-weight="800">Axiom</text>
+  <text x="147" y="26" fill="#22D3EE" font-family="Outfit, sans-serif" font-size="20" font-weight="800">Realty</text>
+</svg>

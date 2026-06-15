@@ -1,0 +1,187 @@
+city,lat,lng,country,iso2,admin_name,capital,population,population_proper
+Johannesburg,-26.2044,28.0456,South Africa,ZA,Gauteng,admin,8500000,4434827
+Cape Town,-33.9253,18.4239,South Africa,ZA,Western Cape,primary,4770313,4770313
+Soweto,-26.2678,27.8585,South Africa,ZA,Gauteng,,1271628,1271628
+Gqeberha,-33.9581,25.6000,South Africa,ZA,Eastern Cape,,967677,967677
+Pietermaritzburg,-29.6167,30.3833,South Africa,ZA,KwaZulu-Natal,admin,839327,839327
+Durban,-29.8833,31.0500,South Africa,ZA,KwaZulu-Natal,,838634,536644
+Pretoria,-25.7461,28.1881,South Africa,ZA,Gauteng,primary,741651,741651
+Rustenburg,-25.6667,27.2428,South Africa,ZA,North West,,549575,549575
+Newcastle,-27.7464,29.9328,South Africa,ZA,KwaZulu-Natal,,507710,507710
+East London,-33.0175,27.9047,South Africa,ZA,Eastern Cape,,478676,478676
+Katlehong,-26.3333,28.1500,South Africa,ZA,Gauteng,,467890,467890
+Khayelitsha,-34.0403,18.6778,South Africa,ZA,Western Cape,,391749,391749
+Randburg,-26.0936,28.0064,South Africa,ZA,Gauteng,,337053,337053
+Roodepoort,-26.1625,27.8725,South Africa,ZA,Gauteng,,326416,326416
+Mitchells Plain,-34.0506,18.6181,South Africa,ZA,Western Cape,,310485,310485
+Boksburg,-26.2125,28.2625,South Africa,ZA,Gauteng,,260321,260321
+Bloemfontein,-29.1167,26.2167,South Africa,ZA,Free State,primary,256185,256185
+Germiston,-26.2178,28.1672,South Africa,ZA,Gauteng,,255863,255863
+Centurion,-25.8603,28.1894,South Africa,ZA,Gauteng,,236580,236580
+Kimberley,-28.7383,24.7639,South Africa,ZA,Northern Cape,admin,225160,225160
+Sandton,-26.1070,28.0517,South Africa,ZA,Gauteng,,222415,222415
+Klerksdorp,-26.8667,26.6667,South Africa,ZA,North West,,186515,186515
+Bethelsdorp,-33.8833,25.5000,South Africa,ZA,Eastern Cape,,182012,182012
+Kempton Park,-26.1000,28.2333,South Africa,ZA,Gauteng,,171575,171575
+Nqutu,-28.2320,30.5660,South Africa,ZA,KwaZulu-Natal,,170307,170307
+Kroonstad,-27.6500,27.2333,South Africa,ZA,Free State,,168762,168762
+Benoni,-26.1883,28.3206,South Africa,ZA,Gauteng,,158777,158777
+George,-33.9667,22.4500,South Africa,ZA,Western Cape,,157394,157394
+Potchefstroom,-26.7150,27.1033,South Africa,ZA,North West,,148804,148804
+Pinetown,-29.8167,30.8500,South Africa,ZA,KwaZulu-Natal,,144026,144026
+Krugersdorp,-26.1000,27.7667,South Africa,ZA,Gauteng,,140643,140643
+Mthatha,-31.5800,28.7900,South Africa,ZA,Eastern Cape,,137772,137772
+Polokwane,-23.9000,29.4500,South Africa,ZA,Limpopo,admin,130028,130028
+Springs,-26.2547,28.4428,South Africa,ZA,Gauteng,,121610,121610
+Alberton,-26.2672,28.1219,South Africa,ZA,Gauteng,,121536,121536
+Upington,-28.4500,21.2500,South Africa,ZA,Northern Cape,,121189,121189
+Winterveld,-25.4200,27.9490,South Africa,ZA,North West,,120826,120826
+Parow,-33.9000,18.6000,South Africa,ZA,Western Cape,,119462,119462
+Paarl,-33.7242,18.9558,South Africa,ZA,Western Cape,,112045,112045
+Empangeni,-28.7500,31.9000,South Africa,ZA,KwaZulu-Natal,,110340,110340
+Witbank,-25.8770,29.2010,South Africa,ZA,Mpumalanga,,108673,108673
+Uitenhage,-33.7667,25.4000,South Africa,ZA,Eastern Cape,,103639,103639
+KwaDukuza,-29.3333,31.2917,South Africa,ZA,KwaZulu-Natal,,101224,101224
+Worcester,-33.6450,19.4436,South Africa,ZA,Western Cape,,97098,97098
+Grahamstown,-33.2996,26.5200,South Africa,ZA,Eastern Cape,,91548,91548
+Oudtshoorn,-33.5833,22.2000,South Africa,ZA,Western Cape,,90822,90822
+Ermelo,-26.5333,29.9833,South Africa,ZA,Mpumalanga,,83865,83865
+Stellenbosch,-33.9367,18.8614,South Africa,ZA,Western Cape,,77476,77476
+Sasolburg,-26.8142,27.8286,South Africa,ZA,Free State,,76349,76349
+Thaba Nchu,-29.2000,26.8333,South Africa,ZA,Free State,,70118,70118
+Kwamhlanga,-25.4320,28.7080,South Africa,ZA,Gauteng,,69853,69853
+Thohoyandou,-22.9500,30.4833,South Africa,ZA,Limpopo,,69453,69453
+Queenstown,-31.9000,26.8833,South Africa,ZA,Eastern Cape,,68872,68872
+Odendaalsrus,-27.8667,26.6833,South Africa,ZA,Free State,,63743,63743
+Bethal,-26.4500,29.4500,South Africa,ZA,Mpumalanga,,60779,60779
+Mossel Bay,-34.1833,22.1333,South Africa,ZA,Western Cape,,59031,59031
+Wellington,-33.6333,18.9833,South Africa,ZA,Western Cape,,55543,55543
+Queensburgh,-29.8667,30.9333,South Africa,ZA,KwaZulu-Natal,,54846,54846
+Phuthaditjhaba,-28.5333,28.8167,South Africa,ZA,Free State,,54661,54661
+Kokstad,-30.5539,29.4269,South Africa,ZA,KwaZulu-Natal,,51561,51561
+Edenvale,-26.1411,28.1528,South Africa,ZA,Gauteng,,49292,49292
+Vryheid,-27.7669,30.8000,South Africa,ZA,KwaZulu-Natal,,47365,47365
+Kuilsrivier,-33.9414,18.7066,South Africa,ZA,Western Cape,,46686,46686
+Bothaville,-27.3833,26.6167,South Africa,ZA,Free State,,46030,46030
+Parys,-26.9000,27.4500,South Africa,ZA,Free State,,45868,45868
+Grabouw,-34.1500,19.0167,South Africa,ZA,Western Cape,,44593,44593
+Despatch,-33.8015,25.4768,South Africa,ZA,Eastern Cape,,39619,39619
+Vredenburg,-32.9064,17.9958,South Africa,ZA,Western Cape,,38382,38382
+Mmabatho,-25.8500,25.6333,South Africa,ZA,North West,,38297,38297
+Lydenburg,-25.0960,30.4460,South Africa,ZA,Mpumalanga,,37258,37258
+Siyabuswa,-25.1167,29.0500,South Africa,ZA,Mpumalanga,,36882,36882
+Namakgale,-23.9380,31.0280,South Africa,ZA,Limpopo,,36365,36365
+Malmesbury,-33.4500,18.7333,South Africa,ZA,Western Cape,,35897,35897
+Lebowakgomo,-24.3050,29.5650,South Africa,ZA,Limpopo,,35087,35087
+Phokeng,-25.5833,27.1333,South Africa,ZA,North West,,34597,34597
+Westville,-29.8310,30.9250,South Africa,ZA,KwaZulu-Natal,,30508,30508
+Ulundi,-28.3167,31.4167,South Africa,ZA,KwaZulu-Natal,,29132,29132
+Mondlo,-27.9670,30.7220,South Africa,ZA,KwaZulu-Natal,,28871,28871
+Saldanha,-32.9978,17.9456,South Africa,ZA,Western Cape,,28142,28142
+Heilbron,-27.2836,27.9708,South Africa,ZA,Free State,,27407,27407
+Jeffrey’s Bay,-34.0333,24.9167,South Africa,ZA,Eastern Cape,,27107,27107
+Frankfort,-27.2833,28.5167,South Africa,ZA,Free State,,26144,26144
+Giyani,-23.3100,30.7064,South Africa,ZA,Limpopo,,25954,25954
+Mathibestad,-25.2760,28.1780,South Africa,ZA,North West,,25945,25945
+Mpophomeni,-29.5670,30.1820,South Africa,ZA,KwaZulu-Natal,,25732,25732
+Volksrust,-27.3667,29.8833,South Africa,ZA,Mpumalanga,,24281,24281
+uMhlanga Rocks,-29.7333,31.0708,South Africa,ZA,KwaZulu-Natal,,24238,24238
+Nkowakowa,-23.8860,30.2930,South Africa,ZA,Limpopo,,22484,22484
+Robertson,-33.8000,19.8833,South Africa,ZA,Western Cape,,21929,21929
+Pampierstad,-27.7760,24.6900,South Africa,ZA,North West,,21707,21707
+Hammanskraal,-25.4000,28.2833,South Africa,ZA,North West,,21345,21345
+Bronkhorstspruit,-25.8050,28.7464,South Africa,ZA,Gauteng,,20769,20769
+Itsoseng,-26.0830,25.8820,South Africa,ZA,North West,,19959,19959
+Garsfontein,-25.7913,28.2935,South Africa,ZA,Gauteng,,19501,19501
+Mooirivier,-29.2000,29.9833,South Africa,ZA,KwaZulu-Natal,,17779,17779
+Kingsborough,-30.0833,30.8667,South Africa,ZA,KwaZulu-Natal,,16368,16368
+Turffontein,-26.2446,28.0397,South Africa,ZA,Gauteng,,15887,15887
+Alice,-32.7892,26.8350,South Africa,ZA,Eastern Cape,,15143,15143
+Mahikeng,-25.8656,25.6436,South Africa,ZA,North West,admin,15117,15117
+Breyten,-26.3000,29.9833,South Africa,ZA,Mpumalanga,,14347,14347
+Primrose,-26.1833,28.1667,South Africa,ZA,Gauteng,,14024,14024
+Bedfordview,-26.1794,28.1361,South Africa,ZA,Gauteng,,13959,13959
+eManzimtoti,-30.0500,30.8833,South Africa,ZA,KwaZulu-Natal,,13813,13813
+Kirkwood,-33.4003,25.4425,South Africa,ZA,Eastern Cape,,13765,13765
+Pretoria-Noord,-25.6731,28.1733,South Africa,ZA,Gauteng,,12972,12972
+Elandsdoorn,-25.2880,29.1960,South Africa,ZA,Mpumalanga,,12941,12941
+Buffelshoek,-24.6308,31.1383,South Africa,ZA,Limpopo,,12703,12703
+Groutville,-29.3880,31.2450,South Africa,ZA,KwaZulu-Natal,,12638,12638
+Summerstrand,-33.9914,25.6569,South Africa,ZA,Eastern Cape,,12614,12614
+Jeppe’s Reef,-25.7200,31.4770,South Africa,ZA,Mpumalanga,,12589,12589
+Dysselsdorp,-33.5667,22.4333,South Africa,ZA,Western Cape,,12544,12544
+Matatiele,-30.3422,28.8061,South Africa,ZA,KwaZulu-Natal,,12466,12466
+eXobho,-30.1572,30.0647,South Africa,ZA,KwaZulu-Natal,,12461,12461
+Lenyenye,-23.9720,30.2690,South Africa,ZA,Limpopo,,12099,12099
+Mount Fletcher,-30.6920,28.5030,South Africa,ZA,Eastern Cape,,11488,11488
+Gonubie,-32.9430,28.0080,South Africa,ZA,Eastern Cape,,11471,11471
+Mogogelo,-25.3540,28.1380,South Africa,ZA,North West,,11425,11425
+Vaal Reefs,-26.9290,26.7360,South Africa,ZA,North West,,11345,11345
+De Doorns,-33.4833,19.6833,South Africa,ZA,Western Cape,,11278,11278
+Bhisho,-32.8494,27.4381,South Africa,ZA,Eastern Cape,admin,11192,11192
+Langeloop,-25.6840,31.6350,South Africa,ZA,Mpumalanga,,11122,11122
+Ekuvukeni,-28.4660,30.1570,South Africa,ZA,KwaZulu-Natal,,11018,11018
+Velddrif,-32.7833,18.1667,South Africa,ZA,Western Cape,,11017,11017
+Hartswater,-27.7667,24.8167,South Africa,ZA,Northern Cape,,10465,10465
+Alexandria,-33.6533,26.4083,South Africa,ZA,Eastern Cape,,10085,10085
+Ga-Kgapane,-23.6490,30.2260,South Africa,ZA,Limpopo,,9879,9879
+Boekenhouthoek,-25.3030,29.0150,South Africa,ZA,Mpumalanga,,9166,9166
+Steynsrus,-27.9500,27.5667,South Africa,ZA,Free State,,9106,9106
+Greytown,-29.0667,30.5833,South Africa,ZA,KwaZulu-Natal,,9090,9090
+Mbuzini,-25.9333,31.9333,South Africa,ZA,Mpumalanga,,9070,9070
+Doornkop,-26.2328,27.7833,South Africa,ZA,Gauteng,,8740,8740
+Umzimkulu,-30.2630,29.9400,South Africa,ZA,Eastern Cape,,8399,8399
+Sedgefield,-34.0214,22.8033,South Africa,ZA,Western Cape,,8286,8286
+Hawston,-34.3833,19.1333,South Africa,ZA,Western Cape,,8214,8214
+Buffelspruit,-25.6580,31.5160,South Africa,ZA,Mpumalanga,,8202,8202
+Lorraine,-33.9725,25.4981,South Africa,ZA,Eastern Cape,,8004,8004
+Saron,-33.1810,19.0100,South Africa,ZA,Western Cape,,7843,7843
+Bosfontein,-25.7440,31.6260,South Africa,ZA,Mpumalanga,,7811,7811
+Breidbach,-32.8833,27.4333,South Africa,ZA,Eastern Cape,,7767,7767
+Welverdiend,-24.5810,31.3430,South Africa,ZA,Limpopo,,7601,7601
+Wolwekraal,-25.1530,28.9610,South Africa,ZA,Mpumalanga,,7426,7426
+Citrusdal,-32.5894,19.0147,South Africa,ZA,Western Cape,,7177,7177
+Tweeling,-27.5500,28.5167,South Africa,ZA,Free State,,6465,6465
+Vanrhynsdorp,-31.6167,18.7333,South Africa,ZA,Western Cape,,6272,6272
+Klawer,-31.7833,18.6167,South Africa,ZA,Western Cape,,6234,6234
+Elsburg,-26.2450,28.1970,South Africa,ZA,Gauteng,,6231,6231
+Olifantshoek,-23.3400,30.2770,South Africa,ZA,Limpopo,,5976,5976
+Genadendal,-34.0333,19.5500,South Africa,ZA,Western Cape,,5663,5663
+eManguzi,-26.9960,32.7520,South Africa,ZA,KwaZulu-Natal,,5534,5534
+Botrivier,-34.2258,19.2050,South Africa,ZA,Western Cape,,5505,5505
+Oberholzer,-26.3470,27.3820,South Africa,ZA,Gauteng,,5397,5397
+Mount Ayliff,-30.8092,29.3669,South Africa,ZA,Eastern Cape,,5367,5367
+Mount Frere,-30.9167,28.9833,South Africa,ZA,Eastern Cape,,5252,5252
+Riviersonderend,-34.1503,19.9144,South Africa,ZA,Western Cape,,5245,5245
+Kenton on Sea,-33.6830,26.6590,South Africa,ZA,Eastern Cape,,5154,5154
+Flagstaff,-31.0800,29.5044,South Africa,ZA,Eastern Cape,,4821,4821
+Waterkloof,-25.7750,28.2417,South Africa,ZA,Gauteng,,4820,4820
+Sonop,-25.6480,27.6980,South Africa,ZA,North West,,4659,4659
+Libode,-31.5333,29.0167,South Africa,ZA,Eastern Cape,,4560,4560
+Bluewater Bay,-33.8567,25.6294,South Africa,ZA,Eastern Cape,,4530,4530
+Riebeek-Wes,-33.3505,18.8674,South Africa,ZA,Western Cape,,4350,4350
+Sibasa,-22.9320,30.4670,South Africa,ZA,Limpopo,,4314,4314
+Uvongo Beach,-30.8167,30.3833,South Africa,ZA,KwaZulu-Natal,,4288,4288
+Sandbaai,-34.4190,19.1940,South Africa,ZA,Western Cape,,4102,4102
+Lusikisiki,-31.3680,29.5760,South Africa,ZA,Eastern Cape,,4028,4028
+Chrissiesmeer,-26.2780,30.2130,South Africa,ZA,Mpumalanga,,4012,4012
+Schulzendal,-25.7490,31.5400,South Africa,ZA,Mpumalanga,,3659,3659
+Rooiboklaagte,-24.6550,31.0670,South Africa,ZA,Mpumalanga,,3650,3650
+Madikwe,-25.3550,26.5300,South Africa,ZA,North West,,3623,3623
+Malelane,-25.4833,31.5167,South Africa,ZA,Mpumalanga,,3486,3486
+Warner Beach,-30.0850,30.8620,South Africa,ZA,KwaZulu-Natal,,3453,3453
+Richmond,-29.8667,30.2667,South Africa,ZA,KwaZulu-Natal,,3349,3349
+Shakaskraal,-29.4500,31.2167,South Africa,ZA,KwaZulu-Natal,,3296,3296
+New Hanover,-29.3500,30.5333,South Africa,ZA,KwaZulu-Natal,,3175,3175
+Komaggas,-29.8000,17.5000,South Africa,ZA,Northern Cape,,3116,3116
+Rawsonville,-33.6847,19.3150,South Africa,ZA,Western Cape,,3099,3099
+Gannalaagte,-26.4640,25.5300,South Africa,ZA,North West,,2830,2830
+Fontainebleau,-26.1037,27.9766,South Africa,ZA,Gauteng,,2826,2826
+Sheepmoor,-26.7186,30.2989,South Africa,ZA,Mpumalanga,,2727,2727
+Lesseyton,-31.8330,26.7660,South Africa,ZA,Eastern Cape,,2715,2715
+Ngqeleni,-31.6700,29.0280,South Africa,ZA,Eastern Cape,,2629,2629
+Roossenekal,-25.1950,29.9250,South Africa,ZA,Mpumalanga,,2625,2625
+Doonside,-30.0700,30.8710,South Africa,ZA,KwaZulu-Natal,,2596,2596
+Abbotspoort,-23.4530,28.0930,South Africa,ZA,Limpopo,,2489,2489
+Hlabisa,-28.1333,31.8667,South Africa,ZA,KwaZulu-Natal,,2469,2469
+Nelspruit,-25.4745,30.9703,South Africa,ZA,Mpumalanga,admin,,

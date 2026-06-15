@@ -1,0 +1,52 @@
+﻿<svg width="880" height="620" viewBox="0 0 880 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="880" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07131f"/>
+      <stop offset="0.6" stop-color="#0d2236"/>
+      <stop offset="1" stop-color="#0a1b2c"/>
+    </linearGradient>
+    <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(250 180) rotate(45) scale(260)">
+      <stop stop-color="#22D3EE" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(630 330) rotate(35) scale(300)">
+      <stop stop-color="#A78BFA" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#A78BFA" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="880" height="620" rx="28" fill="url(#bg)"/>
+  <rect width="880" height="620" rx="28" fill="url(#g1)"/>
+  <rect width="880" height="620" rx="28" fill="url(#g2)"/>
+
+  <g opacity="0.45" stroke="#38BDF8" stroke-width="1.2">
+    <path d="M60 520L220 390L350 450L520 320L700 390L820 260"/>
+    <path d="M100 560L240 470L370 520L540 400L710 450L820 360"/>
+    <path d="M80 470L230 340L360 400L540 260L690 320L800 220"/>
+  </g>
+
+  <g fill="#7DD3FC">
+    <circle cx="220" cy="390" r="6"/>
+    <circle cx="350" cy="450" r="6"/>
+    <circle cx="520" cy="320" r="6"/>
+    <circle cx="700" cy="390" r="6"/>
+    <circle cx="540" cy="400" r="6"/>
+    <circle cx="710" cy="450" r="6"/>
+  </g>
+
+  <g fill="#0B1220" opacity="0.95">
+    <rect x="150" y="250" width="68" height="220" rx="8"/>
+    <rect x="230" y="210" width="78" height="260" rx="8"/>
+    <rect x="322" y="170" width="95" height="300" rx="8"/>
+    <rect x="428" y="240" width="72" height="230" rx="8"/>
+    <rect x="512" y="140" width="110" height="330" rx="8"/>
+    <rect x="635" y="190" width="88" height="280" rx="8"/>
+  </g>
+
+  <g stroke="#22D3EE" stroke-opacity="0.55" stroke-width="2">
+    <rect x="160" y="265" width="48" height="18" rx="5"/>
+    <rect x="245" y="225" width="46" height="18" rx="5"/>
+    <rect x="338" y="185" width="62" height="18" rx="5"/>
+    <rect x="524" y="155" width="82" height="18" rx="5"/>
+    <rect x="648" y="205" width="62" height="18" rx="5"/>
+  </g>
+</svg>

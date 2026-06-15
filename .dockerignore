@@ -1,0 +1,11 @@
+node_modules
+.git
+.wwebjs_cache
+.pm2
+data/secure-documents
+data/whatsapp-web-auth
+*.log
+server.out.log
+server.err.log
+operations-server.out.log
+operations-server.err.log

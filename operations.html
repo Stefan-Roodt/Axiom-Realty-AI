@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Axiom Realty OS | Intelligent Estate Agency Operations</title>
+    <meta
+      name="description"
+      content="Axiom Realty OS is a shared AI-enabled estate agency workspace for clients, agents, attorneys, finance partners and human concierges."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="operations.css" />
+  </head>
+  <body class="auth-locked">
+    <aside class="sidebar">
+      <a class="os-brand" href="index.html">
+        <img src="assets-logo.svg" alt="Axiom Realty AI" />
+        <span>OPERATING SYSTEM</span>
+      </a>
+
+      <nav class="os-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="overview"><span>01</span>Overview</button>
+        <button class="nav-item" data-view="cases"><span>02</span>Cases</button>
+        <button class="nav-item" data-view="journey"><span>03</span>Journey map</button>
+        <button class="nav-item" data-view="documents"><span>04</span>Documents</button>
+        <button class="nav-item" data-view="partners"><span>05</span>Partners</button>
+        <button class="nav-item" data-view="automation"><span>06</span>Automation</button>
+        <button class="nav-item" data-view="management"><span>07</span>Management</button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="system-status"><i></i><span>Automation engine live</span></div>
+        <a href="index.html">Back to Axiom lead engine</a>
+      </div>
+    </aside>
+
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="overline" id="displayDate"></p>
+          <h1 id="screenTitle">Concierge Command Centre</h1>
+        </div>
+        <div class="topbar-actions">
+          <label class="role-select">
+            <span>View as</span>
+            <select id="roleSwitcher">
+              <option value="concierge">Concierge</option>
+              <option value="seller">Seller</option>
+              <option value="buyer">Buyer</option>
+              <option value="agent">Agent</option>
+              <option value="attorney">Transferring attorney</option>
+              <option value="finance">Finance partner</option>
+            </select>
+          </label>
+          <button class="mini-btn" id="logoutButton">Sign out</button>
+          <button class="icon-btn" id="notificationButton" aria-label="Notifications">
+            <span>12</span>
+            <b>!</b>
+          </button>
+          <div class="avatar" id="roleAvatar">SC</div>
+        </div>
+      </header>
+
+      <section class="screen active" data-screen="overview">
+        <div class="hero-panel">
+          <div>
+            <p class="overline">Axiom Intelligence Briefing</p>
+            <h2 id="welcomeTitle">Good evening, Stefan. Here is where your operation needs attention.</h2>
+            <p id="welcomeBody">AI is monitoring 48 active journeys, 164 document obligations and 23 partner actions across your property pipeline.</p>
+          </div>
+          <button class="primary-btn" data-open-ai>Ask Axiom AI <span>+</span></button>
+        </div>
+
+        <div class="metric-grid" id="metricGrid"></div>
+
+        <div class="content-grid">
+          <section class="panel priority-panel">
+            <div class="panel-head">
+              <div>
+                <p class="overline">Live operations</p>
+                <h2 id="priorityTitle">Today's priority queue</h2>
+              </div>
+              <span class="live-pill"><i></i>Live</span>
+            </div>
+            <div class="priority-list" id="priorityList"></div>
+          </section>
+
+          <section class="panel activity-panel">
+            <div class="panel-head">
+              <div>
+                <p class="overline">Shared CRM</p>
+                <h2>Latest activity</h2>
+              </div>
+              <button class="text-btn" data-view-link="cases">View cases</button>
+            </div>
+            <div class="activity-list" id="activityList"></div>
+          </section>
+        </div>
+
+        <section class="panel case-focus" id="caseFocus"></section>
+      </section>
+
+      <section class="screen" data-screen="cases">
+        <div class="section-intro">
+          <div>
+            <p class="overline">Shared transaction CRM</p>
+            <h2>Every journey, one source of truth</h2>
+            <p>Buyers, sellers, agents, attorneys and finance partners see the right next step in real time.</p>
+          </div>
+          <button class="primary-btn" id="newCaseButton">+ Register new client</button>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-tools">
+            <div class="filter-row" id="caseFilters">
+              <button class="filter-chip active" data-case-filter="all">All cases</button>
+              <button class="filter-chip" data-case-filter="seller">Sellers</button>
+              <button class="filter-chip" data-case-filter="buyer">Buyers</button>
+              <button class="filter-chip" data-case-filter="transfer">Transfers</button>
+              <button class="filter-chip" data-case-filter="risk">At risk</button>
+            </div>
+            <input id="caseSearch" type="search" placeholder="Search client, area or case..." />
+          </div>
+          <div class="case-table-wrap">
+            <table class="case-table">
+              <thead>
+                <tr><th>Case</th><th>Client</th><th>Journey</th><th>Current stage</th><th>Next action</th><th>Due</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="caseRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="journey">
+        <div class="section-intro">
+          <div>
+            <p class="overline">Automation blueprint</p>
+            <h2>Seller-to-transfer journey</h2>
+            <p>The engine stays ahead of every milestone, prepares the next request and keeps each authorised party informed.</p>
+          </div>
+          <button class="ghost-btn" id="simulateJourney">Simulate next milestone</button>
+        </div>
+        <section class="panel playbook-console">
+          <div class="panel-head">
+            <div>
+              <p class="overline">Transaction playbooks</p>
+              <h2>Prepare the next milestone before it becomes urgent</h2>
+            </div>
+            <span class="live-pill"><i></i>Reusable workflow engine</span>
+          </div>
+          <div class="playbook-toolbar">
+            <label>Case
+              <select id="playbookCaseSelect"></select>
+            </label>
+            <label>Milestone
+              <select id="playbookMilestoneSelect"></select>
+            </label>
+            <button class="ghost-btn" id="prepareMilestone">Prepare selected milestone</button>
+            <button class="primary-btn" id="advanceMilestone">Advance and prepare next</button>
+          </div>
+          <div id="playbookSummary"></div>
+          <div class="playbook-milestones" id="playbookMilestones"></div>
+        </section>
+        <section class="panel playbook-console">
+          <div class="panel-head">
+            <div>
+              <p class="overline">Recovery Console</p>
+              <h2>Predict delays and orchestrate recovery</h2>
+            </div>
+            <span class="live-pill"><i></i>Closing Command AI</span>
+          </div>
+          <div class="playbook-toolbar">
+            <label>Case
+              <select id="recoveryCaseSelect"></select>
+            </label>
+            <div></div>
+            <button class="ghost-btn" id="runRecoveryPlan">Run prediction now</button>
+            <button class="primary-btn" id="queueRecoveryPlan">Queue next-best actions</button>
+          </div>
+          <div id="recoverySummary"></div>
+          <div class="playbook-milestones" id="recoveryActions"></div>
+        </section>
+        <div class="journey-map" id="journeyMap"></div>
+      </section>
+
+      <section class="screen" data-screen="documents">
+        <div class="section-intro">
+          <div>
+            <p class="overline">Document orchestration</p>
+            <h2>Requested before they become blockers</h2>
+            <p>Each requirement has an owner, due date, approval status and reminder trail.</p>
+          </div>
+          <button class="primary-btn" id="requestDocumentButton">+ Request document</button>
+        </div>
+        <div class="metric-grid compact" id="documentMetrics"></div>
+        <div class="panel table-panel">
+          <div class="table-tools">
+            <div class="filter-row" id="documentFilters">
+              <button class="filter-chip active" data-doc-filter="all">All documents</button>
+              <button class="filter-chip" data-doc-filter="overdue">Overdue</button>
+              <button class="filter-chip" data-doc-filter="uploaded">For approval</button>
+              <button class="filter-chip" data-doc-filter="approved">Approved</button>
+            </div>
+          </div>
+          <div class="case-table-wrap">
+            <table class="case-table">
+              <thead>
+                <tr><th>Document</th><th>Case</th><th>Responsible party</th><th>Required by</th><th>Last reminder</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="documentRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="partners">
+        <div class="section-intro">
+          <div>
+            <p class="overline">Partner network</p>
+            <h2>The whole transaction chain, connected</h2>
+            <p>Monitor responsiveness and invite service providers into the right case without admin friction.</p>
+          </div>
+          <button class="ghost-btn" id="openPartnerStudio">+ Invite partner</button>
+        </div>
+        <div class="partner-grid" id="partnerGrid"></div>
+        <section class="panel partner-access-studio">
+          <div class="panel-head">
+            <div>
+              <p class="overline">Partner access studio</p>
+              <h2>Secure onboarding in one flow</h2>
+            </div>
+            <span class="live-pill"><i></i>One-time secure links</span>
+          </div>
+          <p class="studio-copy">Choose the case and partner role, then issue a one-time secure link with WhatsApp and email delivery built in.</p>
+          <div class="channel-status">
+            <span class="channel-pill ready">WhatsApp delivery</span>
+            <span class="channel-pill ready">Email delivery</span>
+            <span class="channel-pill ready">Portal access</span>
+          </div>
+          <div class="studio-form-grid">
+            <label>Case<select id="studioAccessCase"></select></label>
+            <label>Role
+              <select id="studioAccessRole">
+                <option value="seller">Seller</option>
+                <option value="buyer">Buyer</option>
+                <option value="agent">Agent</option>
+                <option value="attorney">Transferring attorney</option>
+                <option value="finance">Finance partner</option>
+              </select>
+            </label>
+            <label>Name<input id="studioAccessName" placeholder="Participant name" /></label>
+            <label>Cellphone<input id="studioAccessCellphone" placeholder="+27..." /></label>
+            <label>Email<input id="studioAccessEmail" placeholder="name@company.com" /></label>
+            <label>Birthday (seller / buyer)<input id="studioAccessBirthday" placeholder="YYYY-MM-DD (optional)" /></label>
+          </div>
+          <div class="priority-buttons studio-actions">
+            <button class="primary-btn" id="studioCreateAccess">Generate secure link</button>
+            <button class="ghost-btn" id="studioCopyLink">Copy latest link</button>
+            <button class="ghost-btn" id="studioShowQr">Show QR code</button>
+          </div>
+          <div class="studio-result" id="studioAccessResult">No secure link generated yet.</div>
+          <div class="panel" id="studioQrPanel" hidden>
+            <p class="overline">Mobile onboarding QR</p>
+            <img class="whatsapp-qr" id="studioQrImage" alt="Secure onboarding QR code" />
+          </div>
+          <div class="case-table-wrap">
+            <table class="case-table">
+              <thead>
+                <tr><th>Role</th><th>Name</th><th>Case</th><th>Created</th><th>Status</th></tr>
+              </thead>
+              <tbody id="studioRecentAccessRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="screen" data-screen="automation">
+        <div class="section-intro">
+          <div>
+            <p class="overline">Always-on assistance</p>
+            <h2>Automation rules doing the quiet work</h2>
+            <p>The portal stays the source of truth. WhatsApp, email and AI act as intelligent communication layers around it.</p>
+          </div>
+          <span class="live-pill"><i></i>14 workflows active</span>
+        </div>
+        <div class="automation-grid" id="automationGrid"></div>
+        <section class="panel delivery-console">
+          <div class="panel-head">
+            <div>
+              <p class="overline">Communication operations</p>
+              <h2>WhatsApp delivery queue</h2>
+            </div>
+            <div class="priority-buttons">
+              <button class="ghost-btn" id="connectWhatsappWeb">Connect WhatsApp Web</button>
+              <button class="ghost-btn" id="runReminderSweep">Run reminder sweep</button>
+              <button class="primary-btn" id="processNotifications">Process queue</button>
+            </div>
+          </div>
+          <div class="metric-grid compact" id="deliveryMetrics"></div>
+          <div class="channel-status" id="channelStatus"></div>
+          <div class="case-table-wrap">
+            <table class="case-table">
+              <thead>
+                <tr><th>Notification</th><th>Case</th><th>Recipient</th><th>Channel</th><th>Attempts</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="notificationRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="screen" data-screen="management">
+        <div class="section-intro">
+          <div>
+            <p class="overline">Executive command</p>
+            <h2>Management dashboard</h2>
+            <p>Track operational health, communication lead time and partner readiness in one view.</p>
+          </div>
+          <span class="live-pill"><i></i>Concierge-level insight</span>
+        </div>
+        <div class="metric-grid" id="managementMetrics"></div>
+        <section class="panel management-panel">
+          <div class="panel-head">
+            <div>
+              <p class="overline">Communication strategy</p>
+              <h2>Five earlier-communication upgrades</h2>
+            </div>
+            <div class="priority-buttons">
+              <button class="ghost-btn" id="runPhase2Automation">Run phase 2 automation</button>
+              <button class="ghost-btn" id="exportWeeklySummary">Export weekly summary</button>
+            </div>
+          </div>
+          <div class="management-improvements" id="managementImprovements"></div>
+          <div class="studio-result" id="phase2SummaryResult">No phase 2 run yet in this session.</div>
+        </section>
+        <section class="panel management-panel">
+          <div class="panel-head">
+            <div>
+              <p class="overline">Attention map</p>
+              <h2>Cases needing leadership visibility</h2>
+            </div>
+          </div>
+          <div class="case-table-wrap">
+            <table class="case-table">
+              <thead>
+                <tr><th>Case</th><th>Client</th><th>Risk</th><th>Next action</th><th>Channel gap</th></tr>
+              </thead>
+              <tbody id="managementCaseRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <aside class="case-drawer" id="caseDrawer" aria-hidden="true">
+      <button class="drawer-close" id="closeCaseDrawer" aria-label="Close case">×</button>
+      <div id="caseDrawerContent"></div>
+    </aside>
+
+    <aside class="ai-drawer" id="aiDrawer" aria-hidden="true">
+      <header>
+        <div class="ai-orb">AI</div>
+        <div>
+          <p class="overline">Always available</p>
+          <h2>Axiom AI Concierge</h2>
+        </div>
+        <button class="drawer-close" id="closeAiDrawer" aria-label="Close AI concierge">×</button>
+      </header>
+      <div class="ai-context">
+        <strong>Case-aware assistance</strong>
+        <span id="aiContextText">I can answer journey questions, explain document requirements and escalate sensitive matters.</span>
+      </div>
+      <div class="ai-messages" id="aiMessages">
+        <div class="message ai">Hello. I can help with any step of the property journey. What would you like to know?</div>
+      </div>
+      <form class="ai-form" id="aiForm">
+        <input id="aiInput" autocomplete="off" placeholder="Ask about the next step, documents or delays..." />
+        <button type="submit">Send</button>
+      </form>
+      <div class="quick-prompts">
+        <button data-prompt="What happens next?">What happens next?</button>
+        <button data-prompt="Which documents are outstanding?">Outstanding documents</button>
+        <button data-prompt="I need to speak to a person">Escalate to concierge</button>
+      </div>
+    </aside>
+
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+
+    <div class="toast" id="toast"></div>
+    <input id="documentUploadInput" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden />
+
+    <div class="login-modal open" id="loginModal" aria-hidden="false">
+      <img src="assets-logo.svg" alt="Axiom Realty AI" />
+      <p class="overline">Secure shared workspace</p>
+      <h2>Sign in to Axiom Realty OS</h2>
+      <p>For this demo, choose any workspace profile and use the same shared cellphone and PIN.</p>
+      <form id="loginForm">
+        <label>Workspace profile
+          <select id="demoAccount">
+            <option value="+27832803176" data-profile-id="USR-CONCIERGE" data-pin="1234">Concierge - Stefan Roodt</option>
+            <option value="+27832803176" data-profile-id="USR-SELLER" data-pin="1234">Seller - Johan Botha</option>
+            <option value="+27832803176" data-profile-id="USR-BUYER" data-pin="1234">Buyer - Naledi Mokoena</option>
+            <option value="+27832803176" data-profile-id="USR-AGENT" data-pin="1234">Agent - Elize van Zyl</option>
+            <option value="+27832803176" data-profile-id="USR-ATTORNEY" data-pin="1234">Attorney - Van der Merwe Inc.</option>
+            <option value="+27832803176" data-profile-id="USR-FINANCE" data-pin="1234">Finance - ooba Bond Originators</option>
+          </select>
+        </label>
+        <label>Cellphone<input id="loginCellphone" name="cellphone" value="+27832803176" autocomplete="username" /></label>
+        <label>PIN<input id="loginPin" name="pin" type="password" value="1234" inputmode="numeric" autocomplete="current-password" /></label>
+        <button class="primary-btn" type="submit">Sign in securely</button>
+      </form>
+      <small>Shared demo sign-in: +27 83 280 3176 | PIN: 1234. Choose a workspace profile first.</small>
+      <div class="priority-buttons">
+        <button class="ghost-btn" id="requestOtpButton" type="button">Send OTP code</button>
+        <input id="loginOtpCode" placeholder="Enter OTP code" inputmode="numeric" autocomplete="one-time-code" />
+        <button class="ghost-btn" id="verifyOtpButton" type="button">Verify OTP</button>
+      </div>
+      <label>Secure access token<input id="loginAccessToken" placeholder="Paste token from secure link (optional)" autocomplete="one-time-code" /></label>
+      <button class="ghost-btn" id="accessTokenLoginButton" type="button">Sign in with secure token</button>
+      <small>Secure access links are one-time and case-scoped. PIN verification remains hashed server-side.</small>
+    </div>
+
+    <div class="registration-modal" id="registrationModal" aria-hidden="true">
+      <button class="drawer-close" id="closeRegistration" aria-label="Close registration">×</button>
+      <p class="overline">Account first, details later</p>
+      <h2>Register a new journey</h2>
+      <p>A simple account is enough to start. The client can complete details through the portal, AI chat or WhatsApp.</p>
+      <form id="registrationForm">
+        <div class="form-grid">
+          <label>First name<input name="firstName" required placeholder="First name" /></label>
+          <label>Surname<input name="surname" required placeholder="Surname" /></label>
+          <label>Cellphone<input name="cellphone" required placeholder="+27..." /></label>
+          <label>Journey type
+            <select name="journeyType">
+              <option value="seller">Selling a property</option>
+              <option value="buyer">Buying a property</option>
+              <option value="agent">Agent application</option>
+            </select>
+          </label>
+        </div>
+        <button class="primary-btn" type="submit">Create account and send WhatsApp welcome</button>
+      </form>
+    </div>
+
+    <script src="operations.js?v=20260601-shared-demo-login"></script>
+  </body>
+</html>

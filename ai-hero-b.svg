@@ -1,0 +1,43 @@
+﻿<svg width="880" height="620" viewBox="0 0 880 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="880" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14061E"/>
+      <stop offset="0.55" stop-color="#2A0E3F"/>
+      <stop offset="1" stop-color="#130820"/>
+    </linearGradient>
+    <radialGradient id="p1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 190) rotate(30) scale(290)">
+      <stop stop-color="#F472B6" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#F472B6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="p2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(650 340) rotate(10) scale(320)">
+      <stop stop-color="#FB923C" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#FB923C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="880" height="620" rx="28" fill="url(#bg2)"/>
+  <rect width="880" height="620" rx="28" fill="url(#p1)"/>
+  <rect width="880" height="620" rx="28" fill="url(#p2)"/>
+
+  <g stroke="#F9A8D4" stroke-opacity="0.5" stroke-width="1.4">
+    <path d="M90 460C180 380 230 410 310 330C390 250 470 270 550 220C640 165 700 210 790 140"/>
+    <path d="M80 510C170 430 220 460 300 380C380 300 460 320 540 270C630 215 690 260 780 190"/>
+    <path d="M100 560C190 480 240 510 320 430C400 350 480 370 560 320C650 265 710 310 800 240"/>
+  </g>
+
+  <g fill="#FDF2F8" fill-opacity="0.92">
+    <circle cx="310" cy="330" r="6"/>
+    <circle cx="550" cy="220" r="6"/>
+    <circle cx="790" cy="140" r="6"/>
+    <circle cx="540" cy="270" r="6"/>
+    <circle cx="780" cy="190" r="6"/>
+  </g>
+
+  <g fill="#1F102C" opacity="0.96">
+    <rect x="150" y="220" width="78" height="250" rx="10"/>
+    <rect x="242" y="180" width="86" height="290" rx="10"/>
+    <rect x="344" y="145" width="100" height="325" rx="10"/>
+    <rect x="460" y="255" width="80" height="215" rx="10"/>
+    <rect x="554" y="128" width="112" height="342" rx="10"/>
+    <rect x="680" y="210" width="88" height="260" rx="10"/>
+  </g>
+</svg>

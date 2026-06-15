@@ -1,0 +1,21 @@
+﻿<svg width="340" height="340" viewBox="0 0 340 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="orb2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(170 170) rotate(90) scale(160)">
+      <stop stop-color="#FDBA74"/>
+      <stop offset="0.5" stop-color="#F472B6"/>
+      <stop offset="1" stop-color="#2A0E3F"/>
+    </radialGradient>
+  </defs>
+  <circle cx="170" cy="170" r="150" fill="url(#orb2)"/>
+  <g stroke="#FBCFE8" stroke-opacity="0.55" stroke-width="1.4">
+    <ellipse cx="170" cy="170" rx="112" ry="72"/>
+    <ellipse cx="170" cy="170" rx="72" ry="112"/>
+    <circle cx="170" cy="170" r="42"/>
+  </g>
+  <g fill="#FFF7ED">
+    <circle cx="170" cy="58" r="5"/>
+    <circle cx="282" cy="170" r="5"/>
+    <circle cx="170" cy="282" r="5"/>
+    <circle cx="58" cy="170" r="5"/>
+  </g>
+</svg>

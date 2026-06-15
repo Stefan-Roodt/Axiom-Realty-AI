@@ -1,0 +1,6 @@
+.env
+data/
+*.log
+node_modules/
+.pm2/
+.wwebjs_cache/

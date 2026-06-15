@@ -1,0 +1,510 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Axiom Realty AI | AI Property Concierge</title>
+    <meta
+      name="description"
+      content="Axiom Realty AI captures buyer and seller intent fast, packages clean real estate leads, and prepares them for fast concierge follow-up."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero" id="top">
+      <div class="mesh" aria-hidden="true"></div>
+      <nav class="nav wrapper">
+        <a class="brand" href="#top">
+          <img src="assets-logo.svg" alt="Axiom Realty AI" />
+        </a>
+        <a class="admin-nav-link" href="?admin=1#admin">Admin</a>
+      </nav>
+
+      <div class="hero-content wrapper">
+        <div class="copy">
+          <p class="eyebrow">AI Property Concierge</p>
+          <h1>Buying? Selling? Get the Personalised Service You Deserve. Quick.</h1>
+          <p class="subtext">
+            Tell us what you need once. Our AI concierge turns it into a clear brief
+            so the right person can follow up fast, with context.
+          </p>
+          <p class="promise-text">
+            No cold forms. No repeating yourself. Just a faster route to a useful property conversation.
+          </p>
+
+          <div class="cta-group">
+            <button class="btn btn-primary" data-intent="buy">I Want to Buy</button>
+            <button class="btn btn-secondary" data-intent="sell">I Want to Sell</button>
+          </div>
+
+          <ul class="trust-list">
+            <li>Say what you need in plain language</li>
+            <li>We capture the key details quickly</li>
+            <li>A concierge gets a specialist to contact you</li>
+          </ul>
+          <div class="proof-row">
+            <span>Your needs captured in under 60 seconds</span>
+            <span>Concierge-ready context</span>
+            <span>We connect the best possible agent to you</span>
+            <span>Let us do the hard work</span>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <img src="ai-hero.svg" alt="AI real estate skyline visualization" />
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section wrapper">
+        <div class="section-heading">
+          <p class="eyebrow">How It Works</p>
+          <h2>The Concierge-to-Agent Loop</h2>
+        </div>
+
+        <div class="grid steps">
+          <article class="card">
+            <h3>1. Capture the Need</h3>
+            <p>Tell us the essentials: buy or sell, area, price, timing, and contact details.</p>
+          </article>
+          <article class="card">
+            <h3>2. Package the Brief</h3>
+            <p>AI turns your request into a clean brief a specialist can act on.</p>
+          </article>
+          <article class="card">
+            <h3>3. Area Specialist Appointed</h3>
+            <p>Your concierge connects you with an area specialist who can take the next step.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section accent">
+        <div class="wrapper split">
+          <div>
+            <p class="eyebrow">For Buyers</p>
+            <h2>Looking to buy?</h2>
+            <p>
+              Tell us where you want to buy, what your budget is, and what kind of property you are looking for.
+              We’ll help connect you with someone who can guide you properly.
+            </p>
+            <button class="btn btn-primary" data-intent="buy">Find me a property expert</button>
+          </div>
+          <div class="orb-wrap">
+            <img src="ai-orb.svg" alt="AI neural signal orb" />
+          </div>
+          <div>
+            <p class="eyebrow">For Sellers</p>
+            <h2>Thinking of selling?</h2>
+            <p>
+              We help you connect with a property expert who knows your area, your property type, and your
+              target market. Instead of guessing which agent to call, let us help you find the right person.
+            </p>
+            <button class="btn btn-secondary" data-intent="sell">Sell my property</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrapper" id="contact">
+        <div class="contact-box">
+          <h2>Tell Us What You Need</h2>
+          <p>
+            Choose buy or sell. We will capture the essentials and get the right specialist moving.
+          </p>
+          <div class="cta-group center">
+            <button class="btn btn-primary large" data-intent="buy">Find me a property expert</button>
+            <button class="btn btn-secondary large" data-intent="sell">Sell my property</button>
+          </div>
+          <p class="next-step-message hidden" id="nextStepMessage"></p>
+        </div>
+      </section>
+
+      <section class="section wrapper" id="property-experts">
+        <div class="section-heading">
+          <p class="eyebrow">For Agents / Experts</p>
+          <h2>Are you a property expert?</h2>
+          <p>
+            We partner with responsive, professional property experts who want properly qualified buyer and seller opportunities.
+          </p>
+        </div>
+        <form class="card expert-form" id="expertApplicationForm">
+          <div class="expert-form-grid">
+            <label>
+              Name
+              <input name="name" type="text" required />
+            </label>
+            <label>
+              Agency
+              <input name="agency" type="text" required />
+            </label>
+            <label>
+              Mobile number
+              <input name="mobile" type="text" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" required />
+            </label>
+            <label>
+              Areas covered
+              <input name="areasCovered" type="text" required />
+            </label>
+            <label>
+              Property types handled
+              <input name="propertyTypes" type="text" placeholder="House, flat, land, farm..." required />
+            </label>
+            <label>
+              FFC / compliance status
+              <input name="complianceStatus" type="text" required />
+            </label>
+            <label>
+              Are you open to referral partnerships?
+              <select name="referralPartnership" required>
+                <option value="">Select</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+                <option value="Open to discuss">Open to discuss</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Notes
+            <textarea name="notes" rows="4" placeholder="Tell us about your focus areas, responsiveness, and ideal referrals"></textarea>
+          </label>
+          <button class="btn btn-primary large" type="submit">Apply to partner with us</button>
+          <p class="next-step-message hidden" id="expertApplicationMessage"></p>
+        </form>
+      </section>
+
+      <span id="admin" class="anchor-target" aria-hidden="true"></span>
+      <section class="section wrapper hidden" id="analytics" aria-label="Admin operations login">
+        <div class="section-heading">
+          <p class="eyebrow">Operations Intelligence</p>
+          <h2>Live Funnel Metrics</h2>
+        </div>
+        <form class="admin-gate" id="adminGate">
+          <label for="adminPassword">Admin password</label>
+          <div class="admin-row">
+            <input id="adminPassword" type="text" autocomplete="off" placeholder="Enter admin password" />
+            <button class="btn btn-primary" type="submit">Unlock</button>
+          </div>
+          <p class="small-note hidden" id="adminMessage"></p>
+        </form>
+        <div id="operationsPanel" class="hidden">
+          <div class="operations-workspace-head">
+            <div>
+              <p class="eyebrow">Concierge workspace</p>
+              <h3>Lead Inbox</h3>
+            </div>
+            <span class="risk-badge">Live operations</span>
+          </div>
+          <div class="operations-tabs" role="tablist" aria-label="Operations workspace tabs">
+            <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox">Inbox</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Follow-up Updates</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">At Risk</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">7-Day Sprint</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Metrics</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Registers</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">WhatsApp</button>
+          </div>
+          <section class="operations-tab-panel active" data-operations-panel="inbox">
+            <div class="card risk-panel inbox-panel">
+              <div class="risk-topline">
+                <div>
+                  <h3>Lead Queue</h3>
+                  <p class="small-note">Filter, sort, and work leads without losing sight of referral status.</p>
+                </div>
+                <span class="risk-badge" id="leadQueueCount">Latest leads</span>
+              </div>
+              <div class="inbox-command-bar">
+                <div class="inbox-command-main">
+                  <p class="eyebrow">Axiom Signal</p>
+                  <strong id="inboxFocus">Finding today's clearest conversion move...</strong>
+                  <span id="inboxBoundary">Live inbox protected. Checking quarantined records...</span>
+                </div>
+                <div class="inbox-command-side">
+                  <span class="signal-target" id="inboxMission">6 referrals · 2 closures</span>
+                  <button class="location-btn ghost-action" type="button" data-open-operations-tab="sprint">Review sprint</button>
+                </div>
+              </div>
+              <form class="lead-filter-form" id="leadFilterForm">
+                <label>
+                  Period
+                  <select id="leadPeriod">
+                    <option value="all">All time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This week</option>
+                    <option value="month">This month</option>
+                    <option value="year">This year</option>
+                  </select>
+                </label>
+                <label>
+                  Sort
+                  <select id="leadSort">
+                    <option value="latest">Latest first</option>
+                    <option value="oldest">Oldest first</option>
+                  </select>
+                </label>
+                <label>
+                  Referral
+                  <select id="leadReferral">
+                    <option value="all">All leads</option>
+                    <option value="referred">Referred</option>
+                    <option value="unreferred">Unreferred</option>
+                  </select>
+                </label>
+                <label>
+                  Dataset
+                  <select id="leadDataset">
+                    <option value="live">Live leads</option>
+                    <option value="test">Test records</option>
+                    <option value="draft">Draft chats</option>
+                    <option value="all">All records</option>
+                  </select>
+                </label>
+                <label>
+                  Search
+                  <input id="leadSearch" type="search" placeholder="Name, area, agent, pipeline" />
+                </label>
+                <button class="location-btn" type="button" id="clearLeadFilters">Clear</button>
+              </form>
+              <div class="lead-stage-tabs" id="leadStageTabs" aria-label="Lead pipeline stage tabs"></div>
+              <div id="agentAssistList" class="risk-lead-list"></div>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="followups" hidden>
+            <div class="card risk-panel">
+              <div class="risk-topline">
+                <div>
+                  <h3>Automated Follow-up Updates</h3>
+                  <p class="small-note">Filtered next actions from lead age, urgency, handoff status, contact confirmation, and commission risk.</p>
+                </div>
+                <span class="risk-badge" id="taskQueueCount">Tasks loading</span>
+              </div>
+              <div class="daily-control-bar" id="dailyControlBar">
+                <div class="daily-control-title">
+                  <strong>Daily Concierge Control Panel</strong>
+                  <small id="dailyControlDate">Loading today...</small>
+                </div>
+                <div class="daily-control-grid">
+                  <span>SLA met today: <b id="dailyControlSla">-</b></span>
+                  <span>Escalations open: <b id="dailyControlEscalations">-</b></span>
+                  <span>Commission risk open: <b id="dailyControlCommissionRisk">-</b></span>
+                  <span>Referred today: <b id="dailyControlReferred">-</b></span>
+                  <span>Contacted today: <b id="dailyControlContacted">-</b></span>
+                  <span>Closed won today: <b id="dailyControlClosures">-</b></span>
+                </div>
+                <div class="daily-control-actions">
+                  <button class="location-btn ghost-action" type="button" id="downloadDailyReport">Download Daily Report (CSV)</button>
+                </div>
+              </div>
+              <div id="taskQueueList" class="task-queue-list"></div>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="risk" hidden>
+            <div class="card risk-panel">
+              <h3>At Risk Lead Queue</h3>
+              <p class="small-note">Leads close to or past SLA without first contact.</p>
+              <div id="riskLeadList" class="risk-lead-list"></div>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="sprint" hidden>
+            <div class="card sprint-panel">
+              <div class="risk-topline">
+                <div>
+                  <h3>7-Day Conversion Sprint</h3>
+                  <p class="small-note">Immediate proof point: refer 6 people through the site and close 2 deals. Every active lead should have one clear next move.</p>
+                </div>
+                <span class="risk-badge" id="sprintStatus">Sprint loading</span>
+              </div>
+              <div class="sprint-grid">
+                <article><span>People referred</span><strong id="sprintReferrals">-</strong><small>Target: 6</small></article>
+                <article><span>Deals closed</span><strong id="sprintClosures">-</strong><small>Target: 2</small></article>
+                <article><span>New leads</span><strong id="sprintLeads">-</strong><small>Last 7 days</small></article>
+                <article><span>Contact confirmed</span><strong id="sprintContacted">-</strong><small>Last 7 days</small></article>
+              </div>
+              <div class="sprint-focus">
+                <strong>AI operating focus</strong>
+                <p id="sprintFocus">Finding the clearest action...</p>
+              </div>
+              <div class="sprint-sources" id="sprintSources"></div>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="metrics" hidden>
+            <div class="analytics-grid">
+              <article class="card metric-card"><h3>Total Leads</h3><p id="mTotalLeads">-</p></article>
+              <article class="card metric-card"><h3>Avg Lead Score</h3><p id="mAvgScore">-</p></article>
+              <article class="card metric-card"><h3>Completion Rate</h3><p id="mCompletion">-</p></article>
+              <article class="card metric-card"><h3>Hot Leads</h3><p id="mHotLeads">-</p></article>
+              <article class="card metric-card"><h3>At Risk Leads</h3><p id="mAtRisk">-</p></article>
+              <article class="card metric-card"><h3>Overdue Leads</h3><p id="mOverdue">-</p></article>
+              <article class="card metric-card"><h3>Delivery Attention</h3><p id="mDeliveryFailed">-</p></article>
+              <article class="card metric-card"><h3>Protected Deals</h3><p id="mProtectedDeals">-</p></article>
+              <article class="card metric-card"><h3>Commission Risk</h3><p id="mCommissionRisk">-</p></article>
+              <article class="card metric-card"><h3>Agent Acknowledgements</h3><p id="mAgentAcks">-</p></article>
+              <article class="card metric-card"><h3>Unacknowledged Links</h3><p id="mUnackedLinks">-</p></article>
+              <article class="card metric-card"><h3>Follow-up Sessions</h3><p id="mFollowUps">-</p></article>
+              <article class="card metric-card"><h3>Concierge Messages</h3><p id="mMessages">-</p></article>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="registers" hidden>
+            <div class="card risk-panel">
+              <div class="risk-topline">
+                <div>
+                  <h3>Axiom Admin Registers</h3>
+                  <p class="small-note">PropWorx-style control layer for referral visibility, commission protection, and deal progression.</p>
+                </div>
+                <span class="risk-badge" id="registerSnapshotCount">Loading</span>
+              </div>
+              <div class="register-filter-chips" id="registerFilterChips" aria-label="Register filters">
+                <button class="register-filter-chip active" type="button" data-register-filter="all">All</button>
+                <button class="register-filter-chip" type="button" data-register-filter="referred">Referred</button>
+                <button class="register-filter-chip" type="button" data-register-filter="commission-risk">Commission Risk</button>
+                <button class="register-filter-chip" type="button" data-register-filter="sale-pending">Sale Pending</button>
+                <button class="register-filter-chip" type="button" data-register-filter="closed-won">Closed Won</button>
+              </div>
+              <div class="register-grid">
+                <article class="register-card">
+                  <h4>Referral Register</h4>
+                  <div class="register-table-wrap">
+                    <table class="register-table">
+                      <thead>
+                        <tr>
+                          <th>Lead</th>
+                          <th>Area</th>
+                          <th>Assigned Agent</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="referralRegisterBody"></tbody>
+                    </table>
+                  </div>
+                </article>
+                <article class="register-card">
+                  <h4>Commission Register</h4>
+                  <div class="register-table-wrap">
+                    <table class="register-table">
+                      <thead>
+                        <tr>
+                          <th>Lead</th>
+                          <th>Referral %</th>
+                          <th>Expected Fee</th>
+                          <th>Invoice / Payment</th>
+                          <th>Due Date</th>
+                        </tr>
+                      </thead>
+                      <tbody id="commissionRegisterBody"></tbody>
+                    </table>
+                  </div>
+                </article>
+                <article class="register-card">
+                  <h4>Deal / Transfer Register</h4>
+                  <div class="register-table-wrap">
+                    <table class="register-table">
+                      <thead>
+                        <tr>
+                          <th>Lead</th>
+                          <th>Pipeline Stage</th>
+                          <th>Contact</th>
+                          <th>Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody id="transferRegisterBody"></tbody>
+                    </table>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="whatsapp" hidden>
+            <div class="card risk-panel whatsapp-bridge-panel">
+              <div class="risk-topline">
+                <div>
+                  <h3>WhatsApp Test Bridge</h3>
+                  <p class="small-note">Pre-launch WhatsApp Web alerts to the central concierge. Replace with WhatsApp Cloud API before going live.</p>
+                </div>
+                <span class="risk-badge" id="whatsappBridgeBadge">Checking</span>
+              </div>
+              <div class="whatsapp-bridge-grid">
+                <div>
+                  <p class="small-note" id="whatsappBridgeStatus">Status unavailable.</p>
+                  <div class="risk-actions left-actions">
+                    <button class="location-btn" type="button" id="startWhatsappBridge">Start / Refresh QR</button>
+                    <button class="location-btn" type="button" id="sendWhatsappBridgeTest">Send Test Alert</button>
+                    <button class="location-btn ghost-action" type="button" id="logoutWhatsappBridge">Logout Test Bridge</button>
+                  </div>
+                </div>
+                <div class="whatsapp-qr-wrap hidden" id="whatsappQrWrap">
+                  <img id="whatsappQrImage" alt="WhatsApp Web QR code" />
+                  <p class="small-note">Scan with WhatsApp: Linked devices > Link a device.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <section class="intake-overlay hidden" id="intakeOverlay" aria-hidden="true">
+      <div class="intake-modal">
+        <button class="close-modal" id="closeModal" aria-label="Close form">×</button>
+        <p class="eyebrow" id="intakeEyebrow">Lead Intake</p>
+        <h2 id="intakeTitle">Tell us about your request</h2>
+        <p class="progress-note" id="progressNote">Answer the essentials first. We only ask what the concierge needs to act fast.</p>
+        <form id="intakeForm">
+          <div id="dynamicFields" class="dynamic-fields"></div>
+          <label for="additionalInfo">Anything else we should know? <span class="optional-label">Optional</span></label>
+          <textarea id="additionalInfo" name="additionalInfo" rows="3" placeholder="Bedrooms, bathrooms, finance status, or special instructions"></textarea>
+          <p class="privacy-note">
+            POPIA reassurance: we use your details only to prepare your property brief and connect you with the right specialist. We handle your information responsibly and do not sell your personal details.
+          </p>
+          <label class="consent-label">
+            <input id="leadConsent" name="consent" type="checkbox" required />
+            <span>I agree that my details may be shared with a suitable property professional for the purpose of assisting me with my property request.</span>
+          </label>
+          <button type="submit" class="btn btn-primary large" id="submitLeadBtn">Send Request</button>
+        </form>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="wrapper">
+        <p><span id="year"></span> Axiom Realty AI. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <button class="concierge-toggle" id="conciergeToggle" aria-label="Open AI concierge">
+      <span class="concierge-dot" aria-hidden="true"></span>
+      <span>
+        <strong>AI Concierge</strong>
+        <small>Start your brief</small>
+      </span>
+    </button>
+    <section class="concierge-panel hidden" id="conciergePanel" aria-live="polite">
+      <div class="concierge-head">
+        <strong>Axiom AI Concierge</strong>
+        <button id="conciergeClose" class="concierge-close" aria-label="Close concierge">×</button>
+      </div>
+      <div class="concierge-messages" id="conciergeMessages">
+        <p class="bot-msg">Hi, I am your AI property concierge. Tell me what you need to buy or sell, and I will turn it into a clear brief for fast follow-up.</p>
+      </div>
+      <form id="conciergeForm" class="concierge-form">
+        <input id="conciergeInput" type="text" placeholder="" aria-label="Message the AI property concierge" />
+        <button type="submit" class="btn btn-primary">Send</button>
+      </form>
+      <p class="privacy-note compact">
+        POPIA reassurance: your details are used only to prepare your brief and connect you with the right specialist.
+      </p>
+    </section>
+
+    <script src="towns-by-province.js"></script>
+    <script src="script.js?v=20260530-auto-ack"></script>
+  </body>
+</html>
+

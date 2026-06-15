@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Axiom Realty AI | Shared Stakeholder Portal</title>
+    <meta
+      name="description"
+      content="Secure shared stakeholder portal for Axiom Realty AI transaction visibility and progress updates."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="agent-page">
+    <main class="agent-shell">
+      <section class="agent-card">
+        <img src="assets-logo.svg" alt="Axiom Realty AI" class="agent-logo" />
+        <p class="eyebrow" id="portalRole">Shared Stakeholder Portal</p>
+        <h1>Live visibility. One shared source of truth.</h1>
+        <p class="subtext">
+          This secure portal keeps buyer, seller, agent, attorney, bond originator, and concierge aligned on one live case view.
+        </p>
+        <p class="small-note" id="stakeholderStatus">Loading shared case...</p>
+      </section>
+
+      <section class="agent-card hidden" id="stakeholderLeadSummary"></section>
+
+      <section class="agent-card hidden" id="stakeholderUpdateCard">
+        <form id="stakeholderUpdateForm" class="agent-update-form">
+          <div class="agent-form-grid">
+            <label>
+              Deal status (optional)
+              <select id="stakeholderDealStatus">
+                <option value="">Keep unchanged</option>
+              </select>
+            </label>
+            <label>
+              Contact medium (optional)
+              <select id="stakeholderContactMedium">
+                <option value="">Not updating contact</option>
+              </select>
+            </label>
+            <label>
+              Next check-in (optional)
+              <input id="stakeholderNextCheckIn" type="date" />
+            </label>
+          </div>
+          <label>
+            Progress update
+            <textarea
+              id="stakeholderNote"
+              rows="4"
+              maxlength="500"
+              placeholder="Share an update so all parties remain aligned and informed."
+              required
+            ></textarea>
+          </label>
+          <button class="btn btn-primary large" id="stakeholderSubmit" type="submit">Save Shared Update</button>
+          <p class="privacy-note compact">
+            POPIA reassurance: this secure page is for this case only. Share and use data responsibly for property-service follow-up.
+          </p>
+        </form>
+      </section>
+    </main>
+
+    <script src="stakeholder-update.js"></script>
+  </body>
+</html>
