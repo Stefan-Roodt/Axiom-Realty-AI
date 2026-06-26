@@ -23,7 +23,7 @@
         <a class="brand" href="#top">
           <img src="assets-logo.svg" alt="Axiom Realty AI" />
         </a>
-        <a class="admin-nav-link" href="?admin=1#admin">Admin</a>
+        <a class="admin-nav-link" href="?admin=1#admin">Mission Control</a>
       </nav>
 
       <div class="hero-content wrapper">
@@ -183,15 +183,15 @@
       </section>
 
       <span id="admin" class="anchor-target" aria-hidden="true"></span>
-      <section class="section wrapper hidden" id="analytics" aria-label="Admin operations login">
+      <section class="section wrapper hidden" id="analytics" aria-label="Mission Control access">
         <div class="section-heading">
-          <p class="eyebrow">Operations Intelligence</p>
-          <h2>Live Funnel Metrics</h2>
+          <p class="eyebrow">Mission Control</p>
+          <h2>Axiom Caseflow Command</h2>
         </div>
         <form class="admin-gate" id="adminGate">
-          <label for="adminPassword">Admin password</label>
+          <label for="adminPassword">Access key</label>
           <div class="admin-row">
-            <input id="adminPassword" type="text" autocomplete="off" placeholder="Enter admin password" />
+            <input id="adminPassword" type="text" autocomplete="off" placeholder="Enter Mission Control access key" />
             <button class="btn btn-primary" type="submit">Unlock</button>
           </div>
           <p class="small-note hidden" id="adminMessage"></p>
@@ -199,26 +199,48 @@
         <div id="operationsPanel" class="hidden">
           <div class="operations-workspace-head">
             <div>
-              <p class="eyebrow">Concierge workspace</p>
-              <h3>Lead Inbox</h3>
+              <p class="eyebrow">Axiom Mission Control</p>
+              <h3>Caseflow Command</h3>
             </div>
-            <span class="risk-badge">Live operations</span>
+            <span class="risk-badge">Live caseflow</span>
+          </div>
+          <div class="mission-control-band" aria-label="Axiom operating system pillars">
+            <article class="mission-control-pill">
+              <span>Capture</span>
+              <strong>Register every lead cleanly</strong>
+              <small>Intent, timing, source, and contact confidence in one intake record.</small>
+            </article>
+            <article class="mission-control-pill">
+              <span>Handoff</span>
+              <strong>Pass the right case forward fast</strong>
+              <small>Agent acceptance, client contact, and referral terms stay visible.</small>
+            </article>
+            <article class="mission-control-pill">
+              <span>Protect</span>
+              <strong>Guard commission and document proof</strong>
+              <small>Fee control, vault evidence, and escalation triggers stay attached to the case.</small>
+            </article>
+            <article class="mission-control-pill">
+              <span>Progress</span>
+              <strong>Track the transaction to the finish</strong>
+              <small>Every milestone from offer to registration lives in one operating view.</small>
+            </article>
           </div>
           <div class="operations-tabs" role="tablist" aria-label="Operations workspace tabs">
-            <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox">Inbox</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Follow-up Updates</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">At Risk</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">7-Day Sprint</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Metrics</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Registers</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">WhatsApp</button>
+            <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox">Lead Radar</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Action Queue</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">Escalations</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">Momentum</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Scoreboard</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Protection Desk</button>
+            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">Concierge Comms</button>
           </div>
           <section class="operations-tab-panel active" data-operations-panel="inbox">
             <div class="card risk-panel inbox-panel">
               <div class="risk-topline">
                 <div>
-                  <h3>Lead Queue</h3>
-                  <p class="small-note">Filter, sort, and work leads without losing sight of referral status.</p>
+                  <h3>Live Lead Radar</h3>
+                  <p class="small-note">Qualify, route, and work cases without losing sight of handoff, referral, or protection status.</p>
                 </div>
                 <span class="risk-badge" id="leadQueueCount">Latest leads</span>
               </div>
@@ -227,12 +249,14 @@
                   <p class="eyebrow">Axiom Signal</p>
                   <strong id="inboxFocus">Finding today's clearest conversion move...</strong>
                   <span id="inboxBoundary">Live inbox protected. Checking quarantined records...</span>
+                  <small class="small-note" id="inboxCommandSummary">Loading control summary...</small>
                 </div>
                 <div class="inbox-command-side">
                   <span class="signal-target" id="inboxMission">6 referrals · 2 closures</span>
-                  <button class="location-btn ghost-action" type="button" data-open-operations-tab="sprint">Review sprint</button>
+                  <button class="location-btn ghost-action" type="button" data-open-operations-tab="sprint">Open momentum</button>
                 </div>
               </div>
+              <div class="inbox-command-deck" id="inboxCommandDeck"></div>
               <form class="lead-filter-form" id="leadFilterForm">
                 <label>
                   Period
@@ -282,16 +306,17 @@
             <div class="card risk-panel">
               <div class="risk-topline">
                 <div>
-                  <h3>Automated Follow-up Updates</h3>
-                  <p class="small-note">Filtered next actions from lead age, urgency, handoff status, contact confirmation, and commission risk.</p>
+                  <h3>Action Queue</h3>
+                  <p class="small-note">AI-prioritised next moves from lead age, urgency, handoff status, contact confirmation, and commission risk.</p>
                 </div>
                 <span class="risk-badge" id="taskQueueCount">Tasks loading</span>
               </div>
               <div class="daily-control-bar" id="dailyControlBar">
                 <div class="daily-control-title">
-                  <strong>Daily Concierge Control Panel</strong>
+                  <strong>Today's Control Pulse</strong>
                   <small id="dailyControlDate">Loading today...</small>
                 </div>
+                <p class="small-note" id="taskCommandSummary">Loading action focus...</p>
                 <div class="daily-control-grid">
                   <span>SLA met today: <b id="dailyControlSla">-</b></span>
                   <span>Escalations open: <b id="dailyControlEscalations">-</b></span>
@@ -301,16 +326,20 @@
                   <span>Closed won today: <b id="dailyControlClosures">-</b></span>
                 </div>
                 <div class="daily-control-actions">
-                  <button class="location-btn ghost-action" type="button" id="downloadDailyReport">Download Daily Report (CSV)</button>
+                  <button class="location-btn ghost-action" type="button" id="downloadDailyReport">Download Control Report (CSV)</button>
                 </div>
               </div>
+              <div class="task-command-deck" id="taskCommandDeck"></div>
+              <div class="followup-control-grid" id="followupControlGrid"></div>
               <div id="taskQueueList" class="task-queue-list"></div>
             </div>
           </section>
           <section class="operations-tab-panel" data-operations-panel="risk" hidden>
             <div class="card risk-panel">
-              <h3>At Risk Lead Queue</h3>
-              <p class="small-note">Leads close to or past SLA without first contact.</p>
+              <h3>Escalation Engine</h3>
+              <p class="small-note">Cases close to or past SLA, missing updates, missing proof, or drifting on transfer.</p>
+              <p class="small-note" id="riskCommandSummary">Loading intervention focus...</p>
+              <div class="risk-command-deck" id="riskCommandDeck"></div>
               <div id="riskLeadList" class="risk-lead-list"></div>
             </div>
           </section>
@@ -318,8 +347,8 @@
             <div class="card sprint-panel">
               <div class="risk-topline">
                 <div>
-                  <h3>7-Day Conversion Sprint</h3>
-                  <p class="small-note">Immediate proof point: refer 6 people through the site and close 2 deals. Every active lead should have one clear next move.</p>
+                  <h3>Momentum Window</h3>
+                  <p class="small-note">Immediate proof point: refer 6 people through the site and close 2 deals. Every active case should have one clear next move.</p>
                 </div>
                 <span class="risk-badge" id="sprintStatus">Sprint loading</span>
               </div>
@@ -330,7 +359,7 @@
                 <article><span>Contact confirmed</span><strong id="sprintContacted">-</strong><small>Last 7 days</small></article>
               </div>
               <div class="sprint-focus">
-                <strong>AI operating focus</strong>
+                <strong>Axiom operating focus</strong>
                 <p id="sprintFocus">Finding the clearest action...</p>
               </div>
               <div class="sprint-sources" id="sprintSources"></div>
@@ -357,8 +386,8 @@
             <div class="card risk-panel">
               <div class="risk-topline">
                 <div>
-                  <h3>Axiom Admin Registers</h3>
-                  <p class="small-note">PropWorx-style control layer for referral visibility, commission protection, and deal progression.</p>
+                  <h3>Protection Desk</h3>
+                  <p class="small-note">Referral visibility, commission protection, and deal progression in one control layer.</p>
                 </div>
                 <span class="risk-badge" id="registerSnapshotCount">Loading</span>
               </div>
@@ -369,6 +398,8 @@
                 <button class="register-filter-chip" type="button" data-register-filter="sale-pending">Sale Pending</button>
                 <button class="register-filter-chip" type="button" data-register-filter="closed-won">Closed Won</button>
               </div>
+              <p class="small-note" id="registerCommandSummary">Loading register summary...</p>
+              <div class="register-command-deck" id="registerCommandDeck"></div>
               <div class="register-grid">
                 <article class="register-card">
                   <h4>Referral Register</h4>
@@ -376,9 +407,9 @@
                     <table class="register-table">
                       <thead>
                         <tr>
-                          <th>Lead</th>
+                          <th>Case</th>
                           <th>Area</th>
-                          <th>Assigned Agent</th>
+                          <th>Receiving Agent</th>
                           <th>Status</th>
                         </tr>
                       </thead>
@@ -392,7 +423,7 @@
                     <table class="register-table">
                       <thead>
                         <tr>
-                          <th>Lead</th>
+                          <th>Case</th>
                           <th>Referral %</th>
                           <th>Expected Fee</th>
                           <th>Invoice / Payment</th>
@@ -409,9 +440,9 @@
                     <table class="register-table">
                       <thead>
                         <tr>
-                          <th>Lead</th>
-                          <th>Pipeline Stage</th>
-                          <th>Contact</th>
+                          <th>Case</th>
+                          <th>Current Milestone</th>
+                          <th>Next Checkpoint</th>
                           <th>Updated</th>
                         </tr>
                       </thead>
@@ -426,8 +457,8 @@
             <div class="card risk-panel whatsapp-bridge-panel">
               <div class="risk-topline">
                 <div>
-                  <h3>WhatsApp Test Bridge</h3>
-                  <p class="small-note">Pre-launch WhatsApp Web alerts to the central concierge. Replace with WhatsApp Cloud API before going live.</p>
+                  <h3>Concierge Comms</h3>
+                  <p class="small-note">Pre-launch message bridge for concierge alerts, confirmations, and handoff packs.</p>
                 </div>
                 <span class="risk-badge" id="whatsappBridgeBadge">Checking</span>
               </div>
@@ -437,13 +468,38 @@
                   <div class="risk-actions left-actions">
                     <button class="location-btn" type="button" id="startWhatsappBridge">Start / Refresh QR</button>
                     <button class="location-btn" type="button" id="sendWhatsappBridgeTest">Send Test Alert</button>
+                    <button class="location-btn" type="button" id="runSmartReminders">Run Smart Reminders</button>
+                    <button class="location-btn ghost-action" type="button" id="processWhatsappQueue">Process Queue</button>
                     <button class="location-btn ghost-action" type="button" id="logoutWhatsappBridge">Logout Test Bridge</button>
                   </div>
+                  <p class="small-note" id="smartReminderStatus">Smart reminders ready.</p>
                 </div>
                 <div class="whatsapp-qr-wrap hidden" id="whatsappQrWrap">
                   <img id="whatsappQrImage" alt="WhatsApp Web QR code" />
                   <p class="small-note">Scan with WhatsApp: Linked devices > Link a device.</p>
                 </div>
+              </div>
+              <div class="whatsapp-inbox-shell">
+                <aside class="whatsapp-case-list" id="whatsappCaseList"></aside>
+                <section class="whatsapp-thread-panel">
+                  <div class="whatsapp-thread-topline">
+                    <div>
+                      <h4 id="whatsappThreadTitle">No WhatsApp case selected</h4>
+                      <p class="small-note" id="whatsappThreadMeta">Inbound replies and document uploads will appear here.</p>
+                    </div>
+                    <div class="risk-actions left-actions">
+                      <button class="location-btn ghost-action" type="button" id="refreshWhatsappInbox">Refresh Inbox</button>
+                    </div>
+                  </div>
+                  <div class="whatsapp-thread-messages" id="whatsappThreadMessages">
+                    <p class="small-note">No WhatsApp conversations yet.</p>
+                  </div>
+                  <form class="whatsapp-reply-form" id="whatsappReplyForm">
+                    <select id="whatsappReplyRecipient" aria-label="Reply recipient"></select>
+                    <input id="whatsappReplyInput" type="text" maxlength="1600" placeholder="Type a WhatsApp reply or follow-up..." />
+                    <button class="location-btn" type="submit">Send Reply</button>
+                  </form>
+                </section>
               </div>
             </div>
           </section>

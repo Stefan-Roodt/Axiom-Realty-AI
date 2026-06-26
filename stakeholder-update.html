@@ -21,8 +21,8 @@
       <section class="agent-card">
         <img src="assets-logo.svg" alt="Axiom Realty AI" class="agent-logo" />
         <p class="eyebrow" id="portalRole">Shared Stakeholder Portal</p>
-        <h1>Live visibility. One shared source of truth.</h1>
-        <p class="subtext">
+        <h1 id="portalHeading">Live visibility. One shared source of truth.</h1>
+        <p class="subtext" id="portalIntro">
           This secure portal keeps buyer, seller, agent, attorney, bond originator, and concierge aligned on one live case view.
         </p>
         <p class="small-note" id="stakeholderStatus">Loading shared case...</p>
@@ -32,25 +32,32 @@
 
       <section class="agent-card hidden" id="stakeholderUpdateCard">
         <form id="stakeholderUpdateForm" class="agent-update-form">
+          <div class="portal-form-head">
+            <div>
+              <strong id="stakeholderFormTitle">Share a progress update</strong>
+              <p class="small-note" id="stakeholderFormHint">Keep the case current with one clear, relevant update.</p>
+            </div>
+          </div>
+          <div class="portal-prompt-deck" id="stakeholderPromptDeck"></div>
           <div class="agent-form-grid">
-            <label>
+            <label id="stakeholderDealStatusLabel">
               Deal status (optional)
               <select id="stakeholderDealStatus">
                 <option value="">Keep unchanged</option>
               </select>
             </label>
-            <label>
+            <label id="stakeholderContactMediumLabel">
               Contact medium (optional)
               <select id="stakeholderContactMedium">
                 <option value="">Not updating contact</option>
               </select>
             </label>
-            <label>
+            <label id="stakeholderNextCheckInLabel">
               Next check-in (optional)
               <input id="stakeholderNextCheckIn" type="date" />
             </label>
           </div>
-          <label>
+          <label id="stakeholderNoteLabel">
             Progress update
             <textarea
               id="stakeholderNote"

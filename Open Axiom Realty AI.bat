@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-call "%~dp0START-AXIOM-PERMANENT.cmd"
+call "%~dp0START-DEVELOPING.cmd"

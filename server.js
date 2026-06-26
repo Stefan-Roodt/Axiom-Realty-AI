@@ -31,6 +31,9 @@ const LEAD_AUTOMATION_INTERVAL_MS = Number(process.env.LEAD_AUTOMATION_INTERVAL_
 const AUTO_CONCIERGE_DIGEST_ENABLED = String(process.env.AUTO_CONCIERGE_DIGEST_ENABLED || "true").toLowerCase() === "true";
 const AUTO_CONCIERGE_DIGEST_HOUR = Number(process.env.AUTO_CONCIERGE_DIGEST_HOUR || 8);
 const AUTO_CONCIERGE_DIGEST_MINUTE = Number(process.env.AUTO_CONCIERGE_DIGEST_MINUTE || 0);
+const LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS || 1);
+const LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS || 1);
+const LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS || 7);
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "axiom-admin").trim();
 const dataDir = path.join(__dirname, "data");
 const sessionsFile = path.join(dataDir, "lead-sessions.json");
@@ -168,6 +171,18 @@ const leadDocumentCategoryAliases = {
   "Bond documents": ["bond document", "bond approval", "guarantee", "bank", "Milestone evidence"],
   "Rates clearance": ["rates clearance", "municipal clearance", "clearance certificate", "Milestone evidence"]
 };
+const leadDocumentCoreFolders = [
+  "FICA",
+  "Offer to Purchase (OTP)",
+  "Certificates",
+  "Proof of payment",
+  "Compliance documents",
+  "Transfer documents",
+  "Bond documents",
+  "Rates clearance",
+  "Referral acceptance proof",
+  "Communication log"
+];
 const leadDocumentMimeAllowList = new Set([
   "application/pdf",
   "image/jpeg",
@@ -567,7 +582,7 @@ function createDefaultOperationsPlaybooks() {
 
 function createDefaultOperationsStore() {
   return {
-    version: 3,
+    version: 4,
     cases: [
       { id: "AX-1048", client: "Johan & Mia Botha", journey: "seller", area: "Parys", property: "3-bedroom family home", value: "R1.75m - R1.95m", stage: "Market preparation", next: "Upload certified ID", owner: "Seller", due: "Today", status: "At risk", progress: 58, agent: "Elize van Zyl", concierge: "Stefan Roodt", attorney: "Moyo Attorneys", finance: "ABSA Home Loans", birthdays: { seller: "05-12", buyer: null } },
       { id: "AX-1053", client: "Naledi Mokoena", journey: "buyer", area: "Sandton", property: "2-bedroom sectional title", value: "Budget R2.4m", stage: "Bond pre-approval", next: "Upload latest payslip", owner: "Buyer", due: "Tomorrow", status: "In progress", progress: 32, agent: "Thabo Nkosi", concierge: "Lerato Maseko", attorney: "To appoint", finance: "ooba Bond Originators", birthdays: { seller: null, buyer: "09-03" } },
@@ -615,6 +630,8 @@ function createDefaultOperationsStore() {
       lastPhase2Summary: null,
       lastLeadAutomationRunAt: null,
       lastLeadAutomationSummary: null,
+      lastLeadDeadlineAutomationRunAt: null,
+      lastLeadDeadlineAutomationSummary: null,
       lastConciergeDigestDay: null,
       lastConciergeDigestAt: null,
       lastConciergeDigestStatus: null,
@@ -628,9 +645,13 @@ function createDefaultOperationsStore() {
       { level: "medium", caseId: "AX-1042", client: "Sarah Jacobs", issue: "Rates clearance follow-up", detail: "Attorney requested municipal certificate - Check expected date", due: "3 Jun" },
       { level: "medium", caseId: "AX-1039", client: "Ayesha Khan", issue: "Bond approval ready for review", detail: "Standard Bank uploaded approval letter - Confirm conditions", due: "Today" }
     ],
+    humanTakeover: {},
     identities: [],
     otpChallenges: [],
+    appointments: [],
     accessLinks: [],
+    caseNotes: [],
+    whatsappInbox: [],
     auditLog: []
   };
 }
@@ -643,6 +664,57 @@ function dedupeOperationsNotifications(notifications) {
     seen.add(item.dedupeKey);
     return true;
   });
+}
+
+function normalizeOperationsWhatsappInbox(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages.map((entry) => {
+    if (!entry || typeof entry !== "object") return entry;
+    const source = sanitizeShortText(entry.source || "", 80);
+    const senderRole = sanitizeShortText(entry.senderRole || "", 40).toLowerCase();
+    const hasRecipientPhone = Boolean(cleanPhoneNumber(entry.recipientPhone || ""));
+    const hasSenderPhone = Boolean(cleanPhoneNumber(entry.senderPhone || entry.senderCellphone || ""));
+    const looksLikeLegacyOutbound =
+      entry.direction === "inbound" &&
+      senderRole === "concierge" &&
+      hasRecipientPhone &&
+      !hasSenderPhone &&
+      (source === "admin-reply" || source.startsWith("inbound-command:"));
+    if (!looksLikeLegacyOutbound) return entry;
+    return {
+      ...entry,
+      direction: "outbound",
+      status: entry.status || "queued",
+      readAt: entry.readAt || entry.createdAt || new Date().toISOString()
+    };
+  });
+}
+
+function normalizeOperationsCaseNotes(notes) {
+  if (!Array.isArray(notes)) return [];
+  return notes
+    .filter((entry) => entry && typeof entry === "object" && entry.caseId)
+    .map((entry) => ({
+      id: entry.id || randomUUID(),
+      createdAt: entry.createdAt || new Date().toISOString(),
+      caseId: entry.caseId,
+      category: sanitizeShortText(entry.category || "General", 80) || "General",
+      title: sanitizeShortText(entry.title || "Case note", 180) || "Case note",
+      note: sanitizeShortText(entry.note || "", 4000),
+      source: sanitizeShortText(entry.source || "system", 80) || "system",
+      createdBy: sanitizeShortText(entry.createdBy || "System", 120) || "System",
+      transcript: sanitizeShortText(entry.transcript || "", 8000),
+      summary: sanitizeShortText(entry.summary || "", 1200),
+      media: entry.media && typeof entry.media === "object"
+        ? {
+            storageName: entry.media.storageName || null,
+            originalName: sanitizeShortText(entry.media.originalName || "", 180) || "voice-note",
+            mimeType: sanitizeShortText(entry.media.mimeType || "", 120).toLowerCase() || "application/octet-stream",
+            size: Number(entry.media.size || 0) || 0,
+            durationSeconds: Number(entry.media.durationSeconds || 0) || null
+          }
+        : null
+    }));
 }
 
 function loadPersistedOperations() {
@@ -680,7 +752,10 @@ function loadPersistedOperations() {
       priorities: stored.priorities || createDefaultOperationsStore().priorities,
       identities: Array.isArray(stored.identities) ? stored.identities : [],
       otpChallenges: Array.isArray(stored.otpChallenges) ? stored.otpChallenges : [],
+      appointments: Array.isArray(stored.appointments) ? stored.appointments.map((entry) => normalizeOperationsAppointment(entry)) : [],
       accessLinks: Array.isArray(stored.accessLinks) ? stored.accessLinks : [],
+      caseNotes: normalizeOperationsCaseNotes(stored.caseNotes),
+      whatsappInbox: normalizeOperationsWhatsappInbox(stored.whatsappInbox),
       auditLog: stored.auditLog || []
     };
     for (const item of operationsStore.cases || []) {
@@ -688,6 +763,7 @@ function loadPersistedOperations() {
       normalizeCaseMovingServices(item);
       normalizeCaseComplianceSupport(item);
       normalizeCaseFinanceSupport(item);
+      normalizeCaseHumanTakeover(item);
       normalizeCaseStakeholders(item);
       normalizeCaseStakeholderEmails(item);
     }
@@ -705,6 +781,710 @@ function persistOperations() {
   } catch {
     // Keep the local prototype responsive if a write fails.
   }
+}
+
+function ensureOperationsWhatsappInbox() {
+  operationsStore.whatsappInbox = Array.isArray(operationsStore.whatsappInbox) ? operationsStore.whatsappInbox : [];
+  return operationsStore.whatsappInbox;
+}
+
+function ensureOperationsCaseNotes() {
+  operationsStore.caseNotes = Array.isArray(operationsStore.caseNotes) ? operationsStore.caseNotes : [];
+  return operationsStore.caseNotes;
+}
+
+const operationsAppointmentStatuses = new Set([
+  "proposed",
+  "pending-confirmation",
+  "confirmed",
+  "reschedule-requested",
+  "completed",
+  "missed",
+  "cancelled"
+]);
+
+function normalizeOperationsAppointment(entry = {}) {
+  const scheduledFor = entry?.scheduledFor && !Number.isNaN(new Date(entry.scheduledFor).getTime()) ? new Date(entry.scheduledFor).toISOString() : null;
+  const participantRole = sanitizeShortText(entry?.participantRole || "", 40).toLowerCase();
+  const participantPhone = cleanPhoneNumber(entry?.participantPhone || "") || "";
+  const requestedStatus = sanitizeShortText(entry?.status || "", 60).toLowerCase();
+  const status = operationsAppointmentStatuses.has(requestedStatus) ? requestedStatus : participantPhone ? "pending-confirmation" : "proposed";
+  return {
+    id: entry?.id || randomUUID(),
+    caseId: sanitizeShortText(entry?.caseId || "", 40),
+    kind: sanitizeShortText(entry?.kind || "appointment", 60) || "appointment",
+    title: sanitizeShortText(entry?.title || "", 160) || "",
+    participantName: sanitizeShortText(entry?.participantName || "", 160) || "",
+    participantPhone,
+    participantRole: isValidOperationsParticipantRole(participantRole) ? participantRole : "",
+    scheduledFor,
+    location: sanitizeShortText(entry?.location || "", 200) || "",
+    notes: sanitizeShortText(entry?.notes || "", 500) || "",
+    status,
+    confirmationRequired: Boolean(entry?.confirmationRequired !== false && participantPhone),
+    createdAt: entry?.createdAt && !Number.isNaN(new Date(entry.createdAt).getTime()) ? new Date(entry.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: entry?.updatedAt && !Number.isNaN(new Date(entry.updatedAt).getTime()) ? new Date(entry.updatedAt).toISOString() : new Date().toISOString(),
+    createdBy: sanitizeShortText(entry?.createdBy || "System", 160) || "System",
+    confirmedAt: entry?.confirmedAt && !Number.isNaN(new Date(entry.confirmedAt).getTime()) ? new Date(entry.confirmedAt).toISOString() : null,
+    completedAt: entry?.completedAt && !Number.isNaN(new Date(entry.completedAt).getTime()) ? new Date(entry.completedAt).toISOString() : null,
+    cancelledAt: entry?.cancelledAt && !Number.isNaN(new Date(entry.cancelledAt).getTime()) ? new Date(entry.cancelledAt).toISOString() : null,
+    cancelledBy: sanitizeShortText(entry?.cancelledBy || "", 160) || "",
+    missedAt: entry?.missedAt && !Number.isNaN(new Date(entry.missedAt).getTime()) ? new Date(entry.missedAt).toISOString() : null,
+    rescheduleRequestedAt: entry?.rescheduleRequestedAt && !Number.isNaN(new Date(entry.rescheduleRequestedAt).getTime()) ? new Date(entry.rescheduleRequestedAt).toISOString() : null,
+    lastReminderAt: entry?.lastReminderAt && !Number.isNaN(new Date(entry.lastReminderAt).getTime()) ? new Date(entry.lastReminderAt).toISOString() : null,
+    lastNotificationId: entry?.lastNotificationId || null
+  };
+}
+
+function ensureOperationsAppointments() {
+  operationsStore.appointments = Array.isArray(operationsStore.appointments) ? operationsStore.appointments.map((entry) => normalizeOperationsAppointment(entry)) : [];
+  return operationsStore.appointments;
+}
+
+function listCaseAppointments(caseId) {
+  return ensureOperationsAppointments()
+    .filter((entry) => entry.caseId === caseId)
+    .sort((a, b) => {
+      const aTime = new Date(a.scheduledFor || a.createdAt || 0).getTime();
+      const bTime = new Date(b.scheduledFor || b.createdAt || 0).getTime();
+      return aTime - bTime;
+    });
+}
+
+function getCaseUpcomingAppointment(caseId, { role = "", phone = "" } = {}) {
+  const cleanPhone = cleanPhoneNumber(phone || "") || "";
+  return listCaseAppointments(caseId).find((entry) => {
+    if (["completed", "cancelled", "missed"].includes(entry.status)) return false;
+    if (role && entry.participantRole && entry.participantRole !== role) return false;
+    if (cleanPhone && entry.participantPhone && entry.participantPhone !== cleanPhone) return false;
+    return true;
+  }) || null;
+}
+
+function findOperationsAppointment(appointmentId) {
+  return ensureOperationsAppointments().find((entry) => entry.id === appointmentId) || null;
+}
+
+function formatOperationsAppointmentKind(kind = "") {
+  const normalized = String(kind || "").trim().toLowerCase();
+  return (
+    {
+      viewing: "Viewing",
+      valuation: "Valuation",
+      signing: "Signing",
+      callback: "Callback",
+      inspection: "Inspection"
+    }[normalized] || humanizeLabel(normalized || "appointment")
+  );
+}
+
+function formatOperationsAppointmentTime(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "time to be confirmed";
+  return date.toLocaleString("en-ZA", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function buildAppointmentWhatsappMessage(item, appointment, { mode = "scheduled" } = {}) {
+  const label = appointment?.title || formatOperationsAppointmentKind(appointment?.kind || "appointment");
+  const whenText = formatOperationsAppointmentTime(appointment?.scheduledFor);
+  const locationText = appointment?.location ? ` at ${appointment.location}` : "";
+  if (mode === "scheduled") {
+    return `${item.id}: ${label} has been booked for ${whenText}${locationText}. Reply CONFIRM to lock it in, RESCHEDULE if you need a different time, or MISSED if this slot falls away.`;
+  }
+  if (mode === "confirm-reminder") {
+    return `${item.id}: friendly reminder to confirm your ${label.toLowerCase()} for ${whenText}${locationText}. Reply CONFIRM to lock it in or RESCHEDULE if you need a different time.`;
+  }
+  if (mode === "day-of") {
+    return `${item.id}: your ${label.toLowerCase()} is today at ${whenText}${locationText}. Reply CALL ME if you need help or MISSED if this slot can no longer happen.`;
+  }
+  if (mode === "reschedule-ack") {
+    return `${item.id}: thank you, we have flagged your ${label.toLowerCase()} for rescheduling. A concierge will send a new time shortly.`;
+  }
+  if (mode === "missed-ack") {
+    return `${item.id}: thank you, we have marked the ${label.toLowerCase()} as missed and reopened scheduling follow-up. A concierge will contact you with the next slot.`;
+  }
+  if (mode === "confirmed-ack") {
+    return `${item.id}: thank you, your ${label.toLowerCase()} for ${whenText}${locationText} is confirmed.`;
+  }
+  if (mode === "cancelled") {
+    return `${item.id}: your ${label.toLowerCase()} scheduled for ${whenText}${locationText} has been cancelled. We will follow up with the next step if needed.`;
+  }
+  return `${item.id}: ${label} update recorded for ${whenText}${locationText}.`;
+}
+
+function getCaseWhatsappMessages(caseId) {
+  return ensureOperationsWhatsappInbox()
+    .filter((item) => item.caseId === caseId)
+    .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+}
+
+function getOperationsCaseNotes(caseId) {
+  return ensureOperationsCaseNotes()
+    .filter((item) => item.caseId === caseId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+}
+
+function findOperationsCaseByParticipantPhone(cellphone = "") {
+  const clean = cleanPhoneNumber(cellphone);
+  if (!clean) return null;
+  const matches = [];
+  for (const item of operationsStore.cases || []) {
+    const candidatePhones = [
+      resolveCaseParticipantPhone(item, "seller"),
+      resolveCaseParticipantPhone(item, "buyer"),
+      cleanPhoneNumber(item.agentPhone || ""),
+      cleanPhoneNumber(item.attorneyPhone || ""),
+      cleanPhoneNumber(item.financePhone || "")
+    ].filter(Boolean);
+    if (candidatePhones.includes(clean)) matches.push(item);
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function appendOperationsWhatsappMessage(entry = {}) {
+  const inbox = ensureOperationsWhatsappInbox();
+  const direction = sanitizeShortText(entry.direction || "inbound", 20).toLowerCase() === "outbound" ? "outbound" : "inbound";
+  const status = sanitizeShortText(entry.status || "", 120) || (direction === "outbound" ? "queued" : "captured");
+  const message = {
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+    status,
+    direction,
+    transport: "whatsapp",
+    readAt: null,
+    caseId: entry.caseId || "",
+    senderName: sanitizeShortText(entry.senderName || entry.sender || "Participant", 160),
+    senderPhone: cleanPhoneNumber(entry.senderPhone || entry.senderCellphone || "") || "",
+    senderRole: sanitizeShortText(entry.senderRole || "", 40).toLowerCase() || null,
+    recipientName: sanitizeShortText(entry.recipientName || "", 160) || "",
+    recipientPhone: cleanPhoneNumber(entry.recipientPhone || "") || "",
+    recipientRole: sanitizeShortText(entry.recipientRole || "", 40).toLowerCase() || null,
+    text: sanitizeShortText(entry.text || "", 2000),
+    source: sanitizeShortText(entry.source || "whatsapp-webhook", 80),
+    attachments: Array.isArray(entry.attachments) ? entry.attachments : [],
+    providerStatus: sanitizeShortText(entry.providerStatus || "", 120) || null,
+    notificationId: entry.notificationId || null,
+    linkedDocumentIds: Array.isArray(entry.linkedDocumentIds) ? entry.linkedDocumentIds : []
+  };
+  if (message.direction === "outbound") {
+    message.readAt = message.createdAt;
+  }
+  inbox.unshift(message);
+  operationsStore.whatsappInbox = inbox.slice(0, 2000);
+  return message;
+}
+
+function markOperationsWhatsappMessagesRead(caseId, actor = "Concierge") {
+  const now = new Date().toISOString();
+  let updated = 0;
+  for (const item of ensureOperationsWhatsappInbox()) {
+    if (item.caseId !== caseId || item.direction !== "inbound" || item.readAt) continue;
+    item.readAt = now;
+    item.readBy = sanitizeShortText(actor, 120) || "Concierge";
+    updated += 1;
+  }
+  return updated;
+}
+
+function isAllowedInboundDocumentType(mimeType = "", filename = "") {
+  const normalizedMime = String(mimeType || "").toLowerCase();
+  const lowerName = String(filename || "").toLowerCase();
+  const allowedMime = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain"
+  ]);
+  if (allowedMime.has(normalizedMime)) return true;
+  return [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".txt"].some((ext) => lowerName.endsWith(ext));
+}
+
+function parseInboundWhatsAppAttachments(body = {}) {
+  const raw = [];
+  if (Array.isArray(body.attachments)) raw.push(...body.attachments);
+  if (Array.isArray(body.media)) raw.push(...body.media);
+  if (body.attachment && typeof body.attachment === "object") raw.push(body.attachment);
+  if (!raw.length && (body.base64 || body.dataBase64 || body.mediaBase64 || body.mediaDataBase64 || body.mediaUrl || body.url)) {
+    raw.push({
+      filename: body.filename || body.name || "whatsapp-upload",
+      mimeType: body.mimeType || body.mediaMimeType || "",
+      base64: body.base64 || body.dataBase64 || body.mediaBase64 || body.mediaDataBase64 || "",
+      url: body.mediaUrl || body.url || "",
+      caption: body.caption || "",
+      documentName: body.documentName || body.category || ""
+    });
+  }
+  return raw
+    .map((item) => ({
+      filename: safeBaseFilename(sanitizeShortText(item?.filename || item?.name || "whatsapp-upload", 180)),
+      mimeType: sanitizeShortText(item?.mimeType || item?.type || "", 120).toLowerCase(),
+      base64: String(item?.base64 || item?.dataBase64 || item?.mediaBase64 || item?.mediaDataBase64 || "").trim(),
+      url: sanitizeShortText(item?.url || "", 1200),
+      caption: sanitizeShortText(item?.caption || "", 500),
+      documentName: sanitizeShortText(item?.documentName || item?.category || "", 180),
+      transcript: sanitizeShortText(item?.transcript || item?.voiceTranscript || item?.textTranscript || item?.speechToText || "", 8000),
+      durationSeconds: Number(item?.durationSeconds || item?.duration || 0) || null
+    }))
+    .filter((item) => item.filename || item.base64 || item.url);
+}
+
+function decodeInboundAttachmentBytes(attachment) {
+  const raw = String(attachment?.base64 || "").trim();
+  if (!raw) return null;
+  const clean = raw.includes(",") ? raw.split(",").pop() : raw;
+  try {
+    const bytes = Buffer.from(clean || "", "base64");
+    return bytes.length ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
+function isInboundVoiceNoteAttachment(attachment = {}) {
+  const mime = String(attachment?.mimeType || "").toLowerCase();
+  const filename = String(attachment?.filename || "").toLowerCase();
+  if (mime.startsWith("audio/")) return true;
+  return [".ogg", ".opus", ".mp3", ".m4a", ".aac", ".wav", ".webm"].some((ext) => filename.endsWith(ext));
+}
+
+function extractInboundVoiceTranscript(attachment = {}, messageText = "") {
+  return sanitizeShortText(
+    attachment.transcript ||
+      attachment.voiceTranscript ||
+      attachment.textTranscript ||
+      attachment.speechToText ||
+      attachment.text ||
+      messageText ||
+      "",
+    8000
+  );
+}
+
+function summarizeInboundVoiceTranscript(transcript = "") {
+  const clean = sanitizeShortText(String(transcript || "").replace(/\s+/g, " ").trim(), 4000);
+  if (!clean) return "";
+  if (clean.length <= 280) return clean;
+  const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
+  let summary = "";
+  for (const sentence of sentences) {
+    const next = summary ? `${summary} ${sentence}` : sentence;
+    if (next.length > 280) break;
+    summary = next;
+  }
+  return summary || `${clean.slice(0, 277)}...`;
+}
+
+function storeInboundSecureMedia(bytes, { originalName = "upload.bin", mimeType = "application/octet-stream" } = {}) {
+  ensureDataDir();
+  if (!fs.existsSync(secureDocumentsDir)) fs.mkdirSync(secureDocumentsDir, { recursive: true });
+  const storageName = `${randomUUID()}.bin`;
+  fs.writeFileSync(path.join(secureDocumentsDir, storageName), bytes);
+  return {
+    storageName,
+    originalName: safeBaseFilename(originalName),
+    mimeType: sanitizeShortText(mimeType, 120).toLowerCase() || "application/octet-stream",
+    size: bytes.length
+  };
+}
+
+function normalizeLooseText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function inboundTextHasAny(normalizedValue = "", phrases = []) {
+  const normalized = normalizeLooseText(normalizedValue);
+  if (!normalized) return false;
+  return phrases.some((phrase) => normalized.includes(normalizeLooseText(phrase)));
+}
+
+function inferInboundDocumentNames(attachment = {}, messageText = "") {
+  const combined = normalizeLooseText([
+    attachment.documentName,
+    attachment.caption,
+    attachment.filename,
+    messageText
+  ]
+    .filter(Boolean)
+    .join(" "));
+  if (!combined) return [];
+  const names = new Set();
+  if (inboundTextHasAny(combined, ["fica", "id", "identity document", "identity copy", "certified id", "passport"])) {
+    names.add("Certified identity document");
+  }
+  if (inboundTextHasAny(combined, ["fica", "proof of address", "utility bill", "municipal account", "rates account"])) {
+    names.add("Proof of address");
+  }
+  if (inboundTextHasAny(combined, ["payslip", "pay slip", "salary slip", "salary advice"])) {
+    names.add("Latest payslip");
+  }
+  if (inboundTextHasAny(combined, ["bank statement", "bank statements"])) {
+    names.add("Latest bank statements");
+  }
+  if (inboundTextHasAny(combined, ["otp", "offer to purchase", "signed offer", "sale agreement"])) {
+    names.add("Signed offer to purchase");
+  }
+  if (inboundTextHasAny(combined, ["mandate", "listing mandate"])) {
+    names.add("Signed mandate agreement");
+  }
+  if (inboundTextHasAny(combined, ["property condition disclosure", "disclosure form", "condition disclosure"])) {
+    names.add("Property condition disclosure form");
+  }
+  if (inboundTextHasAny(combined, ["bond approval", "approval letter"])) {
+    names.add("Bond approval letter");
+  }
+  if (inboundTextHasAny(combined, ["guarantee confirmation", "guarantee letter", "guarantees"])) {
+    names.add("Guarantee confirmation");
+  }
+  if (inboundTextHasAny(combined, ["attorney fica", "legal fica"])) {
+    names.add("Attorney FICA pack");
+  }
+  if (inboundTextHasAny(combined, ["rates clearance", "clearance certificate"])) {
+    names.add("Rates clearance certificate");
+  }
+  if (inboundTextHasAny(combined, ["electrical coc", "electrical compliance", "certificate of compliance"])) {
+    names.add("Electrical compliance certificate");
+  }
+  if (inboundTextHasAny(combined, ["transfer docs", "transfer documents", "signed transfer"])) {
+    names.add("Transfer documents");
+  }
+  return [...names];
+}
+
+function isOperationsDocumentRoleMatch(doc, role = "") {
+  if (!role) return true;
+  const owner = normalizeLooseText(doc?.owner || "");
+  if (!owner) return true;
+  if (role === "seller") return owner.includes("seller") || owner.includes("participant");
+  if (role === "buyer") return owner.includes("buyer") || owner.includes("participant");
+  if (role === "agent") return owner.includes("agent");
+  if (role === "attorney") return owner.includes("attorney") || owner.includes("convey");
+  if (role === "finance") return owner.includes("finance") || owner.includes("bond") || owner.includes("bank") || owner.includes("originator");
+  return true;
+}
+
+function findBestInboundDocumentMatch(candidates = [], desiredName = "", usedIds = new Set()) {
+  const desired = normalizeLooseText(desiredName);
+  if (!desired) return null;
+  const exact = candidates.find((doc) => !usedIds.has(doc.id) && normalizeLooseText(doc.name) === desired);
+  if (exact) return exact;
+  const fuzzy = candidates.find((doc) => {
+    if (usedIds.has(doc.id)) return false;
+    const docName = normalizeLooseText(doc.name);
+    return docName.includes(desired) || desired.includes(docName);
+  });
+  return fuzzy || null;
+}
+
+function inferInboundDocumentMatches(item, role, attachment, messageText = "") {
+  const fallbackName = attachment.documentName || attachment.caption || attachment.filename || "WhatsApp upload";
+  const desiredNames = inferInboundDocumentNames(attachment, messageText);
+  const roleCandidates = (operationsStore.documents || []).filter((doc) => doc.caseId === item.id && isOperationsDocumentRoleMatch(doc, role));
+  const openCandidates = roleCandidates.filter((doc) => !["Approved", "Uploaded"].includes(doc.status) || !doc.file?.storageName);
+  const candidates = openCandidates.length ? openCandidates : roleCandidates.filter((doc) => !doc.file?.storageName);
+  const matches = [];
+  const usedIds = new Set();
+
+  for (const desiredName of desiredNames) {
+    const match = findBestInboundDocumentMatch(candidates, desiredName, usedIds);
+    if (!match) continue;
+    usedIds.add(match.id);
+    matches.push(match);
+  }
+
+  if (!matches.length) {
+    const directMatch = findBestInboundDocumentMatch(candidates, fallbackName, usedIds);
+    if (directMatch) matches.push(directMatch);
+  }
+
+  if (!matches.length && candidates.length === 1) matches.push(candidates[0]);
+  return {
+    fallbackName,
+    desiredNames,
+    roleCandidates,
+    matches
+  };
+}
+
+function upsertOperationsDocumentFromWhatsapp(item, { sender = "", senderRole = "", attachment = {}, messageText = "" } = {}) {
+  const bytes = decodeInboundAttachmentBytes(attachment);
+  const fileBacked = Boolean(bytes);
+  const safeMime = attachment.mimeType || "application/octet-stream";
+  const safeNameBase = attachment.filename || `whatsapp-${senderRole || "upload"}${extFromMime(safeMime)}`;
+  const originalName = safeBaseFilename(safeNameBase);
+  const note = attachment.caption || attachment.documentName || "";
+  const inferred = inferInboundDocumentMatches(item, senderRole, attachment, messageText);
+  const ownerRoleLabel = senderRole ? getOperationsRoleLabel(senderRole) : "Participant";
+  const desiredNames = inferred.desiredNames.length ? inferred.desiredNames : [attachment.documentName || inferred.fallbackName || originalName];
+  const targets = inferred.matches.map((document) => ({ document, created: false }));
+  for (const desiredName of desiredNames) {
+    const alreadyMatched = targets.some((target) => normalizeLooseText(target.document?.name || target.name || "") === normalizeLooseText(desiredName));
+    if (alreadyMatched) continue;
+    const satisfied = findBestInboundDocumentMatch(inferred.roleCandidates || [], desiredName, new Set());
+    if (satisfied && ["Approved", "Uploaded"].includes(satisfied.status) && satisfied.file?.storageName) continue;
+    targets.push({ document: null, created: true, name: desiredName });
+  }
+  if (!targets.length) {
+    targets.push({ document: null, created: true, name: attachment.documentName || inferred.fallbackName || originalName });
+  }
+
+  return targets.map((target) => {
+    let document = target.document;
+    if (!document) {
+      document = {
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+        name: target.name || inferred.fallbackName || originalName,
+        caseId: item.id,
+        owner: `${sender || item.client} - ${ownerRoleLabel}`,
+        due: item.due || "Today",
+        reminder: "WhatsApp inbound",
+        status: fileBacked || attachment.url ? "Uploaded" : "Requested"
+      };
+      operationsStore.documents.unshift(document);
+    }
+
+    let ingestStatus = "metadata-only";
+    if (fileBacked && isAllowedInboundDocumentType(safeMime, originalName) && bytes.length <= LEAD_DOCUMENT_MAX_BYTES) {
+      ensureDataDir();
+      if (!fs.existsSync(secureDocumentsDir)) fs.mkdirSync(secureDocumentsDir, { recursive: true });
+      if (document.file?.storageName) {
+        const previous = path.join(secureDocumentsDir, path.basename(document.file.storageName));
+        if (fs.existsSync(previous)) fs.unlinkSync(previous);
+      }
+      const storageName = `${randomUUID()}.bin`;
+      fs.writeFileSync(path.join(secureDocumentsDir, storageName), bytes);
+      document.file = {
+        storageName,
+        originalName,
+        mimeType: safeMime,
+        size: bytes.length,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: `${sanitizeShortText(sender || "Participant", 120)} via WhatsApp`
+      };
+      document.status = "Uploaded";
+      document.reminder = "Received via WhatsApp - Awaiting review";
+      ingestStatus = "uploaded";
+      addOperationsTimeline(item.id, `${document.name} received via WhatsApp`, `${sender || "Participant"} sent ${originalName} on WhatsApp. The file is protected and awaiting review.`);
+      addOperationsActivity("UP", "WhatsApp document intake", `${item.id} - ${document.name}`);
+      addOperationsAudit("whatsapp-document-uploaded", item.id, `${document.name}: ${originalName}`);
+    } else if (attachment.url) {
+      document.externalUrl = attachment.url;
+      document.status = "Uploaded";
+      document.reminder = "WhatsApp media received - Awaiting review";
+      ingestStatus = "linked";
+      addOperationsTimeline(item.id, `${document.name} received via WhatsApp`, `${sender || "Participant"} sent a WhatsApp media reference for ${document.name}.`);
+      addOperationsActivity("UP", "WhatsApp media linked", `${item.id} - ${document.name}`);
+      addOperationsAudit("whatsapp-document-linked", item.id, `${document.name}: ${attachment.url}`);
+    } else if (fileBacked) {
+      document.reminder = "WhatsApp inbound - Review required";
+      ingestStatus = "unsupported";
+    } else {
+      document.reminder = "WhatsApp attachment noted";
+    }
+
+    return {
+      documentId: document.id,
+      documentName: document.name,
+      ingestStatus,
+      originalName,
+      mimeType: safeMime,
+      size: bytes?.length || null,
+      hasDownload: Boolean(document.file?.storageName),
+      note,
+      externalUrl: attachment.url || ""
+    };
+  });
+}
+
+function captureInboundVoiceNoteFromWhatsapp(item, { sender = "", senderRole = "", attachment = {}, messageText = "" } = {}) {
+  const bytes = decodeInboundAttachmentBytes(attachment);
+  const originalName = safeBaseFilename(attachment.filename || `voice-note${extFromMime(attachment.mimeType) || ".ogg"}`);
+  const transcript = extractInboundVoiceTranscript(attachment, messageText);
+  const summary = summarizeInboundVoiceTranscript(transcript);
+  const sentiment = analyzeWhatsappHumanTakeover({ voiceTranscript: transcript, voiceSummary: summary });
+  const media = bytes?.length
+    ? {
+        ...storeInboundSecureMedia(bytes, { originalName, mimeType: attachment.mimeType || "application/octet-stream" }),
+        durationSeconds: attachment.durationSeconds || null
+      }
+    : null;
+  const transcriptState = transcript ? "transcribed" : media ? "pending-transcript" : "noted";
+  const body = transcript
+    ? `Transcript: ${transcript}${summary && summary !== transcript ? `\n\nSummary: ${summary}` : ""}${sentiment ? `\n\nSentiment risk: ${sentiment.severity} (${sentiment.score})${sentiment.reasonLabels?.length ? `\nSignals: ${sentiment.reasonLabels.join(", ")}` : ""}` : ""}`
+    : "Voice note received. Transcript is pending because no local speech-to-text engine is configured in this app yet.";
+  const caseNote = addOperationsCaseNote({
+    caseId: item.id,
+    category: "Voice note",
+    title: `WhatsApp voice note from ${sender || "Participant"}`,
+    note: body,
+    source: "whatsapp-voice-note",
+    createdBy: sender || "Participant",
+    transcript,
+    summary,
+    media
+  });
+  addOperationsTimeline(
+    item.id,
+    "WhatsApp voice note received",
+    transcript
+      ? `${sender || "Participant"} sent a voice note. Transcript saved to case notes${summary ? ` and summarised as: ${summary}` : "."}${sentiment ? ` Sentiment risk scored ${sentiment.severity} (${sentiment.score}).` : ""}`
+      : `${sender || "Participant"} sent a voice note. Audio saved and a case note created while transcription remains pending.`
+  );
+  addOperationsActivity("VN", "WhatsApp voice note captured", `${item.id} - ${sender || "Participant"}`);
+  addOperationsAudit("whatsapp-voice-note", item.id, `${sender || "Participant"}: ${summary || transcript || "Transcript pending"}${sentiment ? ` | sentiment ${sentiment.severity} (${sentiment.score})` : ""}`);
+  return {
+    kind: "voice-note",
+    caseNoteId: caseNote?.id || null,
+    documentId: null,
+    documentName: "Voice note",
+    ingestStatus: transcriptState,
+    originalName,
+    mimeType: attachment.mimeType || "application/octet-stream",
+    size: bytes?.length || null,
+    hasDownload: Boolean(media?.storageName),
+    downloadPath: caseNote?.id ? `/api/whatsapp/inbox/media/${encodeURIComponent(caseNote.id)}/download` : "",
+    note: attachment.caption || "",
+    transcript,
+    summary,
+    sentiment,
+    externalUrl: attachment.url || ""
+  };
+}
+
+function buildWhatsappInboxParticipants(item, messages = []) {
+  const roleMap = { SELL: "seller", BUY: "buyer", AGENT: "agent", TRANS: "attorney", ORIG: "finance", CONC: "concierge" };
+  const map = new Map();
+  for (const code of ["SELL", "BUY", "AGENT", "TRANS", "ORIG"]) {
+    const recipient = resolveGateOwnerRecipient(item, code);
+    if (!recipient?.name || /^to appoint$/i.test(recipient.name) || !recipient.phone) continue;
+    map.set(recipient.phone, {
+      name: recipient.name,
+      phone: recipient.phone,
+      role: roleMap[code] || code.toLowerCase(),
+      stakeholderCode: code
+    });
+  }
+  for (const message of messages) {
+    const phone = cleanPhoneNumber(message.senderPhone || message.recipientPhone || "");
+    if (!phone) continue;
+    if (!map.has(phone)) {
+      const resolvedRole = sanitizeShortText(message.direction === "inbound" ? message.senderRole || "" : message.recipientRole || "", 40).toLowerCase() || null;
+      const resolvedOwnerText = message.direction === "inbound" ? message.senderRole || message.senderName || "" : message.recipientRole || message.recipientName || "";
+      map.set(phone, {
+        name: message.direction === "inbound" ? message.senderName : message.recipientName || "Participant",
+        phone,
+        role: resolvedRole,
+        stakeholderCode: mapOwnerTextToStakeholderCode(resolvedOwnerText)
+      });
+    }
+  }
+  return [...map.values()];
+}
+
+function buildAdminWhatsappInboxSummary() {
+  const cases = [];
+  for (const item of operationsStore.cases || []) {
+    const messages = getCaseWhatsappMessages(item.id);
+    if (!messages.length) continue;
+    const latest = messages[messages.length - 1];
+    const latestVoiceNote = (latest?.attachments || []).find((attachment) => attachment.kind === "voice-note");
+    const unreadCount = messages.filter((entry) => entry.direction === "inbound" && !entry.readAt).length;
+    cases.push({
+      caseId: item.id,
+      client: item.client,
+      stage: item.stage,
+      next: item.next,
+      owner: item.owner,
+      humanTakeover: getCaseHumanTakeoverState(item),
+      unreadCount,
+      lastMessageAt: latest?.createdAt || null,
+      lastMessagePreview:
+        latest?.text ||
+        latestVoiceNote?.summary ||
+        latestVoiceNote?.transcript ||
+        (latest?.attachments?.length ? "Attachment received" : "No message body"),
+      participants: buildWhatsappInboxParticipants(item, messages),
+      caseNotes: getOperationsCaseNotes(item.id).slice(0, 6),
+      documents: (operationsStore.documents || [])
+        .filter((doc) => doc.caseId === item.id)
+        .map((doc) => ({
+          id: doc.id,
+          name: doc.name,
+          owner: doc.owner,
+          status: doc.status,
+          hasFile: Boolean(doc.file?.storageName),
+          uploadedAt: doc.file?.uploadedAt || null
+        })),
+      appointments: listCaseAppointments(item.id).map((appointment) => ({
+        ...appointment,
+        kindLabel: formatOperationsAppointmentKind(appointment.kind)
+      })),
+      messages: messages.map((message) => ({
+        ...message,
+        attachments: Array.isArray(message.attachments) ? message.attachments : []
+      }))
+    });
+  }
+  return cases.sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
+}
+
+async function sendManualWhatsappInboxReply({
+  item,
+  message = "",
+  recipientName = "",
+  recipientPhone = "",
+  recipientRole = "",
+  source = "admin-reply",
+  actor = "Concierge"
+} = {}) {
+  const cleanMessage = sanitizeShortText(message, 1600);
+  const cleanPhone = cleanPhoneNumber(recipientPhone);
+  if (!item?.id || !cleanPhone || !cleanMessage) {
+    return { ok: false, error: "Recipient phone and message are required" };
+  }
+  const notification = queueOperationsNotification({
+    caseId: item.id,
+    channel: "whatsapp",
+    preferredChannel: "whatsapp",
+    stakeholderCode: mapOwnerTextToStakeholderCode(recipientRole || recipientName),
+    recipient: recipientName || cleanPhone,
+    recipientPhone: cleanPhone,
+    template: "manual-reply",
+    message: cleanMessage,
+    dedupeKey: null,
+    bypassPause: true
+  });
+  const delivered = await deliverOperationsNotification(notification);
+  const threadMessage = appendOperationsWhatsappMessage({
+    caseId: item.id,
+    direction: "outbound",
+    senderName: actor,
+    senderRole: "concierge",
+    recipientName: recipientName || cleanPhone,
+    recipientPhone: cleanPhone,
+    recipientRole,
+    text: cleanMessage,
+    source,
+    status: delivered.status || "queued",
+    providerStatus: delivered.providerStatus || delivered.status || null,
+    notificationId: delivered.id
+  });
+  addOperationsTimeline(item.id, "WhatsApp reply sent", `${actor} replied to ${recipientName || cleanPhone} on WhatsApp.`);
+  addOperationsActivity("WA", "WhatsApp reply sent", `${item.id} - ${recipientName || cleanPhone}`);
+  addOperationsAudit("whatsapp-reply-sent", item.id, `${recipientName || cleanPhone}: ${cleanMessage}`);
+  persistOperations();
+  return { ok: true, delivered: delivered.status === "delivered", notification: delivered, threadMessage };
 }
 
 function createPinHash(pin) {
@@ -1121,6 +1901,9 @@ function getVisibleOperationsStore(user) {
     playbooks: operationsStore.playbooks || [],
     workflowRuns: visibleWorkflowRuns,
     identities: visibleIdentities,
+    appointments: ensureOperationsAppointments()
+      .filter((item) => allowedIds.has(item.caseId))
+      .map((item) => (user.role === "concierge" || item.participantRole === user.role ? item : { ...item, participantPhone: "" })),
     accessLinks: visibleAccessLinks,
     auditLog: user.role === "concierge" ? operationsStore.auditLog : []
   };
@@ -1204,6 +1987,36 @@ function normalizeCaseBirthdays(item) {
     seller: existing.seller || null,
     buyer: existing.buyer || null
   };
+}
+
+function normalizeCaseHumanTakeover(item) {
+  if (!item) return;
+  const existing = item.humanTakeover && typeof item.humanTakeover === "object" ? item.humanTakeover : {};
+  item.humanTakeover = {
+    active: Boolean(existing.active),
+    pauseAutomation: existing.pauseAutomation !== false,
+    flaggedAt: existing.flaggedAt || null,
+    flaggedBy: sanitizeShortText(existing.flaggedBy || "", 160) || null,
+    source: sanitizeShortText(existing.source || "", 80) || null,
+    reasonCodes: Array.isArray(existing.reasonCodes) ? existing.reasonCodes.map((code) => sanitizeShortText(code, 80)).filter(Boolean) : [],
+    reasonLabels: Array.isArray(existing.reasonLabels) ? existing.reasonLabels.map((label) => sanitizeShortText(label, 120)).filter(Boolean) : [],
+    triggerMessage: sanitizeShortText(existing.triggerMessage || "", 1200) || "",
+    triggerMessageId: existing.triggerMessageId || null,
+    lastInboundAt: existing.lastInboundAt || null,
+    resumedAt: existing.resumedAt || null,
+    resumedBy: sanitizeShortText(existing.resumedBy || "", 160) || null,
+    resumeNote: sanitizeShortText(existing.resumeNote || "", 500) || ""
+  };
+}
+
+function getCaseHumanTakeoverState(item) {
+  normalizeCaseHumanTakeover(item);
+  return item?.humanTakeover || null;
+}
+
+function isCaseAutomationPaused(item) {
+  const takeover = getCaseHumanTakeoverState(item);
+  return Boolean(takeover?.active && takeover?.pauseAutomation !== false);
 }
 
 function normalizeCaseMovingServices(item) {
@@ -2052,9 +2865,44 @@ function addOperationsAudit(type, caseId, detail) {
   operationsStore.auditLog = operationsStore.auditLog.slice(0, 250);
 }
 
+function addOperationsCaseNote({
+  caseId,
+  category = "General",
+  title = "Case note",
+  note = "",
+  source = "system",
+  createdBy = "System",
+  transcript = "",
+  summary = "",
+  media = null
+} = {}) {
+  if (!caseId) return null;
+  const entry = {
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+    caseId,
+    category: sanitizeShortText(category, 80) || "General",
+    title: sanitizeShortText(title, 180) || "Case note",
+    note: sanitizeShortText(note, 4000),
+    source: sanitizeShortText(source, 80) || "system",
+    createdBy: sanitizeShortText(createdBy, 120) || "System",
+    transcript: sanitizeShortText(transcript, 8000),
+    summary: sanitizeShortText(summary, 1200),
+    media: media && typeof media === "object" ? media : null
+  };
+  const notes = ensureOperationsCaseNotes();
+  notes.unshift(entry);
+  operationsStore.caseNotes = notes.slice(0, 2000);
+  return entry;
+}
+
 function buildOperationsCaseSummary(item) {
   if (!item) return "";
-  return `${item.id} is ${item.progress}% complete. Current stage: ${item.stage}. Next action: ${item.next}. Responsible party: ${item.owner}. Due: ${item.due}.`;
+  const appointment = getCaseUpcomingAppointment(item.id);
+  const appointmentText = appointment
+    ? ` Next appointment: ${appointment.title || formatOperationsAppointmentKind(appointment.kind)} on ${formatOperationsAppointmentTime(appointment.scheduledFor)} (${appointment.status}).`
+    : "";
+  return `${item.id} is ${item.progress}% complete. Current stage: ${item.stage}. Next action: ${item.next}. Responsible party: ${item.owner}. Due: ${item.due}.${appointmentText}`;
 }
 
 function listCaseDocuments(caseId) {
@@ -2063,6 +2911,63 @@ function listCaseDocuments(caseId) {
 
 function listOutstandingCaseDocuments(caseId) {
   return listCaseDocuments(caseId).filter((entry) => !["Approved"].includes(entry.status));
+}
+
+function isOperationsDocumentAwaitingParticipant(doc) {
+  const status = String(doc?.status || "").toLowerCase();
+  return !["approved", "uploaded"].includes(status);
+}
+
+function getOperationsDocumentRole(doc) {
+  const owner = normalizeLooseText(doc?.owner || "");
+  if (owner.includes("seller")) return "seller";
+  if (owner.includes("buyer")) return "buyer";
+  if (owner.includes("agent")) return "agent";
+  if (owner.includes("attorney") || owner.includes("convey")) return "attorney";
+  if (owner.includes("finance") || owner.includes("bond") || owner.includes("bank") || owner.includes("originator")) return "finance";
+  return "";
+}
+
+function getRoleGuidedOutstandingDocuments(caseId, role = "") {
+  const docs = listCaseDocuments(caseId)
+    .filter((entry) => isOperationsDocumentRoleMatch(entry, role) && isOperationsDocumentAwaitingParticipant(entry));
+  return docs.sort((a, b) => {
+    const aDue = parseOperationsDueDate(a?.due, new Date())?.getTime() || Number.MAX_SAFE_INTEGER;
+    const bDue = parseOperationsDueDate(b?.due, new Date())?.getTime() || Number.MAX_SAFE_INTEGER;
+    if (aDue !== bDue) return aDue - bDue;
+    const aCreated = new Date(a?.createdAt || 0).getTime() || 0;
+    const bCreated = new Date(b?.createdAt || 0).getTime() || 0;
+    if (aCreated !== bCreated) return aCreated - bCreated;
+    return new Date(a?.file?.uploadedAt || 0).getTime() - new Date(b?.file?.uploadedAt || 0).getTime();
+  });
+}
+
+function getCaseNextGuidedDocument(item, role = "") {
+  if (!item?.id) return null;
+  return getRoleGuidedOutstandingDocuments(item.id, role)[0] || null;
+}
+
+function inferDocumentUploadHint(documentName = "") {
+  const name = String(documentName || "").toLowerCase();
+  if (name.includes("id")) return "Please send a clear PDF or photo of the ID document.";
+  if (name.includes("proof of address")) return "Please send the latest proof of address PDF or photo.";
+  if (name.includes("payslip")) return "Please send the latest payslip as PDF or clear photo.";
+  if (name.includes("bank statement")) return "Please send the latest stamped bank statement PDF.";
+  if (name.includes("offer to purchase") || /\botp\b/.test(name)) return "Please send the signed OTP PDF or photo of every signed page.";
+  if (name.includes("mandate")) return "Please send the signed mandate as PDF or clear photo.";
+  if (name.includes("bond")) return "Please send the bond document PDF or letter.";
+  if (name.includes("guarantee")) return "Please send the guarantee letter PDF.";
+  return "Please send a PDF, JPG or PNG of the requested document.";
+}
+
+function buildGuidedDocumentRequestMessage(item, document, { includeQueueContext = true } = {}) {
+  if (!item?.id || !document?.name) return "";
+  const remaining = getRoleGuidedOutstandingDocuments(item.id, getOperationsDocumentRole(document));
+  const remainingCount = remaining.length;
+  const queueLine = includeQueueContext && remainingCount > 1
+    ? ` We are collecting these one at a time. After this, ${remainingCount - 1} more document${remainingCount - 1 === 1 ? "" : "s"} will remain.`
+    : "";
+  return `${item.id}: next required document is ${document.name}.${document.due ? ` Due: ${document.due}.` : ""} ${inferDocumentUploadHint(document.name)} Reply DOCS for the current checklist or CALL ME if you need help.${queueLine}`;
 }
 
 function listRecentCaseTimelineEvents(caseId, limit = 3) {
@@ -2160,6 +3065,7 @@ function prepareOperationsMilestone(item, { milestoneId = "", advance = false } 
     if (!document) {
       document = {
         id: randomUUID(),
+        createdAt: new Date().toISOString(),
         name: required.name,
         caseId: item.id,
         owner: resolveOperationsMilestoneOwner(item, required.owner),
@@ -2170,16 +3076,20 @@ function prepareOperationsMilestone(item, { milestoneId = "", advance = false } 
       };
       operationsStore.documents.unshift(document);
       createdDocuments.push(document);
-      const notification = queueOperationsNotification({
-        caseId: item.id,
-        channel: "auto",
-        stakeholderCode: mapOwnerTextToStakeholderCode(document.owner),
-        recipient: document.owner,
-        template: "document-request",
-        message: document.name,
-        dedupeKey: `playbook-document-request:${playbookKey}`
-      });
-      queuedNotifications.push(notification);
+      const role = getOperationsDocumentRole(document);
+      const activeGuidedDoc = getCaseNextGuidedDocument(item, role);
+      if (activeGuidedDoc?.id === document.id) {
+        const notification = queueOperationsNotification({
+          caseId: item.id,
+          channel: "auto",
+          stakeholderCode: mapOwnerTextToStakeholderCode(document.owner),
+          recipient: document.owner,
+          template: "document-request",
+          message: buildGuidedDocumentRequestMessage(item, document),
+          dedupeKey: `playbook-document-request:${playbookKey}`
+        });
+        queuedNotifications.push(notification);
+      }
     } else if (!document.playbookKey) {
       document.playbookKey = playbookKey;
     }
@@ -2253,6 +3163,7 @@ function buildOperationsNotificationMessage(notification) {
   const messages = {
     "journey-welcome": `Welcome to Axiom Realty AI. Your property journey ${caseLabel} is active. Sign in to see the next step and outstanding information.`,
     "smart-reminder": `Axiom Realty AI reminder for ${caseLabel}: ${notification.message || item?.next || "Please review your next action."}`,
+    "manual-reply": `${notification.message || `Axiom Realty AI update for ${caseLabel}.`}`,
     "document-request": `Axiom Realty AI document request for ${caseLabel}: please provide ${notification.message || "the requested document"}. Your secure portal shows the due date and upload route.`,
     "document-reminder": `Axiom Realty AI reminder for ${caseLabel}: ${notification.message || "A requested document is still outstanding."}`,
     "gate-nudge": `Axiom Realty AI control-gate alert for ${caseLabel}: ${notification.message || "A control gate needs owner action."}`,
@@ -2298,11 +3209,37 @@ function queueOperationsNotification({
   recipientEmail = "",
   template,
   message = "",
-  dedupeKey = null
+  dedupeKey = null,
+  bypassPause = false
 }) {
   if (dedupeKey) {
     const existing = operationsStore.notifications.find((item) => item.dedupeKey === dedupeKey && item.status !== "cancelled");
     if (existing) return existing;
+  }
+  const item = caseId ? findOperationsCase(caseId) : null;
+  if (!bypassPause && item && isCaseAutomationPaused(item)) {
+    return {
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      caseId,
+      channel: (channel || "auto").toLowerCase(),
+      preferredChannel: (preferredChannel || preferredChannelForStakeholder(stakeholderCode || "") || channel || "auto").toLowerCase(),
+      stakeholderCode: stakeholderCode || null,
+      recipient,
+      recipientPhone: cleanPhoneNumber(recipientPhone) || "",
+      recipientEmail: cleanEmailAddress(recipientEmail) || "",
+      template,
+      message,
+      dedupeKey,
+      status: "paused-human-takeover",
+      attempts: 0,
+      lastAttemptAt: null,
+      deliveredAt: null,
+      nextRetryAt: null,
+      lastError: "Automation paused for human takeover",
+      providerStatus: "paused-human-takeover"
+    };
   }
   const phone = cleanPhoneNumber(recipientPhone) || resolveOperationsRecipientPhone(recipient, caseId);
   const email = cleanEmailAddress(recipientEmail) || resolveOperationsRecipientEmail(recipient, caseId, stakeholderCode);
@@ -2825,10 +3762,98 @@ function sweepOperationsLifeCoverOffer(now = new Date()) {
   return summary;
 }
 
-function sweepOperationsReminders() {
+function sweepOperationsAppointmentLoops(now = new Date()) {
+  const summary = { checked: 0, queued: 0, alreadyQueued: 0, escalated: 0 };
+  for (const appointment of ensureOperationsAppointments()) {
+    if (!appointment.caseId || !appointment.scheduledFor) continue;
+    if (["completed", "cancelled", "missed"].includes(appointment.status)) continue;
+    summary.checked += 1;
+    const item = findOperationsCase(appointment.caseId);
+    if (!item) continue;
+    const scheduledAt = new Date(appointment.scheduledFor);
+    if (Number.isNaN(scheduledAt.getTime())) continue;
+    const diffMs = scheduledAt.getTime() - now.getTime();
+    const hoursUntil = diffMs / (60 * 60 * 1000);
+    const hoursPast = (now.getTime() - scheduledAt.getTime()) / (60 * 60 * 1000);
+
+    if (appointment.participantPhone && ["pending-confirmation", "proposed", "reschedule-requested"].includes(appointment.status) && hoursUntil <= 30 && hoursUntil >= 3) {
+      const dedupeKey = `appointment-confirm:${appointment.id}:${getOperationsDateKey(now)}`;
+      const exists = operationsStore.notifications.some((entry) => entry.dedupeKey === dedupeKey && entry.status !== "cancelled");
+      if (exists) {
+        summary.alreadyQueued += 1;
+      } else {
+        const notification = queueOperationsNotification({
+          caseId: item.id,
+          channel: "auto",
+          preferredChannel: "whatsapp",
+          stakeholderCode: mapOwnerTextToStakeholderCode(appointment.participantRole || appointment.participantName),
+          recipient: appointment.participantName || appointment.participantPhone,
+          recipientPhone: appointment.participantPhone,
+          template: "appointment-confirmation",
+          message: buildAppointmentWhatsappMessage(item, appointment, { mode: "confirm-reminder" }),
+          dedupeKey
+        });
+        if (notification.status === "queued") {
+          appointment.lastReminderAt = new Date().toISOString();
+          appointment.lastNotificationId = notification.id;
+          appointment.updatedAt = new Date().toISOString();
+          summary.queued += 1;
+          addOperationsTimeline(item.id, "Appointment confirmation reminder queued", `${appointment.title || formatOperationsAppointmentKind(appointment.kind)} reminder queued for ${appointment.participantName || appointment.participantPhone}.`);
+          addOperationsActivity("BOOK", "Appointment reminder queued", `${item.id} - ${appointment.title || formatOperationsAppointmentKind(appointment.kind)}`);
+          addOperationsAudit("appointment-confirmation-reminder", item.id, appointment.id);
+        }
+      }
+    }
+
+    if (appointment.participantPhone && appointment.status === "confirmed" && hoursUntil <= 4 && hoursUntil >= 0) {
+      const dedupeKey = `appointment-dayof:${appointment.id}:${getOperationsDateKey(now)}`;
+      const exists = operationsStore.notifications.some((entry) => entry.dedupeKey === dedupeKey && entry.status !== "cancelled");
+      if (exists) {
+        summary.alreadyQueued += 1;
+      } else {
+        const notification = queueOperationsNotification({
+          caseId: item.id,
+          channel: "auto",
+          preferredChannel: "whatsapp",
+          stakeholderCode: mapOwnerTextToStakeholderCode(appointment.participantRole || appointment.participantName),
+          recipient: appointment.participantName || appointment.participantPhone,
+          recipientPhone: appointment.participantPhone,
+          template: "appointment-day-of",
+          message: buildAppointmentWhatsappMessage(item, appointment, { mode: "day-of" }),
+          dedupeKey
+        });
+        if (notification.status === "queued") {
+          appointment.lastReminderAt = new Date().toISOString();
+          appointment.lastNotificationId = notification.id;
+          appointment.updatedAt = new Date().toISOString();
+          summary.queued += 1;
+          addOperationsTimeline(item.id, "Appointment day-of reminder queued", `${appointment.title || formatOperationsAppointmentKind(appointment.kind)} day-of reminder queued for ${appointment.participantName || appointment.participantPhone}.`);
+          addOperationsActivity("BOOK", "Appointment day-of reminder", `${item.id} - ${appointment.title || formatOperationsAppointmentKind(appointment.kind)}`);
+          addOperationsAudit("appointment-dayof-reminder", item.id, appointment.id);
+        }
+      }
+    }
+
+    if (hoursPast >= 2 && ["pending-confirmation", "confirmed", "reschedule-requested", "proposed"].includes(appointment.status)) {
+      const escalationKey = `appointment-overdue:${appointment.id}:${getOperationsDateKey(now)}`;
+      if (!operationsStore.escalations.some((entry) => entry.dedupeKey === escalationKey)) {
+        operationsStore.escalations.unshift(createOperationsEscalation({
+          item,
+          question: `${appointment.title || formatOperationsAppointmentKind(appointment.kind)} appears unattended after ${formatOperationsAppointmentTime(appointment.scheduledFor)}. Confirm outcome, reschedule if needed, and record the next dated move.`,
+          owner: item.concierge || "Concierge queue",
+          dedupeKey: escalationKey
+        }));
+        summary.escalated += 1;
+      }
+    }
+  }
+  return summary;
+}
+
+function sweepOperationsReminders({ fullAutomation = true } = {}) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const summary = { inspected: 0, queued: 0, escalated: 0 };
+  const summary = { inspected: 0, queued: 0, alreadyQueued: 0, escalated: 0 };
   for (const document of operationsStore.documents) {
     if (["Approved", "Uploaded"].includes(document.status)) continue;
     const due = parseOperationsDueDate(document.due, now);
@@ -2839,13 +3864,22 @@ function sweepOperationsReminders() {
     const stage = days < 0 ? "overdue" : days === 0 ? "due-today" : `due-${days}d`;
     const dedupeKey = `document-reminder:${document.id}:${stage}`;
     const alreadyQueued = operationsStore.notifications.some((item) => item.dedupeKey === dedupeKey && item.status !== "cancelled");
+    if (alreadyQueued) summary.alreadyQueued += 1;
+    const role = getOperationsDocumentRole(document);
+    const guidedDocs = getRoleGuidedOutstandingDocuments(document.caseId, role);
+    const activeDoc = guidedDocs[0];
+    if (activeDoc?.id !== document.id) continue;
     const notification = queueOperationsNotification({
       caseId: document.caseId,
       channel: "auto",
+      preferredChannel: "whatsapp",
       stakeholderCode: mapOwnerTextToStakeholderCode(document.owner),
       recipient: document.owner,
       template: "document-reminder",
-      message: `${document.name} is ${days < 0 ? "overdue" : days === 0 ? "due today" : `due in ${days} day${days === 1 ? "" : "s"}`}.`,
+      message: buildGuidedDocumentRequestMessage(findOperationsCase(document.caseId) || { id: document.caseId }, {
+        ...document,
+        due: days < 0 ? `${document.due} (overdue)` : document.due
+      }),
       dedupeKey
     });
     if (!alreadyQueued && notification.status === "queued" && notification.attempts === 0) {
@@ -2868,18 +3902,22 @@ function sweepOperationsReminders() {
       }
     }
   }
-  const birthdaySummary = sweepOperationsBirthdays(now);
-  const movingSummary = sweepOperationsMovingServicesOffer(now);
-  const bondOriginatorSummary = sweepOperationsBondOriginatorOffer(now);
-  const lifeCoverSummary = sweepOperationsLifeCoverOffer(now);
-  const electricalSummary = sweepOperationsElectricalCoCOffer(now);
-  const gasSummary = sweepOperationsGasCoCOffer(now);
-  const gateSummary = sweepOperationsGateNudges(now);
-  const recoverySummary = sweepOperationsRecoveryPlans(now);
-  const phase2Summary = runOperationsPhase2Automation(now);
+  const smartReminderSummary = queueSmartWhatsappReminderFlows(now);
+  const appointmentSummary = fullAutomation ? sweepOperationsAppointmentLoops(now) : { checked: 0, queued: 0, alreadyQueued: 0, escalated: 0, skipped: true };
+  const birthdaySummary = fullAutomation ? sweepOperationsBirthdays(now) : { checked: 0, queued: 0, skipped: true };
+  const movingSummary = fullAutomation ? sweepOperationsMovingServicesOffer(now) : { checked: 0, queued: 0, skipped: true };
+  const bondOriginatorSummary = fullAutomation ? sweepOperationsBondOriginatorOffer(now) : { checked: 0, queued: 0, skipped: true };
+  const lifeCoverSummary = fullAutomation ? sweepOperationsLifeCoverOffer(now) : { checked: 0, queued: 0, skipped: true };
+  const electricalSummary = fullAutomation ? sweepOperationsElectricalCoCOffer(now) : { checked: 0, queued: 0, skipped: true };
+  const gasSummary = fullAutomation ? sweepOperationsGasCoCOffer(now) : { checked: 0, queued: 0, skipped: true };
+  const gateSummary = fullAutomation ? sweepOperationsGateNudges(now) : { evaluated: 0, queued: 0, skipped: true };
+  const recoverySummary = fullAutomation ? sweepOperationsRecoveryPlans(now) : { evaluated: 0, queued: 0, skipped: true };
+  const phase2Summary = fullAutomation ? runOperationsPhase2Automation(now) : { skipped: true };
   operationsStore.automation.lastSweepAt = new Date().toISOString();
   operationsStore.automation.lastSweepSummary = {
     ...summary,
+    smartReminders: smartReminderSummary,
+    appointments: appointmentSummary,
     birthdays: birthdaySummary,
     movingServices: movingSummary,
     bondOriginator: bondOriginatorSummary,
@@ -2893,6 +3931,8 @@ function sweepOperationsReminders() {
   persistOperations();
   return {
     ...summary,
+    smartReminders: smartReminderSummary,
+    appointments: appointmentSummary,
     birthdays: birthdaySummary,
     movingServices: movingSummary,
     bondOriginator: bondOriginatorSummary,
@@ -2935,7 +3975,11 @@ function queueProactiveRoleBriefs(now = new Date()) {
         recipientPhone: recipient.phone,
         recipientEmail: recipient.email,
         template: "next-step-brief",
-        message: `${item.id} update: ${item.next}. Owner: ${item.owner}. Due: ${item.due}.`,
+        message: buildRoleTrackMessage(item, {
+          stakeholderCode,
+          dueSignal: getOperationsDueSignal(item.due, now),
+          context: "next-step"
+        }),
         dedupeKey
       });
       summary.queued += 1;
@@ -3021,7 +4065,11 @@ function queuePartnerReadinessPrompts(now = new Date()) {
         recipientPhone: recipient.phone,
         recipientEmail: recipient.email,
         template: "partner-readiness",
-        message: `${item.id} readiness check: next control gate action "${item.next}" is due ${item.due}.`,
+        message: buildRoleTrackMessage(item, {
+          stakeholderCode,
+          dueSignal: getOperationsDueSignal(item.due, now),
+          context: "readiness"
+        }),
         dedupeKey
       });
       summary.queued += 1;
@@ -3056,13 +4104,268 @@ function queueDecisionCountdownReminders(now = new Date()) {
         recipientPhone: recipient.phone,
         recipientEmail: recipient.email,
         template: "decision-countdown",
-        message: `${item.id}: decision window reminder for "${item.next}" due ${item.due}.`,
+        message: buildRoleTrackMessage(item, {
+          stakeholderCode,
+          dueSignal: getOperationsDueSignal(item.due, now),
+          context: "decision"
+        }),
         dedupeKey
       });
       summary.queued += 1;
     }
   }
   if (summary.queued) addOperationsActivity("COUNT", "Decision countdown queued", `${summary.queued} decision-window reminder${summary.queued === 1 ? "" : "s"} queued.`);
+  return summary;
+}
+
+function getOperationsDueSignal(value, now = new Date()) {
+  const label = String(value || "").trim();
+  const normalized = label.toLowerCase();
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = parseOperationsDueDate(label, now);
+  if (due) {
+    const dueInDays = Math.ceil((due.getTime() - dayStart.getTime()) / (24 * 60 * 60 * 1000));
+    return {
+      label,
+      due,
+      dueInDays,
+      isOverdue: dueInDays < 0,
+      isDueSoon: dueInDays <= 2,
+      stage: dueInDays < 0 ? "overdue" : dueInDays === 0 ? "due-today" : `due-${dueInDays}d`
+    };
+  }
+  const overdueHours = /(\d+)\s*(h|hr|hrs|hour|hours)\s+overdue/.exec(normalized);
+  if (overdueHours) {
+    return { label, due: null, dueInDays: -1, isOverdue: true, isDueSoon: true, stage: "overdue" };
+  }
+  const overdueDays = /(\d+)\s*(d|day|days)\s+overdue/.exec(normalized);
+  if (overdueDays) {
+    return { label, due: null, dueInDays: -Math.max(1, Number(overdueDays[1])), isOverdue: true, isDueSoon: true, stage: "overdue" };
+  }
+  const dueHours = /(?:within|in)\s+(\d+)\s*(h|hr|hrs|hour|hours)/.exec(normalized);
+  if (dueHours) {
+    const hours = Number(dueHours[1]);
+    return { label, due: null, dueInDays: hours <= 24 ? 0 : Math.ceil(hours / 24), isOverdue: false, isDueSoon: hours <= 48, stage: hours <= 24 ? "due-today" : "due-soon" };
+  }
+  if (normalized.includes("overdue")) return { label, due: null, dueInDays: -1, isOverdue: true, isDueSoon: true, stage: "overdue" };
+  if (normalized.includes("today") || normalized.includes("now")) return { label, due: null, dueInDays: 0, isOverdue: false, isDueSoon: true, stage: "due-today" };
+  return { label, due: null, dueInDays: null, isOverdue: false, isDueSoon: false, stage: "unscheduled" };
+}
+
+function formatOperationsDueSignal(signal, fallback = "") {
+  if (!signal) return fallback ? `Due: ${fallback}` : "No due date captured";
+  if (signal.isOverdue) return `Overdue${signal.label ? `: ${signal.label}` : ""}`;
+  if (signal.dueInDays === 0) return "Due today";
+  if (signal.dueInDays === 1) return "Due tomorrow";
+  if (Number.isFinite(signal.dueInDays)) return `Due in ${signal.dueInDays} days`;
+  return signal.label ? `Due: ${signal.label}` : "No due date captured";
+}
+
+function getStakeholderCommandText(stakeholderCode = "", flowId = "") {
+  if (stakeholderCode === "AGENT" && flowId === "agent-handoff") {
+    return "Reply YES accept referral once accepted, STATUS for the file position, or CALL ME if blocked.";
+  }
+  if (["SELL", "BUY"].includes(stakeholderCode)) {
+    return "Reply DOCS for the checklist, STATUS for the file position, or CALL ME if you need help.";
+  }
+  return "Reply STATUS for the latest file position or CALL ME if concierge support is needed.";
+}
+
+function buildRoleTrackHeadline(item, stakeholderCode = "") {
+  const next = item?.next || "Please review the next action";
+  if (stakeholderCode === "SELL") {
+    return `${item.id}: seller track active. Your next property-side step is "${next}".`;
+  }
+  if (stakeholderCode === "BUY") {
+    return `${item.id}: buyer track active. Your next purchasing step is "${next}".`;
+  }
+  if (stakeholderCode === "AGENT") {
+    return `${item.id}: agent track active. Your next client-delivery step is "${next}".`;
+  }
+  if (stakeholderCode === "TRANS") {
+    return `${item.id}: transfer track active. Your next legal transfer step is "${next}".`;
+  }
+  if (stakeholderCode === "ORIG") {
+    return `${item.id}: finance track active. Your next finance step is "${next}".`;
+  }
+  return `${item.id}: next action is "${next}".`;
+}
+
+function buildRoleTrackFocus(item, stakeholderCode = "") {
+  const stage = String(item?.stage || "").toLowerCase();
+  const next = item?.next || "Please review the next action";
+  if (stakeholderCode === "SELL") {
+    if (/(compliance|coc|clearance|disclosure)/i.test(stage + " " + next)) return "Please keep seller documents and compliance items moving so the transaction does not stall.";
+    return "Please keep seller-side documents, disclosures, and signing items moving.";
+  }
+  if (stakeholderCode === "BUY") {
+    if (/(bond|approval|guarantee|payslip|bank)/i.test(stage + " " + next)) return "Please keep buyer finance documents and approvals moving so the file can advance cleanly.";
+    return "Please keep buyer-side finance, signing, and proof items moving.";
+  }
+  if (stakeholderCode === "AGENT") {
+    if (/(contact|handoff|referral|viewing|offer)/i.test(stage + " " + next)) return "Please confirm acceptance, client contact, and the next dated sales step.";
+    return "Please keep client contact, feedback, and offer momentum visible on the file.";
+  }
+  if (stakeholderCode === "TRANS") {
+    return "Please keep transfer milestones, signatures, clearance, lodgement, and registration dates visible.";
+  }
+  if (stakeholderCode === "ORIG") {
+    return "Please keep approval status, conditions, guarantees, and missing finance documents visible.";
+  }
+  return "Please keep the next case step moving and visible.";
+}
+
+function buildRoleTrackMessage(item, {
+  stakeholderCode = "",
+  flowId = "",
+  dueSignal = null,
+  staleHours = 0,
+  context = "next-step"
+} = {}) {
+  const dueText = formatOperationsDueSignal(dueSignal, item?.due || "");
+  const headline = buildRoleTrackHeadline(item, stakeholderCode);
+  const focus = buildRoleTrackFocus(item, stakeholderCode);
+  const staleText = staleHours >= 24 ? ` No visible update for ${Math.floor(staleHours)} hours.` : "";
+  const commandText = getStakeholderCommandText(stakeholderCode, flowId);
+  if (context === "readiness") {
+    return `${headline} Readiness check: ${focus} ${dueText}.${staleText} ${commandText}`;
+  }
+  if (context === "decision") {
+    return `${headline} Decision window approaching. ${focus} ${dueText}.${staleText} ${commandText}`;
+  }
+  if (context === "smart-reminder") {
+    return `${headline} ${focus} ${dueText}.${staleText} ${commandText}`;
+  }
+  return `${headline} ${focus} ${dueText}. ${commandText}`;
+}
+
+function classifySmartReminderFlow(item, dueSignal, staleHours = 0) {
+  const text = `${item?.journey || ""} ${item?.stage || ""} ${item?.next || ""} ${item?.owner || ""} ${item?.status || ""}`.toLowerCase();
+  const ownerCode = mapOwnerTextToStakeholderCode(item?.owner || "");
+  if (ownerCode === "TRANS" && (staleHours >= 24 || text.includes("waiting"))) {
+    return { id: "attorney-silence", label: "Attorney silence", stakeholderCode: "TRANS" };
+  }
+  if (/(agent|handoff|referral|accept.*lead|lead.*accept|client contact|contact.*client)/i.test(text)) {
+    return { id: "agent-handoff", label: "Agent handoff", stakeholderCode: "AGENT" };
+  }
+  if (/(payslip|bond|finance|guarantee|pre-approval|preapproval|approval|originator|bank)/i.test(text)) {
+    return { id: "finance-delay", label: "Finance delay", stakeholderCode: ownerCode === "BUY" ? "BUY" : "ORIG" };
+  }
+  if (/(gas|electrical|coc|compliance certificate|certificate of compliance)/i.test(text)) {
+    return { id: "compliance-coc", label: "COC compliance", stakeholderCode: "SELL" };
+  }
+  if (/(rates|municipal|clearance|transfer|lodg|registration|handover|attorney|convey|sign)/i.test(text)) {
+    return { id: "transfer-update", label: "Transfer update", stakeholderCode: ownerCode || "TRANS" };
+  }
+  if (dueSignal?.isOverdue || dueSignal?.isDueSoon) {
+    return { id: "deadline-chase", label: "Deadline chase", stakeholderCode: ownerCode || "CONC" };
+  }
+  return { id: "next-action", label: "Next action", stakeholderCode: ownerCode || "CONC" };
+}
+
+function shouldQueueSmartReminderFlow(item, flow, dueSignal, staleHours = 0) {
+  const status = String(item?.status || "").toLowerCase();
+  if (dueSignal?.isOverdue || dueSignal?.isDueSoon) return true;
+  if (/(at risk|overdue|waiting|blocked|stuck)/i.test(status)) return true;
+  if (flow?.id === "attorney-silence" && staleHours >= 24) return true;
+  return flow?.id !== "next-action" && Number.isFinite(dueSignal?.dueInDays) && dueSignal.dueInDays <= 5;
+}
+
+function buildSmartReminderFlowMessage(item, flow, dueSignal, staleHours = 0) {
+  const dueText = formatOperationsDueSignal(dueSignal, item?.due || "");
+  const next = item?.next || "Please update the next action";
+  const commandText = "Reply DONE when complete, STATUS for the latest file position, or CALL ME if blocked.";
+  const staleText = staleHours >= 24 ? ` No visible update for ${Math.floor(staleHours)} hours.` : "";
+  if (["SELL", "BUY", "AGENT", "TRANS", "ORIG"].includes(flow.stakeholderCode || "")) {
+    if (flow.id === "agent-handoff") {
+      return buildRoleTrackMessage(item, {
+        stakeholderCode: flow.stakeholderCode,
+        flowId: flow.id,
+        dueSignal,
+        staleHours,
+        context: "smart-reminder"
+      });
+    }
+    if (["finance-delay", "compliance-coc", "transfer-update", "attorney-silence", "deadline-chase", "next-action"].includes(flow.id)) {
+      return buildRoleTrackMessage(item, {
+        stakeholderCode: flow.stakeholderCode,
+        flowId: flow.id,
+        dueSignal,
+        staleHours,
+        context: "smart-reminder"
+      });
+    }
+  }
+  const messages = {
+    "agent-handoff": `${item.id}: please confirm lead acceptance and first client contact. Next action: ${next}. ${dueText}. ${commandText}`,
+    "finance-delay": `${item.id}: finance follow-up needed. Please confirm approval, guarantees, missing docs, or blocker. ${dueText}. ${commandText}`,
+    "compliance-coc": `${item.id}: compliance certificate follow-up needed. Please confirm COC/gas status, appointment date, or blocker. ${dueText}. ${commandText}`,
+    "transfer-update": `${item.id}: transfer milestone follow-up needed. Please confirm signing, lodgement, clearance, registration, or blocker. ${dueText}.${staleText} ${commandText}`,
+    "attorney-silence": `${item.id}: attorney update needed. Please confirm the current transfer step, blocker, and next expected date.${staleText} ${commandText}`,
+    "deadline-chase": `${item.id}: deadline chase for "${next}". ${dueText}. ${commandText}`,
+    "next-action": `${item.id}: next action reminder: ${next}. ${dueText}. ${commandText}`
+  };
+  return messages[flow.id] || messages["next-action"];
+}
+
+function queueSmartWhatsappReminderFlows(now = new Date()) {
+  const dateKey = getOperationsDateKey(now);
+  const summary = { checked: 0, queued: 0, alreadyQueued: 0, escalated: 0, skippedNoRecipient: 0, flows: {} };
+  for (const item of operationsStore.cases || []) {
+    if (!item?.id) continue;
+    summary.checked += 1;
+    const dueSignal = getOperationsDueSignal(item.due, now);
+    const lastTouch = getCaseLastTouchAt(item.id);
+    const staleHours = lastTouch ? (now.getTime() - lastTouch.getTime()) / (60 * 60 * 1000) : 999;
+    const flow = classifySmartReminderFlow(item, dueSignal, staleHours);
+    if (!shouldQueueSmartReminderFlow(item, flow, dueSignal, staleHours)) continue;
+
+    const recipient = resolveGateOwnerRecipient(item, flow.stakeholderCode);
+    if (!recipient?.name || /^to appoint$/i.test(recipient.name) || (!recipient.phone && !recipient.email)) {
+      summary.skippedNoRecipient += 1;
+      continue;
+    }
+
+    const nextKey = String(item.next || flow.id).toLowerCase().replace(/[^\w]+/g, "-").slice(0, 40);
+    const dedupeKey = `smart-whatsapp:${item.id}:${flow.id}:${flow.stakeholderCode}:${dateKey}:${nextKey}`;
+    const exists = operationsStore.notifications.some((note) => note.dedupeKey === dedupeKey && note.status !== "cancelled");
+    if (exists) summary.alreadyQueued += 1;
+    const notification = queueOperationsNotification({
+      caseId: item.id,
+      channel: "auto",
+      preferredChannel: "whatsapp",
+      stakeholderCode: flow.stakeholderCode,
+      recipient: recipient.name,
+      recipientPhone: recipient.phone,
+      recipientEmail: recipient.email,
+      template: "smart-reminder",
+      message: buildSmartReminderFlowMessage(item, flow, dueSignal, staleHours),
+      dedupeKey
+    });
+
+    if (!exists && notification.status === "queued" && notification.attempts === 0) {
+      summary.queued += 1;
+      summary.flows[flow.id] = (summary.flows[flow.id] || 0) + 1;
+      addOperationsTimeline(item.id, "Smart WhatsApp reminder queued", `${flow.label} reminder queued for ${recipient.name}.`);
+      addOperationsActivity("WA", "Smart reminder queued", `${item.id} - ${flow.label} - ${recipient.name}`);
+      addOperationsAudit("smart-whatsapp-reminder", item.id, `${flow.id}: ${recipient.name}`);
+    }
+
+    const hotStatus = /(at risk|overdue|waiting|blocked|stuck)/i.test(String(item.status || ""));
+    if ((dueSignal.isOverdue || hotStatus) && !exists) {
+      const escalationKey = `smart-whatsapp-escalation:${item.id}:${flow.id}:${dateKey}`;
+      if (!operationsStore.escalations.some((entry) => entry.dedupeKey === escalationKey)) {
+        operationsStore.escalations.unshift(createOperationsEscalation({
+          item,
+          question: `${flow.label} reminder queued, but concierge oversight is needed because the case is ${dueSignal.isOverdue ? "overdue" : item.status}.`,
+          owner: item.concierge || "Concierge queue",
+          dedupeKey: escalationKey
+        }));
+        summary.escalated += 1;
+      }
+    }
+  }
+  if (summary.queued) addOperationsActivity("WA", "Smart WhatsApp flow queued", `${summary.queued} reminder${summary.queued === 1 ? "" : "s"} queued across ${Object.keys(summary.flows).length} flow${Object.keys(summary.flows).length === 1 ? "" : "s"}.`);
   return summary;
 }
 
@@ -4137,6 +5440,14 @@ function ensureLeadAutomationState(session) {
     session.automationState.documentReminders && typeof session.automationState.documentReminders === "object"
       ? session.automationState.documentReminders
       : {};
+  session.automationState.deadlineChase =
+    session.automationState.deadlineChase && typeof session.automationState.deadlineChase === "object"
+      ? session.automationState.deadlineChase
+      : {};
+  session.automationState.wowTouches =
+    session.automationState.wowTouches && typeof session.automationState.wowTouches === "object"
+      ? session.automationState.wowTouches
+      : {};
   return session.automationState;
 }
 
@@ -4322,13 +5633,14 @@ function syncLeadCaseFile(session, options = {}) {
 
 function getLeadCaseFileSummary(session) {
   const caseFile = ensureLeadCaseFile(session);
+  const workflow = getLeadOutcomeWorkflow(session);
   return {
     id: caseFile.id,
     leadId: caseFile.leadId,
     stage: caseFile.stage,
     stageLabel: caseFile.stageLabel,
-    owner: caseFile.owner,
-    dueAt: caseFile.dueAt || null,
+    owner: workflow.activeTrack !== "undecided" ? workflow.primaryOwner : caseFile.owner,
+    dueAt: caseFile.dueAt || getOutcomeWorkflowDueAt(session, workflow) || null,
     updatedAt: caseFile.updatedAt || null,
     nextMilestone: caseFile.nextMilestone || null,
     latestNote: caseFile.latestNote || "",
@@ -4964,6 +6276,10 @@ function getAgentAccessSummary(session, req) {
     expiresAt: access.expiresAt || null,
     acknowledgedAt: access.acknowledgedAt || null,
     lastViewedAt: access.lastViewedAt || null,
+    lastSentAt: access.lastSentAt || null,
+    lastDeliveryStatus: access.lastDeliveryStatus || null,
+    lastDeliveryReason: access.lastDeliveryReason || null,
+    lastDeliveryRecipient: access.lastDeliveryRecipient || null,
     revokedAt: access.revokedAt || null,
     active,
     agentUrl: active && req ? buildAgentUpdateUrl(req, access.token) : null
@@ -5065,6 +6381,38 @@ function buildAgentHandoffSummary(session, req = null) {
     termsProtected,
     complete: gates.every((gate) => gate.complete),
     gates
+  };
+}
+
+function buildCommissionLockSummary(session) {
+  const handoff = buildAgentHandoffSummary(session);
+  const commission = buildCommissionProtectionSummary(session);
+  const coreSteps = [
+    { code: "agent-acceptance", label: "Agent accepted handoff", complete: Boolean(handoff.gates?.[0]?.complete) },
+    { code: "contact-confirmation", label: "Client contact confirmed", complete: Boolean(handoff.gates?.[1]?.complete) },
+    { code: "referral-terms", label: "Referral terms protected", complete: Boolean(handoff.gates?.[2]?.complete) }
+  ];
+  const financeSteps = [
+    { code: "expected-fee", label: "Expected fee captured", complete: Boolean(commission.expectedCommission) },
+    {
+      code: "invoice-tracked",
+      label: "Invoice / payment tracked",
+      complete: ["Invoiced", "Paid", "Waived"].includes(commission.payoutStatus || "")
+    }
+  ];
+  const steps = [...coreSteps, ...financeSteps];
+  const completeCore = coreSteps.filter((item) => item.complete).length;
+  const completeAll = steps.filter((item) => item.complete).length;
+  const locked = completeCore === coreSteps.length;
+  return {
+    locked,
+    label: locked ? "Commission lock in place" : `${coreSteps.length - completeCore} protection gap${coreSteps.length - completeCore === 1 ? "" : "s"}`,
+    completedCoreSteps: completeCore,
+    coreStepCount: coreSteps.length,
+    completedSteps: completeAll,
+    totalSteps: steps.length,
+    nextAction: locked ? commission.nextAction : handoff.nextAction || commission.nextAction,
+    steps
   };
 }
 
@@ -5386,6 +6734,9 @@ function buildFollowUpIntelligence(session) {
   const scoring = session.scoring || {};
   const deal = session.dealProtection || {};
   const assigned = session.assignedAgent || {};
+  const workflow = getLeadOutcomeWorkflow(session);
+  const timeline = buildTransactionTimelineSummary(session);
+  const escalations = getLeadEscalationFlags(session);
   const duplicateSignals = refreshSessionDedupeSignals(session);
   const intakeIntelligence = buildLeadIntakeIntelligence(session, scoring);
   const commissionProtection = buildCommissionProtectionSummary(session);
@@ -5405,9 +6756,9 @@ function buildFollowUpIntelligence(session) {
       ["Offer pending", "Under contract", "Disputed"].includes(deal.status || ""));
 
   const suggestions = [];
-  const add = (label, priority, reason, detail = "") => {
+  const add = (label, priority, reason, detail = "", extras = {}) => {
     if (!suggestions.some((item) => item.label === label)) {
-      suggestions.push({ label, priority, reason, detail });
+      suggestions.push({ label, priority, reason, detail, ...extras });
     }
   };
 
@@ -5427,6 +6778,21 @@ function buildFollowUpIntelligence(session) {
     };
   }
 
+  if (escalations.length) {
+    const topEscalation = escalations[0];
+    add(
+      `Resolve ${topEscalation.category} escalation`,
+      topEscalation.escalationTier === "critical" ? "High" : topEscalation.priority || "High",
+      topEscalation.reason || "Automatic escalation policy triggered.",
+      `${topEscalation.ownerRole} owns this next move. ${topEscalation.nextAction || topEscalation.automationLabel}`,
+      {
+        owner: topEscalation.ownerRole,
+        lane: topEscalation.workflowLane,
+        actionType: topEscalation.actionType
+      }
+    );
+  }
+
   if (duplicateSignals?.isDuplicate) {
     add(
       "Resolve duplicate lead",
@@ -5434,7 +6800,12 @@ function buildFollowUpIntelligence(session) {
       duplicateSignals.recommendation || "This lead appears to duplicate an existing enquiry.",
       duplicateSignals.matchedLeadIds?.length
         ? `Possible existing lead IDs: ${duplicateSignals.matchedLeadIds.join(", ")}`
-        : "Review potential duplicates before assigning another specialist."
+        : "Review potential duplicates before assigning another specialist.",
+      {
+        owner: "Concierge",
+        lane: "qualification",
+        actionType: "dedupe-review"
+      }
     );
   }
 
@@ -5443,7 +6814,40 @@ function buildFollowUpIntelligence(session) {
       "Complete intake before routing",
       "High",
       intakeIntelligence.summary || "Critical intake details are missing.",
-      `Missing: ${intakeIntelligence.missingCritical.join(", ")}.`
+      `Missing: ${intakeIntelligence.missingCritical.join(", ")}.`,
+      {
+        owner: "Concierge",
+        lane: "qualification",
+        actionType: "complete-intake"
+      }
+    );
+  }
+
+  if (workflow.activeTrack === "managed-transaction" && timeline.nextMilestone) {
+    add(
+      `Advance ${timeline.nextMilestone.label}`,
+      escalations.some((item) => item.code === "delayed-transfer-escalation") ? "High" : "Medium",
+      `Managed transaction lane is active. The next controlled step is ${timeline.nextMilestone.label}.`,
+      `Owner: ${mapWorkflowOwnerLabel(timeline.nextMilestone.owner || workflow.primaryOwner)}.`,
+      {
+        owner: mapWorkflowOwnerLabel(timeline.nextMilestone.owner || workflow.primaryOwner),
+        lane: workflow.queueLane,
+        actionType: "advance-milestone"
+      }
+    );
+  }
+
+  if (workflow.activeTrack === "referral-protection" && !commissionProtection.acceptanceProtected) {
+    add(
+      "Lock referral proof today",
+      "High",
+      "Referral-only mode is active, but the proof chain for the introduction is not secure yet.",
+      "Capture acceptance proof, communication evidence, and the first dated handoff update before the deal moves further.",
+      {
+        owner: "Concierge",
+        lane: workflow.queueLane,
+        actionType: "protect-referral"
+      }
     );
   }
 
@@ -5454,7 +6858,12 @@ function buildFollowUpIntelligence(session) {
       deal.nextCheckIn && isDateDue(deal.nextCheckIn)
         ? "The deal-protection check-in date is due."
         : "The lead is active with an agent but referral commission protection is not confirmed.",
-      "Confirm referral terms, current deal status, and whether the client is still engaged."
+      "Confirm referral terms, current deal status, and whether the client is still engaged.",
+      {
+        owner: "Concierge",
+        lane: workflow.activeTrack === "managed-transaction" ? "commission-protection" : workflow.queueLane,
+        actionType: "commission-protection"
+      }
     );
   }
 
@@ -5465,21 +6874,36 @@ function buildFollowUpIntelligence(session) {
       `Referral payment is overdue${commissionProtection.daysUntilDue !== null ? ` by ${Math.abs(commissionProtection.daysUntilDue)} day${Math.abs(commissionProtection.daysUntilDue) === 1 ? "" : "s"}` : ""}.`,
       commissionProtection.payoutReference
         ? `Reference on file: ${commissionProtection.payoutReference}`
-        : "Add invoice/payment reference once confirmed."
+        : "Add invoice/payment reference once confirmed.",
+      {
+        owner: "Concierge",
+        lane: "commission-protection",
+        actionType: "chase-payment"
+      }
     );
   } else if (commissionProtection.expectedCommission && commissionProtection.payoutStatus === "Due") {
     add(
       "Issue referral invoice",
       "High",
       `Expected referral fee is ${commissionProtection.expectedCommission}.`,
-      "Move invoice/payment status to Invoiced and record the reference."
+      "Move invoice/payment status to Invoiced and record the reference.",
+      {
+        owner: "Concierge",
+        lane: "commission-protection",
+        actionType: "issue-invoice"
+      }
     );
   } else if (isSessionReferred(session) && !commissionProtection.expectedCommission) {
     add(
       "Calculate expected referral fee",
       "Medium",
       "Referral percentage or final sale value is not fully captured.",
-      "Capture sale value, referral %, due date, and invoice/payment status."
+      "Capture sale value, referral %, due date, and invoice/payment status.",
+      {
+        owner: "Concierge",
+        lane: "commission-protection",
+        actionType: "calculate-commission"
+      }
     );
   }
 
@@ -5489,14 +6913,24 @@ function buildFollowUpIntelligence(session) {
         "Call now",
         "High",
         isHighIntent ? "This lead has high intent or urgency." : `This lead has been waiting more than ${SLA_MINUTES} minutes.`,
-        "Call the client or central concierge immediately before momentum drops."
+        "Call the client or central concierge immediately before momentum drops.",
+        {
+          owner: "Concierge",
+          lane: "rapid-response",
+          actionType: "call-now"
+        }
       );
     } else {
       add(
         "WhatsApp within 10 minutes",
         "High",
         "New lead has not yet been acknowledged.",
-        "Send the first reassuring WhatsApp while the enquiry is still fresh."
+        "Send the first reassuring WhatsApp while the enquiry is still fresh.",
+        {
+          owner: "Concierge",
+          lane: "rapid-response",
+          actionType: "first-whatsapp"
+        }
       );
     }
   }
@@ -5506,7 +6940,12 @@ function buildFollowUpIntelligence(session) {
       isHighIntent ? "Call now" : "WhatsApp within 10 minutes",
       isHighIntent ? "High" : "Medium",
       "The lead is acknowledged but not yet routed to a specialist.",
-      "Confirm availability and choose the most suitable property specialist."
+      "Confirm availability and choose the most suitable property specialist.",
+      {
+        owner: "Concierge",
+        lane: "qualification",
+        actionType: "route-to-specialist"
+      }
     );
   }
 
@@ -5517,7 +6956,12 @@ function buildFollowUpIntelligence(session) {
       assignedMinutesAgo !== null
         ? `Agent handoff happened ${assignedMinutesAgo} minute${assignedMinutesAgo === 1 ? "" : "s"} ago.`
         : "Agent handoff exists but client contact has not been confirmed.",
-      "Ask the agent to confirm client contact method and time."
+      "Ask the agent to confirm client contact method and time.",
+      {
+        owner: "Agent",
+        lane: workflow.activeTrack === "managed-transaction" ? "managed-transaction" : "referral-protection",
+        actionType: "confirm-client-contact"
+      }
     );
   }
 
@@ -5530,7 +6974,12 @@ function buildFollowUpIntelligence(session) {
       "Record outcome and next appointment",
       isHighIntent ? "High" : "Medium",
       "Client contact is confirmed, but the next commercial step is still fuzzy.",
-      "Record the outcome and choose one dated next move: valuation, viewing, finance check, offer discussion, or follow-up call."
+      "Record the outcome and choose one dated next move: valuation, viewing, finance check, offer discussion, or follow-up call.",
+      {
+        owner: workflow.activeTrack === "managed-transaction" ? workflow.primaryOwner : "Agent",
+        lane: workflow.queueLane,
+        actionType: "record-outcome"
+      }
     );
   }
 
@@ -5545,7 +6994,12 @@ function buildFollowUpIntelligence(session) {
       "Set a dated next check-in",
       "Medium",
       "The lead has an active status but no dated next action.",
-      "Choose the next decision point and record when the agent or concierge must act."
+      "Choose the next decision point and record when the agent or concierge must act.",
+      {
+        owner: workflow.primaryOwner,
+        lane: workflow.queueLane,
+        actionType: "set-check-in"
+      }
     );
   }
 
@@ -5560,7 +7014,12 @@ function buildFollowUpIntelligence(session) {
       "Move the next decision forward today",
       isHighIntent ? "High" : "Medium",
       "The last deal update is more than 24 hours old.",
-      "Confirm the next dated step, the owner, and the blocker. Do not leave the lead in an undated active state."
+      "Confirm the next dated step, the owner, and the blocker. Do not leave the lead in an undated active state.",
+      {
+        owner: workflow.primaryOwner,
+        lane: workflow.queueLane,
+        actionType: "move-decision-forward"
+      }
     );
   }
 
@@ -5569,7 +7028,12 @@ function buildFollowUpIntelligence(session) {
       "Check back in 24 hours",
       "Low",
       "No urgent issue is currently flagged.",
-      "Keep a light touch so the lead does not quietly drift."
+      "Keep a light touch so the lead does not quietly drift.",
+      {
+        owner: workflow.primaryOwner,
+        lane: workflow.queueLane,
+        actionType: "check-back"
+      }
     );
   }
 
@@ -5581,12 +7045,15 @@ function buildFollowUpIntelligence(session) {
     primary: primary.label,
     priority: primary.priority,
     reason: primary.reason,
+    lane: workflow.queueLane,
     suggestions
   };
 }
 
 function buildNextBestAction(session) {
   const lifecycle = getLeadLifecycle(session);
+  const workflow = getLeadOutcomeWorkflow(session);
+  const escalations = getLeadEscalationFlags(session);
   const duplicateSignals = refreshSessionDedupeSignals(session);
   const followUp = buildFollowUpIntelligence(session);
   const match = buildAgentMatchRecommendation(session);
@@ -5594,13 +7061,27 @@ function buildNextBestAction(session) {
   const topSuggestion = (followUp.suggestions || [])[0] || null;
   const referred = isSessionReferred(session);
 
-  if (["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session)) {
+  if (workflow.activeTrack === "closed" || ["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session)) {
     return {
       title: "Archive and monitor",
       priority: "Low",
       owner: "Concierge",
       reason: "This lead is closed. Keep only audit and commission-tracking updates.",
-      actionType: "archive"
+      actionType: "archive",
+      lane: "closure"
+    };
+  }
+
+  if (escalations.length) {
+    const topEscalation = escalations[0];
+    return {
+      title: topEscalation.nextAction || `Resolve ${topEscalation.category} escalation`,
+      priority: topEscalation.escalationTier === "critical" ? "High" : topEscalation.priority || "High",
+      owner: topEscalation.ownerRole || workflow.primaryOwner,
+      reason: topEscalation.reason || "Automatic escalation policy triggered.",
+      actionType: topEscalation.actionType || "escalation-response",
+      lane: topEscalation.workflowLane || workflow.queueLane,
+      escalationCode: topEscalation.code
     };
   }
 
@@ -5611,6 +7092,7 @@ function buildNextBestAction(session) {
       owner: "Concierge",
       reason: duplicateSignals.recommendation || "Potential duplicate lead detected.",
       actionType: "dedupe-review",
+      lane: "qualification",
       relatedLeadIds: duplicateSignals.matchedLeadIds || []
     };
   }
@@ -5622,6 +7104,7 @@ function buildNextBestAction(session) {
       owner: "Concierge",
       reason: intakeIntelligence.summary || "Critical intake fields are missing.",
       actionType: "complete-intake",
+      lane: "qualification",
       missingCritical: intakeIntelligence.missingCritical
     };
   }
@@ -5639,6 +7122,7 @@ function buildNextBestAction(session) {
       owner: "Concierge",
       reason: `Routing confidence is ${match.confidence}% with matching area/type signals.`,
       actionType: "assign-recommended-agent",
+      lane: workflow.queueLane,
       agent: {
         name: match.agent.name,
         agency: match.agent.agency || "",
@@ -5650,9 +7134,10 @@ function buildNextBestAction(session) {
   return {
     title: topSuggestion?.label || "Check back in 24 hours",
     priority: topSuggestion?.priority || "Low",
-    owner: referred ? "Agent" : "Concierge",
+    owner: topSuggestion?.owner || (referred ? "Agent" : workflow.primaryOwner || "Concierge"),
     reason: topSuggestion?.reason || followUp.reason || "No urgent issue is currently flagged.",
-    actionType: "follow-up"
+    actionType: topSuggestion?.actionType || "follow-up",
+    lane: topSuggestion?.lane || workflow.queueLane
   };
 }
 
@@ -5667,9 +7152,18 @@ function getTaskTiming(session, label) {
   if (label === "Call now") return { dueAt: new Date().toISOString(), cadence: "Immediate" };
   if (label === "WhatsApp within 10 minutes") return { dueAt: addMinutesIso(session.createdAt, SLA_MINUTES), cadence: "Within 10 minutes" };
   if (label === "Ask agent to confirm contact") return { dueAt: addMinutesIso(assignedAt, SLA_MINUTES), cadence: "10 minutes after handoff" };
+  if (label.startsWith("Resolve ") && label.endsWith(" escalation")) {
+    return { dueAt: new Date().toISOString(), cadence: "Escalation response" };
+  }
   if (label === "Check back in 24 hours") {
     const anchor = session.agentContact?.contactedAt || session.dealProtection?.updatedAt || session.updatedAt || session.createdAt;
     return { dueAt: addMinutesIso(anchor, 1440), cadence: "24-hour check-back" };
+  }
+  if (label.startsWith("Advance ")) {
+    return { dueAt: addMinutesIso(getLatestLeadActivityAt(session) || session.updatedAt || session.createdAt, 6 * 60), cadence: "Advance next milestone" };
+  }
+  if (label === "Lock referral proof today") {
+    return { dueAt: new Date().toISOString(), cadence: "Referral protection" };
   }
   if (label === "Record outcome and next appointment") {
     return { dueAt: addMinutesIso(session.agentContact?.contactedAt || session.updatedAt || session.createdAt, 60), cadence: "Within 1 hour of contact" };
@@ -5736,10 +7230,29 @@ function getLatestLeadActivityAt(session) {
 function getRequiredLeadDocumentLabels(session) {
   const slots = getSessionSlots(session);
   const timeline = buildTransactionTimelineSummary(session);
+  const workflow = getLeadOutcomeWorkflow(session);
   const codesComplete = new Set((timeline.milestones || []).filter((item) => item.complete).map((item) => item.code));
   const status = (session.dealProtection?.status || "").toLowerCase();
   const commission = ensureDealProofState(session).commission || {};
   const required = new Set();
+
+  if (workflow.activeTrack === "referral-protection") {
+    if (isSessionReferred(session)) required.add("Referral acceptance proof");
+    if (isSessionReferred(session) || session.agentContact?.contactedAt) required.add("Communication log");
+    if (
+      codesComplete.has("offer-received") ||
+      codesComplete.has("otp-signed") ||
+      status.includes("offer") ||
+      status.includes("contract") ||
+      ["referral_fee_due", "referral_fee_paid"].includes(workflow.commercialStatus)
+    ) {
+      required.add("Offer to Purchase (OTP)");
+    }
+    if (["Invoiced", "Paid"].includes(commission.payoutStatus || "")) required.add("Commission invoice");
+    if (commission.payoutStatus === "Paid") required.add("Proof of payment");
+    return Array.from(required);
+  }
+
   if (isSessionReferred(session)) required.add("Referral acceptance proof");
   if (session.agentContact?.contactedAt || status.includes("offer") || status.includes("contract")) required.add("Communication log");
   if (codesComplete.has("offer-received") || codesComplete.has("otp-signed") || status.includes("offer") || status.includes("contract")) {
@@ -5775,16 +7288,52 @@ function getRequiredLeadDocumentLabels(session) {
 function getMissingLeadDocumentLabels(session) {
   const required = getRequiredLeadDocumentLabels(session);
   if (!required.length) return [];
-  const documents = getLeadDocumentSummary(session);
+  return required.filter((label) => getLeadDocumentMatchCount(session, label) === 0);
+}
+
+function getLeadDocumentAliases(label) {
   const normalise = (value) => (value || "").toString().trim().toLowerCase();
-  const hasDocumentFor = (label) => {
-    const aliases = [label, ...(leadDocumentCategoryAliases[label] || [])].map(normalise);
-    return documents.some((doc) => {
-      const haystack = [doc.category, doc.originalName, doc.note].map(normalise).join(" ");
-      return aliases.some((alias) => alias && haystack.includes(alias));
-    });
+  return [label, ...(leadDocumentCategoryAliases[label] || [])].map(normalise);
+}
+
+function leadDocumentMatchesLabel(doc, label) {
+  const normalise = (value) => (value || "").toString().trim().toLowerCase();
+  const haystack = [doc.category, doc.originalName, doc.note].map(normalise).join(" ");
+  return getLeadDocumentAliases(label).some((alias) => alias && haystack.includes(alias));
+}
+
+function getLeadDocumentMatchCount(session, label) {
+  const documents = getLeadDocumentSummary(session);
+  return documents.filter((doc) => leadDocumentMatchesLabel(doc, label)).length;
+}
+
+function buildLeadDocumentVaultSummary(session) {
+  const documents = getLeadDocumentSummary(session);
+  const required = getRequiredLeadDocumentLabels(session);
+  const missing = getMissingLeadDocumentLabels(session);
+  const requiredSet = new Set(required);
+  const missingSet = new Set(missing);
+  const folders = leadDocumentCoreFolders.map((label) => {
+    const storedCount = getLeadDocumentMatchCount(session, label);
+    return {
+      label,
+      required: requiredSet.has(label),
+      stored: storedCount > 0,
+      missing: missingSet.has(label),
+      count: storedCount
+    };
+  });
+  const requiredCount = required.length;
+  const missingCount = missing.length;
+  const readinessPercent = requiredCount > 0 ? Math.round(((requiredCount - missingCount) / requiredCount) * 100) : documents.length ? 100 : 0;
+  return {
+    readinessPercent,
+    requiredCount,
+    missingCount,
+    uploadedCount: documents.length,
+    lastUploadedAt: latestIso(documents.map((item) => item.uploadedAt)),
+    folders
   };
-  return required.filter((label) => !hasDocumentFor(label));
 }
 
 function ensureLeadDocumentReminderLog(session) {
@@ -5814,16 +7363,8 @@ function getLeadDocumentReminderRecipients(session) {
   return getLeadStageUpdateRecipients(session, { includeAgent: true });
 }
 
-async function deliverMissingDocumentReminder(session, missingDocs = [], source = "document-reminder-automation") {
-  const docs = Array.from(new Set((missingDocs || []).filter(Boolean)));
-  if (!docs.length) {
-    return { attempted: 0, delivered: 0, failed: 0, message: "", deliveries: [] };
-  }
-
-  const recipients = getLeadDocumentReminderRecipients(session);
-  const message = buildLeadMissingDocumentMessage(session, docs);
+async function sendLeadRecipientMessage(recipients, message) {
   const deliveries = [];
-
   for (const recipient of recipients) {
     const result = await sendWhatsAppText(message, { force: true, to: recipient.phone });
     deliveries.push({
@@ -5835,42 +7376,59 @@ async function deliverMissingDocumentReminder(session, missingDocs = [], source 
       reason: result?.reason || null
     });
   }
-
   const delivered = deliveries.filter((item) => item.delivered).length;
+  return {
+    attempted: deliveries.length,
+    delivered,
+    failed: Math.max(0, deliveries.length - delivered),
+    message,
+    deliveries
+  };
+}
+
+function summariseLeadDeliveryLog(log = [], limit = 6, mapExtra = () => ({})) {
+  return log.slice(0, Math.max(1, limit)).map((item) => ({
+    id: item.id,
+    at: item.at || null,
+    source: item.source || "",
+    attempted: Number(item.attempted || 0),
+    delivered: Number(item.delivered || 0),
+    failed: Math.max(0, Number(item.attempted || 0) - Number(item.delivered || 0)),
+    deliveries: Array.isArray(item.deliveries) ? item.deliveries.slice(0, 8) : [],
+    ...mapExtra(item)
+  }));
+}
+
+async function deliverMissingDocumentReminder(session, missingDocs = [], source = "document-reminder-automation") {
+  const docs = Array.from(new Set((missingDocs || []).filter(Boolean)));
+  if (!docs.length) {
+    return { attempted: 0, delivered: 0, failed: 0, message: "", deliveries: [] };
+  }
+
+  const recipients = getLeadDocumentReminderRecipients(session);
+  const message = buildLeadMissingDocumentMessage(session, docs);
+  const delivery = await sendLeadRecipientMessage(recipients, message);
   const log = ensureLeadDocumentReminderLog(session);
   log.unshift({
     id: randomUUID(),
     at: new Date().toISOString(),
     source,
     missingDocs: docs,
-    message,
-    attempted: deliveries.length,
-    delivered,
-    deliveries
+    ...delivery
   });
   session.documentReminderLog = log.slice(0, 20);
 
   return {
-    attempted: deliveries.length,
-    delivered,
-    failed: Math.max(0, deliveries.length - delivered),
-    message,
+    ...delivery,
     missingDocs: docs,
-    deliveries
   };
 }
 
 function getLeadDocumentReminderSummary(session, limit = 6) {
   const log = ensureLeadDocumentReminderLog(session);
-  return log.slice(0, Math.max(1, limit)).map((item) => ({
-    id: item.id,
-    at: item.at || null,
+  return summariseLeadDeliveryLog(log, limit, (item) => ({
     source: item.source || "document-reminder",
-    missingDocs: Array.isArray(item.missingDocs) ? item.missingDocs.slice(0, 12) : [],
-    attempted: Number(item.attempted || 0),
-    delivered: Number(item.delivered || 0),
-    failed: Math.max(0, Number(item.attempted || 0) - Number(item.delivered || 0)),
-    deliveries: Array.isArray(item.deliveries) ? item.deliveries.slice(0, 8) : []
+    missingDocs: Array.isArray(item.missingDocs) ? item.missingDocs.slice(0, 12) : []
   }));
 }
 
@@ -5885,6 +7443,129 @@ function getTransferDelayAnchor(session) {
   return latestIso(dates);
 }
 
+function getEscalationDocumentOwner(session, missingDocuments = [], workflow = getLeadOutcomeWorkflow(session)) {
+  if (!Array.isArray(missingDocuments) || !missingDocuments.length) return workflow.primaryOwner || "Concierge";
+  const joined = missingDocuments.join(" ").toLowerCase();
+  if (workflow.activeTrack === "referral-protection") return "Concierge";
+  if (joined.includes("bond")) return "Bond originator";
+  if (joined.includes("rates clearance") || joined.includes("transfer")) return "Attorney";
+  if (joined.includes("compliance") || joined.includes("certificate")) return (getSessionSlots(session).intent || session.intent) === "sell" ? "Seller" : "Attorney";
+  if (joined.includes("fica")) return (getSessionSlots(session).intent || session.intent) === "sell" ? "Seller" : "Buyer";
+  if (joined.includes("offer to purchase") || joined.includes("otp")) return "Agent";
+  return workflow.primaryOwner || "Concierge";
+}
+
+function getLeadEscalationOwnerProfile(session, flag, workflow = getLeadOutcomeWorkflow(session)) {
+  const timeline = buildTransactionTimelineSummary(session);
+  const defaultProfile = {
+    ownerRole: workflow.primaryOwner || "Concierge",
+    workflowLane: workflow.queueLane || workflow.activeTrack || "qualification",
+    automationLabel: "Create a priority follow-up task and keep it in the admin queue until it is cleared.",
+    responseWindow: "Immediate review",
+    actionType: flag.code || "escalation-response"
+  };
+
+  switch (flag.code) {
+    case "new-unacknowledged-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole: "Concierge",
+        workflowLane: "rapid-response",
+        automationLabel: "Pin the lead to the rapid-response queue and force first outreach logging.",
+        responseWindow: `${LEAD_ACK_ESCALATION_MINUTES} minute rapid-response SLA`
+      };
+    case "acknowledged-no-contact-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole: "Concierge",
+        workflowLane: "first-contact",
+        automationLabel: "Raise the first-contact chase task until the client contact method is recorded.",
+        responseWindow: `${LEAD_NO_CLIENT_CONTACT_ESCALATION_HOURS} hour contact window`
+      };
+    case "referred-no-contact-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole: "Agent",
+        workflowLane: workflow.activeTrack === "managed-transaction" ? "managed-transaction" : "referral-protection",
+        automationLabel: "Chase the receiving agent for proof of contact and next appointment.",
+        responseWindow: `${LEAD_REFERRED_CONTACT_ESCALATION_HOURS} hour post-handoff window`
+      };
+    case "no-update-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole:
+          workflow.activeTrack === "managed-transaction"
+            ? mapWorkflowOwnerLabel(timeline.nextMilestone?.owner || workflow.primaryOwner)
+            : isSessionReferred(session)
+              ? "Agent"
+              : "Concierge",
+        workflowLane: workflow.activeTrack === "managed-transaction" ? "managed-transaction" : "referral-protection",
+        automationLabel:
+          workflow.activeTrack === "managed-transaction"
+            ? "Create a dated progress-update task tied to the current transaction owner."
+            : "Request a dated progress update from the receiving agent and hold the referral in view.",
+        responseWindow: `${LEAD_NO_UPDATE_ESCALATION_HOURS} hour update window`
+      };
+    case "missing-docs-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole: getEscalationDocumentOwner(session, flag.missingDocuments, workflow),
+        workflowLane: workflow.activeTrack === "managed-transaction" ? "managed-transaction" : "referral-protection",
+        automationLabel:
+          workflow.activeTrack === "managed-transaction"
+            ? "Trigger document chase tasks for the missing evidence and keep the vault blocked until satisfied."
+            : "Request only the referral-proof documents needed to protect the introduction and payout.",
+        responseWindow: `${LEAD_MISSING_DOCS_ESCALATION_HOURS} hour document window`
+      };
+    case "delayed-transfer-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole: mapWorkflowOwnerLabel(timeline.nextMilestone?.owner || workflow.primaryOwner),
+        workflowLane: "managed-transaction",
+        automationLabel: "Escalate the delayed transfer milestone to the current owner and keep concierge oversight active.",
+        responseWindow: `${LEAD_DELAYED_TRANSFER_ESCALATION_DAYS} day transfer window`
+      };
+    case "commission-risk-escalation":
+      return {
+        ...defaultProfile,
+        ownerRole: "Concierge",
+        workflowLane: workflow.activeTrack === "managed-transaction" ? "commission-protection" : "referral-protection",
+        automationLabel: "Open a commission-protection chase task and hold closure until proof is on file.",
+        responseWindow: `${LEAD_COMMISSION_RISK_ESCALATION_HOURS} hour commission window`
+      };
+    default:
+      return defaultProfile;
+  }
+}
+
+function getLeadEscalationTier(flag, workflow = getLeadOutcomeWorkflow(flag?.session || {})) {
+  if (!flag) return "low";
+  if (flag.status === "overdue" && ["delayed-transfer-escalation", "missing-docs-escalation", "commission-risk-escalation"].includes(flag.code)) {
+    return workflow.activeTrack === "managed-transaction" ? "critical" : "high";
+  }
+  if (flag.status === "overdue") return "high";
+  if (flag.status === "due-soon") return "medium";
+  const priority = String(flag.priority || "High").toLowerCase();
+  if (priority === "high") return "high";
+  if (priority === "medium") return "medium";
+  return "low";
+}
+
+function enrichLeadEscalationFlag(session, flag) {
+  const workflow = getLeadOutcomeWorkflow(session);
+  const ownerProfile = getLeadEscalationOwnerProfile(session, flag, workflow);
+  const escalationTier = getLeadEscalationTier(flag, workflow);
+  return {
+    ...flag,
+    ownerRole: ownerProfile.ownerRole,
+    workflowLane: ownerProfile.workflowLane,
+    automationLabel: ownerProfile.automationLabel,
+    responseWindow: ownerProfile.responseWindow,
+    actionType: ownerProfile.actionType,
+    escalationTier
+  };
+}
+
 function getLeadEscalationFlags(session) {
   const flags = [];
   const createdMs = new Date(session.createdAt || 0).getTime();
@@ -5892,6 +7573,7 @@ function getLeadEscalationFlags(session) {
   const minutesSinceCreated = Number.isFinite(createdMs) ? Math.floor((nowMs - createdMs) / 60000) : 0;
   const lifecycle = getLeadLifecycle(session);
   const isClosed = ["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session);
+  const workflow = getLeadOutcomeWorkflow(session);
 
   if (lifecycle.code === "new-unacknowledged" && !session.conciergeAcknowledgedAt && minutesSinceCreated > LEAD_ACK_ESCALATION_MINUTES) {
     const dueAt = addMinutesIso(session.createdAt, LEAD_ACK_ESCALATION_MINUTES);
@@ -5984,6 +7666,7 @@ function getLeadEscalationFlags(session) {
   const transferAnchor = getTransferDelayAnchor(session);
   const transferAnchorMs = transferAnchor ? new Date(transferAnchor).getTime() : NaN;
   const delayedTransfer =
+    workflow.activeTrack === "managed-transaction" &&
     !isClosed &&
     transferAnchor &&
     timeline.nextMilestone &&
@@ -6024,12 +7707,64 @@ function getLeadEscalationFlags(session) {
     }
   }
 
-  return flags;
+  const tierWeight = { critical: 4, high: 3, medium: 2, low: 1 };
+  return flags
+    .map((flag) => enrichLeadEscalationFlag(session, flag))
+    .sort((a, b) => {
+      const tierDelta = (tierWeight[b.escalationTier] || 0) - (tierWeight[a.escalationTier] || 0);
+      if (tierDelta) return tierDelta;
+      const dueDelta = new Date(a.dueAt || 0).getTime() - new Date(b.dueAt || 0).getTime();
+      if (dueDelta) return dueDelta;
+      return String(a.title || "").localeCompare(String(b.title || ""));
+    });
+}
+
+function buildLeadEscalationSummary(session) {
+  const flags = getLeadEscalationFlags(session);
+  const byCategory = {};
+  const byTier = {};
+  const byOwner = {};
+  let oldestDueAt = null;
+  let overdue = 0;
+  let dueSoon = 0;
+  for (const flag of flags) {
+    const category = flag.category || "Escalation";
+    byCategory[category] = (byCategory[category] || 0) + 1;
+    const tier = flag.escalationTier || "high";
+    byTier[tier] = (byTier[tier] || 0) + 1;
+    const owner = flag.ownerRole || "Concierge";
+    byOwner[owner] = (byOwner[owner] || 0) + 1;
+    if (flag.status === "overdue") overdue += 1;
+    if (flag.status === "due-soon") dueSoon += 1;
+    if (flag.dueAt) {
+      const dueMs = new Date(flag.dueAt).getTime();
+      const oldestMs = oldestDueAt ? new Date(oldestDueAt).getTime() : Infinity;
+      if (Number.isFinite(dueMs) && dueMs < oldestMs) oldestDueAt = flag.dueAt;
+    }
+  }
+  return {
+    total: flags.length,
+    overdue,
+    dueSoon,
+    byCategory,
+    byTier,
+    byOwner,
+    oldestDueAt,
+    primaryTitle: flags[0]?.title || "",
+    primaryAction: flags[0]?.nextAction || "",
+    primaryOwner: flags[0]?.ownerRole || "",
+    primaryAutomation: flags[0]?.automationLabel || "",
+    highestTier: flags[0]?.escalationTier || "",
+    categories: Object.keys(byCategory),
+    owners: Object.keys(byOwner)
+  };
 }
 
 function buildFollowUpTasksForSession(session) {
   const intelligence = buildFollowUpIntelligence(session);
+  const workflow = getLeadOutcomeWorkflow(session);
   const slots = getSessionSlots(session);
+  const deadlineTasks = buildLeadDeadlineTasks(session);
   const baseTasks = (intelligence.suggestions || []).map((suggestion, index) => {
     const timing = getTaskTiming(session, suggestion.label);
     return {
@@ -6043,6 +7778,9 @@ function buildFollowUpTasksForSession(session) {
       priority: suggestion.priority || "Low",
       reason: suggestion.reason || "",
       detail: suggestion.detail || "",
+      owner: suggestion.owner || workflow.primaryOwner || (isSessionReferred(session) ? "Agent" : "Concierge"),
+      lane: suggestion.lane || workflow.queueLane,
+      actionType: suggestion.actionType || "follow-up",
       dueAt: timing.dueAt,
       cadence: timing.cadence,
       status: getTaskStatus(timing.dueAt),
@@ -6059,13 +7797,16 @@ function buildFollowUpTasksForSession(session) {
     title: `Escalation: ${flag.title}`,
     priority: flag.priority || "High",
     reason: flag.reason || "",
-    detail: flag.nextAction || "Automatic escalation policy triggered.",
+    detail: `${flag.nextAction || "Automatic escalation policy triggered."}${flag.automationLabel ? ` ${flag.automationLabel}` : ""}`,
+    owner: flag.ownerRole || workflow.primaryOwner || "Concierge",
+    lane: flag.workflowLane || workflow.queueLane,
+    actionType: flag.actionType || flag.code,
     dueAt: flag.dueAt,
-    cadence: "Escalation policy",
-    status: flag.status || getTaskStatus(flag.dueAt),
-    createdAt: session.createdAt || null
+    cadence: flag.responseWindow || "Escalation policy",
+      status: flag.status || getTaskStatus(flag.dueAt),
+      createdAt: session.createdAt || null
   }));
-  return [...escalationTasks, ...baseTasks];
+  return [...deadlineTasks, ...escalationTasks, ...baseTasks];
 }
 
 function getAutomatedFollowUpTasks() {
@@ -6081,6 +7822,285 @@ function getAutomatedFollowUpTasks() {
       if (priorityDelta) return priorityDelta;
       return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
     });
+}
+
+function addDaysToIso(value, days) {
+  const time = value ? new Date(value).getTime() : Date.now();
+  const base = Number.isFinite(time) ? time : Date.now();
+  return new Date(base + days * 86400000).toISOString();
+}
+
+function parseLeadDeadlineAt(value, { endOfDay = false } = {}) {
+  if (!value) return null;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    const [year, month, day] = value.trim().split("-").map((item) => Number(item));
+    const date = endOfDay
+      ? new Date(year, month - 1, day, 17, 59, 59, 999)
+      : new Date(year, month - 1, day, 9, 0, 0, 0);
+    const time = date.getTime();
+    return Number.isFinite(time) ? new Date(time).toISOString() : null;
+  }
+  const date = new Date(value);
+  const time = date.getTime();
+  return Number.isFinite(time) ? new Date(time).toISOString() : null;
+}
+
+function getDaysUntilIso(value) {
+  const time = value ? new Date(value).getTime() : NaN;
+  if (!Number.isFinite(time)) return null;
+  return Math.ceil((time - Date.now()) / 86400000);
+}
+
+function getLeadDeadlineState(deadlineAt) {
+  const daysUntilDue = getDaysUntilIso(deadlineAt);
+  if (daysUntilDue === null) return "unscheduled";
+  if (daysUntilDue < 0) return "overdue";
+  if (daysUntilDue === 0) return "due-today";
+  if (daysUntilDue <= 3) return "due-soon";
+  return "scheduled";
+}
+
+function getLeadDeadlineReminderPhase(signal) {
+  const daysUntilDue = signal?.daysUntilDue;
+  if (daysUntilDue === null || daysUntilDue === undefined) return null;
+  if (daysUntilDue < 0) return "overdue";
+  if (daysUntilDue === 0) return "due-today";
+  if (daysUntilDue === 1) return "1-day";
+  if (daysUntilDue <= 3) return "3-day";
+  if (daysUntilDue <= 7) return "7-day";
+  return null;
+}
+
+function getLeadDeadlineSignals(session, { activeOnly = false } = {}) {
+  const lifecycle = getLeadLifecycle(session);
+  const workflow = getLeadOutcomeWorkflow(session);
+  if (workflow.activeTrack === "closed" || ["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session)) return [];
+
+  const caseFile = getLeadCaseFileSummary(session);
+  const deal = session.dealProtection || {};
+  const timeline = buildTransactionTimelineSummary(session);
+  const commission = buildCommissionProtectionSummary(session);
+  const signals = [];
+
+  const addSignal = ({
+    code,
+    label,
+    deadlineAt,
+    owner,
+    lane,
+    priority = "Medium",
+    windowDays = 1,
+    cadence = "Deadline chase",
+    reason = "",
+    detail = "",
+    includeAgent = true,
+    audience = "case-team"
+  }) => {
+    const normalizedDeadlineAt = parseLeadDeadlineAt(deadlineAt, { endOfDay: typeof deadlineAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadlineAt.trim()) });
+    if (!normalizedDeadlineAt) return;
+    const daysUntilDue = getDaysUntilIso(normalizedDeadlineAt);
+    const deadlineState = getLeadDeadlineState(normalizedDeadlineAt);
+    const chaseStartAt = addDaysToIso(normalizedDeadlineAt, -Math.max(0, Number(windowDays || 0)));
+    const active = daysUntilDue !== null && (daysUntilDue <= windowDays || daysUntilDue < 0);
+    if (activeOnly && !active) return;
+    signals.push({
+      code,
+      label,
+      deadlineAt: normalizedDeadlineAt,
+      chaseStartAt,
+      owner: owner || workflow.primaryOwner || "Concierge",
+      lane: lane || workflow.queueLane,
+      priority,
+      cadence,
+      reason,
+      detail,
+      includeAgent,
+      audience,
+      windowDays,
+      daysUntilDue,
+      deadlineState,
+      active,
+      queueStatus: getTaskStatus(chaseStartAt)
+    });
+  };
+
+  if (caseFile?.dueAt) {
+    addSignal({
+      code: "case-control",
+      label: caseFile.nextMilestone ? `Keep ${caseFile.nextMilestone} on track` : `Keep ${caseFile.stageLabel || "case progress"} on track`,
+      deadlineAt: caseFile.dueAt,
+      owner: caseFile.owner || workflow.primaryOwner || "Concierge",
+      lane: workflow.queueLane,
+      priority: "High",
+      windowDays: LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS,
+      cadence: "Case control date",
+      reason: "The case file already carries a dated control point.",
+      detail: "Check the blocker, confirm the owner, and move the next dated step if the file has drifted."
+    });
+  } else if (workflow.activeTrack === "managed-transaction" && timeline.nextMilestone) {
+    addSignal({
+      code: "milestone-control",
+      label: `Protect ${timeline.nextMilestone.label}`,
+      deadlineAt: getOutcomeWorkflowDueAt(session, workflow),
+      owner: mapWorkflowOwnerLabel(timeline.nextMilestone.owner || workflow.primaryOwner),
+      lane: workflow.queueLane,
+      priority: "High",
+      windowDays: LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS,
+      cadence: "Managed transaction control",
+      reason: "The next transaction milestone needs a dated chase window before the file stalls.",
+      detail: `Current transaction owner: ${mapWorkflowOwnerLabel(timeline.nextMilestone.owner || workflow.primaryOwner)}.`
+    });
+  }
+
+  if (deal.nextCheckIn && !["Closed won", "Lost", "Cold"].includes(deal.status || "")) {
+    addSignal({
+      code: "deal-check-in",
+      label: "Run the next deal check-in",
+      deadlineAt: deal.nextCheckIn,
+      owner: workflow.primaryOwner || "Concierge",
+      lane: workflow.queueLane,
+      priority: "High",
+      windowDays: LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS,
+      cadence: "Deal follow-up diary",
+      reason: "An agreed next check-in date exists and should be chased before it quietly slips.",
+      detail: "Confirm the current deal status, next appointment, or blocker and update the case immediately."
+    });
+  }
+
+  if (commission.payoutDueDate && !["Paid", "Waived"].includes(commission.payoutStatus || "")) {
+    addSignal({
+      code: "commission-payout",
+      label: "Protect the referral payout date",
+      deadlineAt: commission.payoutDueDate,
+      owner: "Concierge",
+      lane: "commission-protection",
+      priority: commission.overdue ? "High" : commission.dueState === "due-soon" ? "High" : "Medium",
+      windowDays: LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS,
+      cadence: "Commission collection window",
+      reason: "Referral fee timing is now dated and should be chased before cashflow or proof goes stale.",
+      detail: commission.expectedCommission
+        ? `Expected fee: ${commission.expectedCommission}. Invoice/payment status: ${commission.payoutStatus || "Not due"}.`
+        : `Invoice/payment status: ${commission.payoutStatus || "Not due"}.`,
+      includeAgent: true,
+      audience: "agent-only"
+    });
+  }
+
+  return signals.sort((a, b) => {
+    const aActive = a.active ? 1 : 0;
+    const bActive = b.active ? 1 : 0;
+    if (bActive !== aActive) return bActive - aActive;
+    return new Date(a.deadlineAt).getTime() - new Date(b.deadlineAt).getTime();
+  });
+}
+
+function buildLeadDeadlineTasks(session) {
+  const slots = getSessionSlots(session);
+  return getLeadDeadlineSignals(session, { activeOnly: true }).map((signal) => ({
+    id: `${session.id}:deadline:${signal.code}`,
+    leadId: session.id,
+    leadLabel: session.label || "Property Lead",
+    leadName: slots.fullName || "Name not captured",
+    intent: slots.intent || session.intent || "unknown",
+    area: [slots.area, slots.province].filter(Boolean).join(", ") || "Area not captured",
+    title: `Deadline chase: ${signal.label}`,
+    priority: signal.priority || "Medium",
+    reason: signal.reason || "A dated control point is active.",
+    detail: `${signal.detail || "Keep the file moving before the deadline slips."} Deadline: ${new Date(signal.deadlineAt).toLocaleString()}. Concierge can override or move the date without freezing the file.`,
+    owner: signal.owner,
+    lane: signal.lane,
+    actionType: "deadline-chase",
+    dueAt: signal.chaseStartAt,
+    deadlineAt: signal.deadlineAt,
+    deadlineState: signal.deadlineState,
+    cadence: signal.cadence || "Deadline chase",
+    status: signal.queueStatus || getTaskStatus(signal.chaseStartAt),
+    createdAt: session.createdAt || null
+  }));
+}
+
+function ensureLeadDeadlineReminderLog(session) {
+  session.deadlineReminderLog = Array.isArray(session.deadlineReminderLog)
+    ? session.deadlineReminderLog.filter((item) => item && typeof item === "object").slice(0, 50)
+    : [];
+  return session.deadlineReminderLog;
+}
+
+function getLeadDeadlineReminderRecipients(session, signal) {
+  const recipients = getLeadStageUpdateRecipients(session, { includeAgent: Boolean(signal?.includeAgent) });
+  if ((signal?.audience || "") === "agent-only") return recipients.filter((item) => item.role === "agent");
+  return recipients;
+}
+
+function buildLeadDeadlineReminderMessage(session, signal) {
+  const slots = getSessionSlots(session);
+  const timeline = buildTransactionTimelineSummary(session);
+  const contactName = slots.fullName || stakeholderRoleLabels[getLeadPrimaryClientRole(session)] || "Client";
+  const area = [slots.area, slots.province].filter(Boolean).join(", ");
+  const nextStep = timeline.nextMilestone
+    ? `${timeline.nextMilestone.label}${timeline.nextMilestone.owner ? ` (${timeline.nextMilestone.owner})` : ""}`
+    : "registration and handover";
+  const dueText = signal?.deadlineAt ? new Date(signal.deadlineAt).toLocaleString() : "soon";
+  return [
+    `Axiom Realty AI reminder for ${contactName}${area ? ` | ${area}` : ""}:`,
+    `${signal?.label || "A dated step"} is due by ${dueText}.`,
+    signal?.detail || "Please confirm the next step or blocker so the file stays active.",
+    `Current owner: ${signal?.owner || "Concierge"}. Next step on file: ${nextStep}.`,
+    "Axiom Concierge can still keep the case moving, adjust the date, or override the workflow while waiting for your reply."
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+async function deliverLeadDeadlineReminder(session, signal, { source = "deadline-chase-automation" } = {}) {
+  const recipients = getLeadDeadlineReminderRecipients(session, signal);
+  const message = buildLeadDeadlineReminderMessage(session, signal);
+  const delivery = await sendLeadRecipientMessage(recipients, message);
+  const log = ensureLeadDeadlineReminderLog(session);
+  log.unshift({
+    id: randomUUID(),
+    at: new Date().toISOString(),
+    source,
+    code: signal.code || "",
+    label: signal.label || "",
+    note: signal.detail || "",
+    deadlineAt: signal.deadlineAt || null,
+    deadlineState: signal.deadlineState || "",
+    phase: getLeadDeadlineReminderPhase(signal) || "",
+    ...delivery
+  });
+  session.deadlineReminderLog = log.slice(0, 20);
+  return delivery;
+}
+
+function getLeadDeadlineReminderSummary(session, limit = 6) {
+  const log = ensureLeadDeadlineReminderLog(session);
+  return summariseLeadDeliveryLog(log, limit, (item) => ({
+    source: item.source || "deadline-chase",
+    code: item.code || "",
+    label: item.label || "",
+    note: item.note || "",
+    deadlineAt: item.deadlineAt || null,
+    deadlineState: item.deadlineState || "",
+    phase: item.phase || ""
+  }));
+}
+
+function buildLeadDeadlineChaseSummary(session) {
+  const signals = getLeadDeadlineSignals(session);
+  const activeSignals = signals.filter((item) => item.active);
+  const log = ensureLeadDeadlineReminderLog(session);
+  const nextDueAt = signals[0]?.deadlineAt || null;
+  return {
+    trackedCount: signals.length,
+    activeCount: activeSignals.length,
+    overdueCount: activeSignals.filter((item) => item.deadlineState === "overdue").length,
+    dueSoonCount: activeSignals.filter((item) => ["due-today", "due-soon"].includes(item.deadlineState)).length,
+    nextDueAt,
+    totalSent: log.length,
+    lastSentAt: log[0]?.at || null,
+    items: activeSignals.slice(0, 6)
+  };
 }
 
 function buildAgentLeadSummary(session) {
@@ -6136,6 +8156,11 @@ function buildStakeholderLeadSummary(session, role = "stakeholder") {
     role: normalizedRole,
     roleLabel: stakeholderRoleLabels[normalizedRole] || normalizedRole,
     portalBrief: buildStakeholderPortalBrief(session, normalizedRole, transactionTimeline),
+    portalPolicy: {
+      advisoryOnly: true,
+      conciergeOverride: true,
+      note: "Updates from this portal help the file, but they never block progress. Axiom Concierge can continue, correct, or override any portal entry."
+    },
     intent: slots.intent || session.intent || "unknown",
     createdAt: session.createdAt,
     snapshot: getSessionCopilot(session).snapshot || buildSessionSnapshot(session),
@@ -6277,7 +8302,8 @@ function buildAgentShareText(session, req) {
     "",
     REFERRAL_ACKNOWLEDGEMENT_TEXT,
     "",
-    "Please open this secure one-lead update link, acknowledge the referral arrangement, and update client contact/deal progress:",
+    "Please open this secure acknowledgement link before working the lead or contacting the client.",
+    "Once accepted, the handoff is recorded and you can confirm first contact and deal progress in the same link:",
     buildAgentUpdateUrl(req, session.agentAccess.token)
   ].filter((line) => line !== "").join("\n");
 }
@@ -6850,6 +8876,200 @@ async function runLeadMissingDocumentAutomation() {
   return { inspected, queued, delivered, failed, changed };
 }
 
+async function runLeadDeadlineAutomation() {
+  if (!AUTO_LEAD_AUTOMATION_ENABLED) {
+    return { inspected: 0, active: 0, queued: 0, delivered: 0, failed: 0, changed: false };
+  }
+
+  let inspected = 0;
+  let active = 0;
+  let queued = 0;
+  let delivered = 0;
+  let failed = 0;
+  let changed = false;
+  const nowIso = new Date().toISOString();
+  const todayKey = getLocalDayKey();
+
+  for (const session of Array.from(leadSessions.values()).filter(isLiveLeadSession)) {
+    inspected += 1;
+    const lifecycle = getLeadLifecycle(session);
+    if (["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session)) continue;
+
+    const state = ensureLeadAutomationState(session);
+    const chaseState = state.deadlineChase || {};
+    const signals = getLeadDeadlineSignals(session);
+    const activeSignals = signals.filter((item) => item.active);
+    const activeBases = new Set(signals.map((item) => `${item.code}|${item.deadlineAt}`));
+    let sessionChanged = false;
+
+    for (const key of Object.keys(chaseState)) {
+      const [code = "", deadlineAt = ""] = key.split("|");
+      if (!activeBases.has(`${code}|${deadlineAt}`)) {
+        delete chaseState[key];
+        sessionChanged = true;
+        changed = true;
+      }
+    }
+
+    active += activeSignals.length;
+    for (const signal of activeSignals) {
+      const phase = getLeadDeadlineReminderPhase(signal);
+      if (!phase) continue;
+
+      const stateKey = `${signal.code}|${signal.deadlineAt}|${phase}`;
+      const prior = chaseState[stateKey];
+      if (prior?.dayKey === todayKey) continue;
+
+      const result = await deliverLeadDeadlineReminder(session, signal);
+      chaseState[stateKey] = {
+        dayKey: todayKey,
+        phase,
+        attemptedAt: nowIso,
+        delivered: result.delivered,
+        failed: result.failed,
+        deadlineAt: signal.deadlineAt
+      };
+      appendLeadAuditEvent(session, {
+        type: "deadline-chase-reminder",
+        actor: "System",
+        source: "automation",
+        summary: `Deadline chase reminder: ${signal.label}`,
+        details: `${result.delivered}/${result.attempted} delivered | Due ${signal.deadlineAt}`
+      });
+      queued += 1;
+      delivered += Number(result.delivered || 0);
+      failed += Number(result.failed || 0);
+      sessionChanged = true;
+      changed = true;
+    }
+
+    state.deadlineChase = chaseState;
+    if (sessionChanged) {
+      session.updatedAt = nowIso;
+      leadSessions.set(session.id, session);
+    }
+  }
+
+  if (changed) persistSessions();
+  operationsStore.automation = {
+    ...(operationsStore.automation || {}),
+    lastLeadDeadlineAutomationRunAt: nowIso,
+    lastLeadDeadlineAutomationSummary: { inspected, active, queued, delivered, failed }
+  };
+  persistOperations();
+  return { inspected, active, queued, delivered, failed, changed };
+}
+
+async function runLeadWowAutomation() {
+  if (!AUTO_LEAD_AUTOMATION_ENABLED) {
+    return { inspected: 0, queued: 0, delivered: 0, failed: 0, changed: false };
+  }
+
+  let inspected = 0;
+  let queued = 0;
+  let delivered = 0;
+  let failed = 0;
+  let changed = false;
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const todayKey = getLocalDayKey(now);
+
+  for (const session of Array.from(leadSessions.values()).filter(isLiveLeadSession)) {
+    inspected += 1;
+    const lifecycle = getLeadLifecycle(session);
+    if (["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session)) continue;
+
+    const timeline = buildTransactionTimelineSummary(session);
+    const latestActivityAt = getLatestLeadActivityAt(session) || session.updatedAt || session.createdAt;
+    const latestActivityMs = new Date(latestActivityAt).getTime();
+    const hoursSinceActivity = Number.isFinite(latestActivityMs) ? (Date.now() - latestActivityMs) / 3600000 : 0;
+    const missingDocs = getMissingLeadDocumentLabels(session);
+    const state = ensureLeadAutomationState(session);
+    const wowState = state.wowTouches || {};
+    let candidate = null;
+
+    if (
+      missingDocs.length &&
+      hoursSinceActivity < LEAD_MISSING_DOCS_ESCALATION_HOURS &&
+      !wowState[`document-readiness:${todayKey}:${missingDocs.slice().sort().join("|")}`]
+    ) {
+      candidate = {
+        key: `document-readiness:${todayKey}:${missingDocs.slice().sort().join("|")}`,
+        type: "document-readiness",
+        note: `Current missing items: ${missingDocs.join(", ")}`,
+        includeAgent: true
+      };
+    } else if (
+      hoursSinceActivity >= Math.max(12, Math.floor(LEAD_NO_UPDATE_ESCALATION_HOURS / 2)) &&
+      hoursSinceActivity < LEAD_NO_UPDATE_ESCALATION_HOURS &&
+      !wowState[`silence-watchdog:${todayKey}`]
+    ) {
+      candidate = {
+        key: `silence-watchdog:${todayKey}`,
+        type: "silence-watchdog",
+        note: `Last visible update was ${Math.floor(hoursSinceActivity)} hours ago.`,
+        includeAgent: false
+      };
+    } else if (
+      timeline.nextMilestone &&
+      /finance|attorney|transfer|registration/i.test(`${timeline.nextMilestone.owner || ""} ${timeline.nextMilestone.phase || ""}`) &&
+      !wowState[`partner-readiness:${todayKey}:${timeline.nextMilestone.code}`]
+    ) {
+      candidate = {
+        key: `partner-readiness:${todayKey}:${timeline.nextMilestone.code}`,
+        type: "partner-readiness",
+        note: `Next milestone owner: ${timeline.nextMilestone.owner || "Assigned partner"}.`,
+        includeAgent: true
+      };
+    } else if (
+      timeline.nextMilestone &&
+      (isSessionReferred(session) || session.agentContact?.contactedAt || timeline.completedCount > 0) &&
+      !wowState[`next-step-brief:${todayKey}:${timeline.nextMilestone.code}`]
+    ) {
+      candidate = {
+        key: `next-step-brief:${todayKey}:${timeline.nextMilestone.code}`,
+        type: "next-step-brief",
+        note: "",
+        includeAgent: false
+      };
+    }
+
+    if (!candidate) continue;
+
+    const result = await deliverLeadWowAutomationTouch(session, candidate);
+    wowState[candidate.key] = {
+      dayKey: todayKey,
+      type: candidate.type,
+      attemptedAt: nowIso,
+      delivered: result.delivered,
+      failed: result.failed
+    };
+    state.wowTouches = wowState;
+    appendLeadAuditEvent(session, {
+      type: "wow-automation-touch",
+      actor: "System",
+      source: "automation",
+      summary: `${getLeadWowAutomationLabel(candidate.type)} sent`,
+      details: `${result.delivered}/${result.attempted} delivered`
+    });
+    session.updatedAt = nowIso;
+    leadSessions.set(session.id, session);
+    queued += 1;
+    delivered += Number(result.delivered || 0);
+    failed += Number(result.failed || 0);
+    changed = true;
+  }
+
+  if (changed) persistSessions();
+  operationsStore.automation = {
+    ...(operationsStore.automation || {}),
+    lastLeadWowAutomationRunAt: nowIso,
+    lastLeadWowAutomationSummary: { inspected, queued, delivered, failed }
+  };
+  persistOperations();
+  return { inspected, queued, delivered, failed, changed };
+}
+
 async function runConciergeDailyDigestAutomation() {
   if (!AUTO_CONCIERGE_DIGEST_ENABLED) return { skipped: "disabled" };
   const now = new Date();
@@ -6881,8 +9101,10 @@ async function runConciergeDailyDigestAutomation() {
 async function runLeadAutomationCycle() {
   const sweep = runLeadEscalationAutomationSweep();
   const documents = await runLeadMissingDocumentAutomation();
+  const deadlines = await runLeadDeadlineAutomation();
+  const wow = await runLeadWowAutomation();
   const digest = await runConciergeDailyDigestAutomation();
-  return { sweep, documents, digest };
+  return { sweep, documents, deadlines, wow, digest };
 }
 
 function getLeadSlaState(session) {
@@ -6959,6 +9181,12 @@ function buildSessionDeliveryMessage(session, req) {
 
 function buildWhatsAppFallbackUrl(message) {
   const recipient = cleanPhoneNumber(process.env.WHATSAPP_TO_NUMBER || "");
+  if (!recipient) return null;
+  return `https://wa.me/${recipient.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+}
+
+function buildDirectWhatsAppUrl(message, recipientPhone = "") {
+  const recipient = cleanPhoneNumber(recipientPhone || "");
   if (!recipient) return null;
   return `https://wa.me/${recipient.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
 }
@@ -7501,21 +9729,7 @@ function buildLeadStageUpdateMessage(session, { code = "", label = "", note = ""
 async function deliverLeadStageUpdate(session, { code = "", label = "", note = "", includeAgent = false, source = "stage-update" } = {}) {
   const recipients = getLeadStageUpdateRecipients(session, { includeAgent });
   const message = buildLeadStageUpdateMessage(session, { code, label, note });
-  const deliveries = [];
-
-  for (const recipient of recipients) {
-    const result = await sendWhatsAppText(message, { force: true, to: recipient.phone });
-    deliveries.push({
-      role: recipient.role,
-      name: recipient.name,
-      phone: recipient.phone,
-      delivered: Boolean(result?.delivered),
-      status: result?.status || null,
-      reason: result?.reason || null
-    });
-  }
-
-  const delivered = deliveries.filter((item) => item.delivered).length;
+  const delivery = await sendLeadRecipientMessage(recipients, message);
   const log = ensureLeadStageUpdateLog(session);
   log.unshift({
     id: randomUUID(),
@@ -7524,36 +9738,123 @@ async function deliverLeadStageUpdate(session, { code = "", label = "", note = "
     code,
     label: label || getMilestoneLabel(code),
     note: note || "",
-    message,
-    attempted: deliveries.length,
-    delivered,
-    deliveries
+    ...delivery
   });
   session.stageUpdateNotifications = log.slice(0, 20);
 
-  return {
-    attempted: deliveries.length,
-    delivered,
-    failed: Math.max(0, deliveries.length - delivered),
-    message,
-    deliveries
-  };
+  return delivery;
 }
 
 function getLeadStageUpdateSummary(session, limit = 6) {
   const log = ensureLeadStageUpdateLog(session);
-  return log.slice(0, Math.max(1, limit)).map((item) => ({
-    id: item.id,
-    at: item.at || null,
+  return summariseLeadDeliveryLog(log, limit, (item) => ({
     source: item.source || "stage-update",
     code: item.code || "",
     label: item.label || "",
-    note: item.note || "",
-    attempted: Number(item.attempted || 0),
-    delivered: Number(item.delivered || 0),
-    failed: Math.max(0, Number(item.attempted || 0) - Number(item.delivered || 0)),
-    deliveries: Array.isArray(item.deliveries) ? item.deliveries.slice(0, 8) : []
+    note: item.note || ""
   }));
+}
+
+function ensureLeadWowAutomationLog(session) {
+  session.wowAutomationLog = Array.isArray(session.wowAutomationLog)
+    ? session.wowAutomationLog.filter((item) => item && typeof item === "object").slice(0, 50)
+    : [];
+  return session.wowAutomationLog;
+}
+
+function getLeadWowAutomationLabel(type) {
+  return (
+    {
+      "next-step-brief": "Next-step brief",
+      "silence-watchdog": "Silence watchdog reassurance",
+      "partner-readiness": "Partner readiness prompt",
+      "document-readiness": "Document readiness nudge"
+    }[type] || "Proactive touch"
+  );
+}
+
+function buildLeadWowAutomationMessage(session, { type = "", note = "" } = {}) {
+  const slots = getSessionSlots(session);
+  const timeline = buildTransactionTimelineSummary(session);
+  const vault = buildLeadDocumentVaultSummary(session);
+  const firstName = slots.fullName ? slots.fullName.split(/\s+/)[0] : "there";
+  const nextMilestone = timeline.nextMilestone;
+  const nextText = nextMilestone
+    ? `${nextMilestone.label}${nextMilestone.owner ? ` (${nextMilestone.owner})` : ""}`
+    : "registration and handover";
+  const missingDocs = getMissingLeadDocumentLabels(session);
+  const noteText = note ? ` ${note}` : "";
+
+  if (type === "document-readiness") {
+    return [
+      `Hi ${firstName}, Axiom Realty AI is preparing your next step: ${nextText}.`,
+      missingDocs.length ? `Please keep these ready now: ${missingDocs.join(", ")}.` : "Please keep your required documents ready.",
+      `Vault readiness is ${vault.readinessPercent}% right now.${noteText}`,
+      "Reply to your concierge if you want help with any document."
+    ].join(" ");
+  }
+
+  if (type === "silence-watchdog") {
+    return [
+      `Hi ${firstName}, this is a quick reassurance from Axiom Realty AI.`,
+      `Your matter is still being actively monitored and the current focus is ${nextText}.`,
+      noteText,
+      "You do not need to chase blindly; reply if you want a human update."
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (type === "partner-readiness") {
+    return [
+      `Hi ${firstName}, Axiom Realty AI is preparing the next partner handoff around ${nextText}.`,
+      missingDocs.length ? `To keep that handoff smooth, please make sure these items are ready: ${missingDocs.join(", ")}.` : "Please keep any outstanding details ready so the next specialist can move quickly.",
+      noteText,
+      "Reply to your concierge if you want us to confirm the exact requirement."
+    ].join(" ");
+  }
+
+  return [
+    `Hi ${firstName}, Axiom Realty AI next-step brief: ${nextText}.`,
+    noteText || "We are keeping the journey moving and will keep you updated before the next milestone slips.",
+    "Reply to your concierge if you need clarity."
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+async function deliverLeadWowAutomationTouch(session, { type = "", note = "", includeAgent = false, source = "wow-automation" } = {}) {
+  const recipients = getLeadStageUpdateRecipients(session, { includeAgent });
+  const message = buildLeadWowAutomationMessage(session, { type, note });
+  const delivery = await sendLeadRecipientMessage(recipients, message);
+  const log = ensureLeadWowAutomationLog(session);
+  log.unshift({
+    id: randomUUID(),
+    at: new Date().toISOString(),
+    source,
+    type,
+    label: getLeadWowAutomationLabel(type),
+    note: note || "",
+    ...delivery
+  });
+  session.wowAutomationLog = log.slice(0, 20);
+  return delivery;
+}
+
+function getLeadWowAutomationSummary(session, limit = 6) {
+  const log = ensureLeadWowAutomationLog(session);
+  const items = summariseLeadDeliveryLog(log, limit, (item) => ({
+    source: item.source || "wow-automation",
+    type: item.type || "",
+    label: item.label || getLeadWowAutomationLabel(item.type || ""),
+    note: item.note || ""
+  }));
+  return {
+    totalSent: log.length,
+    lastSentAt: log[0]?.at || null,
+    activeTypes: Array.from(new Set(log.map((item) => getLeadWowAutomationLabel(item.type || "")).filter(Boolean))).slice(0, 6),
+    items
+  };
 }
 
 function getLaunchReadiness() {
@@ -7678,6 +9979,249 @@ app.post("/api/whatsapp/test", requireAdmin, async (req, res) => {
   return res.status(result.delivered ? 200 : 502).json({ ok: result.delivered, result, whatsapp: status });
 });
 
+app.get("/api/whatsapp/inbox", requireAdmin, (_req, res) => {
+  return res.json({
+    ok: true,
+    inbox: buildAdminWhatsappInboxSummary(),
+    whatsapp: getWhatsAppConfigStatus()
+  });
+});
+
+app.post("/api/whatsapp/inbox/:caseId/read", requireAdmin, rateLimit({ windowMs: 60000, max: 40 }), (req, res) => {
+  const item = findOperationsCase(req.params.caseId);
+  if (!item) return res.status(404).json({ ok: false, error: "Case not found" });
+  const updated = markOperationsWhatsappMessagesRead(item.id, "Concierge");
+  persistOperations();
+  return res.json({ ok: true, updated });
+});
+
+app.post("/api/whatsapp/inbox/:caseId/human-takeover", requireAdmin, rateLimit({ windowMs: 60000, max: 30 }), (req, res) => {
+  const item = findOperationsCase(req.params.caseId);
+  if (!item) return res.status(404).json({ ok: false, error: "Case not found" });
+  const action = sanitizeShortText(req.body?.action || "resume", 40).toLowerCase();
+  const note = sanitizeShortText(req.body?.note || "", 500);
+  if (action === "resume") {
+    const humanTakeover = resumeCaseHumanTakeover(item, { actor: "Concierge", note });
+    persistOperations();
+    return res.json({ ok: true, action, humanTakeover, inbox: buildAdminWhatsappInboxSummary() });
+  }
+  if (action === "pause") {
+    const reasons = detectWhatsappHumanTakeover(note) || { reasonCodes: ["manual-human-takeover"], reasonLabels: ["Manual concierge takeover"] };
+    const humanTakeover = activateCaseHumanTakeover(item, {
+      reasons,
+      sender: "Concierge",
+      source: "admin-manual-human-takeover",
+      triggerMessage: note
+    });
+    persistOperations();
+    return res.json({ ok: true, action, humanTakeover, inbox: buildAdminWhatsappInboxSummary() });
+  }
+  return res.status(400).json({ ok: false, error: "Unsupported human takeover action" });
+});
+
+app.post("/api/whatsapp/inbox/:caseId/reply", requireAdmin, rateLimit({ windowMs: 60000, max: 30 }), async (req, res) => {
+  const item = findOperationsCase(req.params.caseId);
+  if (!item) return res.status(404).json({ ok: false, error: "Case not found" });
+  const message = sanitizeShortText(req.body?.message, 1600);
+  const recipientPhone = sanitizeShortText(req.body?.recipientPhone || "", 40);
+  const recipientName = sanitizeShortText(req.body?.recipientName || "", 160);
+  const recipientRole = sanitizeShortText(req.body?.recipientRole || "", 40);
+  if (!message) return res.status(400).json({ ok: false, error: "Reply message is required" });
+  if (!cleanPhoneNumber(recipientPhone)) return res.status(400).json({ ok: false, error: "Recipient phone is required" });
+  const result = await sendManualWhatsappInboxReply({
+    item,
+    message,
+    recipientName,
+    recipientPhone,
+    recipientRole,
+    source: "admin-reply",
+    actor: "Concierge"
+  });
+  return res.json({ ok: result.ok, result, inbox: buildAdminWhatsappInboxSummary(), whatsapp: getWhatsAppConfigStatus() });
+});
+
+app.post("/api/whatsapp/inbox/:caseId/appointments", requireAdmin, rateLimit({ windowMs: 60000, max: 30 }), async (req, res) => {
+  const item = findOperationsCase(req.params.caseId);
+  if (!item) return res.status(404).json({ ok: false, error: "Case not found" });
+  const kind = sanitizeShortText(req.body?.kind || "appointment", 60).toLowerCase();
+  const title = sanitizeShortText(req.body?.title || "", 160) || formatOperationsAppointmentKind(kind);
+  const participantName = sanitizeShortText(req.body?.participantName || "", 160);
+  const participantPhone = cleanPhoneNumber(req.body?.participantPhone || "");
+  const participantRole = sanitizeShortText(req.body?.participantRole || "", 40).toLowerCase();
+  const location = sanitizeShortText(req.body?.location || "", 200);
+  const notes = sanitizeShortText(req.body?.notes || "", 500);
+  const scheduledForInput = sanitizeShortText(req.body?.scheduledFor || "", 80);
+  const scheduledFor = scheduledForInput && !Number.isNaN(new Date(scheduledForInput).getTime()) ? new Date(scheduledForInput).toISOString() : null;
+  if (!scheduledFor) return res.status(400).json({ ok: false, error: "A valid appointment date and time is required" });
+  if (!participantName) return res.status(400).json({ ok: false, error: "Choose the participant for this appointment" });
+  if (!participantPhone) return res.status(400).json({ ok: false, error: "The participant needs a valid WhatsApp number" });
+
+  const appointment = normalizeOperationsAppointment({
+    caseId: item.id,
+    kind,
+    title,
+    participantName,
+    participantPhone,
+    participantRole,
+    scheduledFor,
+    location,
+    notes,
+    status: "pending-confirmation",
+    confirmationRequired: true,
+    createdBy: "Concierge"
+  });
+  ensureOperationsAppointments().push(appointment);
+  addOperationsTimeline(item.id, "Appointment booked", `${appointment.title} booked for ${participantName} on ${formatOperationsAppointmentTime(scheduledFor)}${location ? ` at ${location}` : ""}.`);
+  addOperationsActivity("BOOK", "Appointment booked", `${item.id} - ${appointment.title}`);
+  addOperationsAudit("appointment-booked", item.id, `${appointment.id}: ${participantName}`);
+
+  const result = await sendManualWhatsappInboxReply({
+    item,
+    message: buildAppointmentWhatsappMessage(item, appointment, { mode: "scheduled" }),
+    recipientName: participantName,
+    recipientPhone: participantPhone,
+    recipientRole: participantRole,
+    source: "appointment-booked",
+    actor: "Concierge"
+  });
+  appointment.lastNotificationId = result?.notification?.id || null;
+  appointment.updatedAt = new Date().toISOString();
+  persistOperations();
+  return res.json({ ok: true, appointment, result, inbox: buildAdminWhatsappInboxSummary(), whatsapp: getWhatsAppConfigStatus() });
+});
+
+app.post("/api/whatsapp/inbox/appointments/:id/action", requireAdmin, rateLimit({ windowMs: 60000, max: 40 }), async (req, res) => {
+  const appointment = findOperationsAppointment(req.params.id);
+  if (!appointment) return res.status(404).json({ ok: false, error: "Appointment not found" });
+  const item = findOperationsCase(appointment.caseId);
+  if (!item) return res.status(404).json({ ok: false, error: "Case not found" });
+  const action = sanitizeShortText(req.body?.action || "", 40).toLowerCase();
+  const note = sanitizeShortText(req.body?.note || "", 500);
+  const notifyParticipant = req.body?.notifyParticipant === true;
+  const label = appointment.title || formatOperationsAppointmentKind(appointment.kind);
+  const now = new Date().toISOString();
+  let outboundMessage = "";
+
+  if (action === "confirm") {
+    appointment.status = "confirmed";
+    appointment.confirmedAt = now;
+    outboundMessage = buildAppointmentWhatsappMessage(item, appointment, { mode: "confirmed-ack" });
+    addOperationsTimeline(item.id, "Appointment confirmed", `${label} was confirmed from the admin workspace.`);
+    addOperationsActivity("BOOK", "Appointment confirmed", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-confirmed-admin", item.id, appointment.id);
+  } else if (action === "complete") {
+    appointment.status = "completed";
+    appointment.completedAt = now;
+    addOperationsTimeline(item.id, "Appointment completed", `${label} was marked complete.${note ? ` ${note}` : ""}`);
+    addOperationsActivity("BOOK", "Appointment completed", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-completed-admin", item.id, appointment.id);
+  } else if (action === "missed") {
+    appointment.status = "missed";
+    appointment.missedAt = now;
+    outboundMessage = buildAppointmentWhatsappMessage(item, appointment, { mode: "missed-ack" });
+    addOperationsTimeline(item.id, "Appointment missed", `${label} was marked missed from the admin workspace.${note ? ` ${note}` : ""}`);
+    addOperationsActivity("BOOK", "Appointment missed", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-missed-admin", item.id, appointment.id);
+  } else if (action === "cancel") {
+    appointment.status = "cancelled";
+    appointment.cancelledAt = now;
+    appointment.cancelledBy = "Concierge";
+    outboundMessage = buildAppointmentWhatsappMessage(item, appointment, { mode: "cancelled" });
+    addOperationsTimeline(item.id, "Appointment cancelled", `${label} was cancelled from the admin workspace.${note ? ` ${note}` : ""}`);
+    addOperationsActivity("BOOK", "Appointment cancelled", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-cancelled-admin", item.id, appointment.id);
+  } else if (action === "reopen") {
+    appointment.status = "pending-confirmation";
+    appointment.cancelledAt = null;
+    appointment.cancelledBy = "";
+    appointment.missedAt = null;
+    appointment.completedAt = null;
+    appointment.rescheduleRequestedAt = null;
+    outboundMessage = buildAppointmentWhatsappMessage(item, appointment, { mode: "scheduled" });
+    addOperationsTimeline(item.id, "Appointment reopened", `${label} was reopened for confirmation from the admin workspace.`);
+    addOperationsActivity("BOOK", "Appointment reopened", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-reopened-admin", item.id, appointment.id);
+  } else {
+    return res.status(400).json({ ok: false, error: "Unsupported appointment action" });
+  }
+
+  appointment.updatedAt = now;
+  let result = null;
+  if (notifyParticipant && appointment.participantPhone && outboundMessage) {
+    result = await sendManualWhatsappInboxReply({
+      item,
+      message: outboundMessage,
+      recipientName: appointment.participantName,
+      recipientPhone: appointment.participantPhone,
+      recipientRole: appointment.participantRole,
+      source: `appointment-action:${action}`,
+      actor: "Concierge"
+    });
+    appointment.lastNotificationId = result?.notification?.id || appointment.lastNotificationId || null;
+  }
+  persistOperations();
+  return res.json({ ok: true, appointment, result, inbox: buildAdminWhatsappInboxSummary(), whatsapp: getWhatsAppConfigStatus() });
+});
+
+app.post("/api/whatsapp/inbox/simulate", requireAdmin, rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
+  const result = await processInboundWhatsappPayload(req.body, {
+    source: "admin-simulated-inbound",
+    autoReplyActor: "Axiom Concierge"
+  });
+  return res.status(result.ok ? 200 : result.status || 400).json({
+    ...result,
+    inbox: buildAdminWhatsappInboxSummary(),
+    whatsapp: getWhatsAppConfigStatus()
+  });
+});
+
+app.get("/api/whatsapp/inbox/documents/:id/download", requireAdmin, (req, res) => {
+  const document = operationsStore.documents.find((item) => item.id === req.params.id);
+  if (!document?.file?.storageName) return res.status(404).json({ ok: false, error: "Uploaded file not found" });
+  const filePath = path.join(secureDocumentsDir, path.basename(document.file.storageName));
+  if (!fs.existsSync(filePath)) return res.status(404).json({ ok: false, error: "Uploaded file not found" });
+  res.set("Content-Type", document.file.mimeType || "application/octet-stream");
+  res.set("Content-Disposition", `attachment; filename="${document.file.originalName.replace(/[\r\n"]/g, "")}"`);
+  return res.sendFile(filePath);
+});
+
+app.get("/api/whatsapp/inbox/media/:id/download", requireAdmin, (req, res) => {
+  const note = ensureOperationsCaseNotes().find((item) => item.id === req.params.id);
+  if (!note?.media?.storageName) return res.status(404).json({ ok: false, error: "Voice note file not found" });
+  const filePath = path.join(secureDocumentsDir, path.basename(note.media.storageName));
+  if (!fs.existsSync(filePath)) return res.status(404).json({ ok: false, error: "Voice note file not found" });
+  res.set("Content-Type", note.media.mimeType || "application/octet-stream");
+  res.set("Content-Disposition", `attachment; filename="${String(note.media.originalName || "voice-note").replace(/[\r\n"]/g, "")}"`);
+  return res.sendFile(filePath);
+});
+
+app.post("/api/whatsapp/smart-reminders/run", requireAdmin, rateLimit({ windowMs: 60000, max: 10 }), async (req, res) => {
+  const summary = sweepOperationsReminders({ fullAutomation: false });
+  if (req.body?.processQueue !== false) {
+    summary.delivery = await processOperationsNotifications({
+      limit: 50,
+      forceRetry: Boolean(req.body?.forceRetry)
+    });
+  }
+  return res.json({
+    ok: true,
+    summary,
+    whatsapp: getWhatsAppConfigStatus()
+  });
+});
+
+app.post("/api/whatsapp/queue/process", requireAdmin, rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
+  const summary = await processOperationsNotifications({
+    limit: 50,
+    forceRetry: Boolean(req.body?.forceRetry)
+  });
+  return res.json({
+    ok: true,
+    summary,
+    whatsapp: getWhatsAppConfigStatus()
+  });
+});
+
 app.get("/api/analytics", requireAdmin, (_req, res) => {
   res.json({ ok: true, analytics: getAnalyticsSummary() });
 });
@@ -7751,6 +10295,12 @@ app.get("/api/lead-automation/status", requireAdmin, (_req, res) => {
       digestTimeLocal: `${String(AUTO_CONCIERGE_DIGEST_HOUR).padStart(2, "0")}:${String(AUTO_CONCIERGE_DIGEST_MINUTE).padStart(2, "0")}`,
       lastLeadAutomationRunAt: automation.lastLeadAutomationRunAt || null,
       lastLeadAutomationSummary: automation.lastLeadAutomationSummary || null,
+      lastLeadDocumentReminderRunAt: automation.lastLeadDocumentReminderRunAt || null,
+      lastLeadDocumentReminderSummary: automation.lastLeadDocumentReminderSummary || null,
+      lastLeadDeadlineAutomationRunAt: automation.lastLeadDeadlineAutomationRunAt || null,
+      lastLeadDeadlineAutomationSummary: automation.lastLeadDeadlineAutomationSummary || null,
+      lastLeadWowAutomationRunAt: automation.lastLeadWowAutomationRunAt || null,
+      lastLeadWowAutomationSummary: automation.lastLeadWowAutomationSummary || null,
       lastConciergeDigestDay: automation.lastConciergeDigestDay || null,
       lastConciergeDigestAt: automation.lastConciergeDigestAt || null,
       lastConciergeDigestStatus: automation.lastConciergeDigestStatus || null,
@@ -7846,6 +10396,206 @@ function getLeadOutcomeSummary(session) {
   };
 }
 
+function toDateInputValue(value) {
+  const time = value ? new Date(value).getTime() : NaN;
+  if (!Number.isFinite(time)) return "";
+  return new Date(time).toISOString().slice(0, 10);
+}
+
+function getLifecycleRank(code) {
+  return leadLifecycleStages.find((stage) => stage.code === code)?.rank || 0;
+}
+
+function maybeAdvanceLeadLifecycle(session, code, options = {}) {
+  if (!leadLifecycleStageCodes.includes(code)) return false;
+  const current = getLeadLifecycle(session);
+  if (getLifecycleRank(code) <= getLifecycleRank(current.code)) return false;
+  session.lifecycleStage = {
+    code,
+    note: options.note || current.note || "",
+    updatedAt: options.updatedAt || new Date().toISOString(),
+    source: options.source || "outcome-behavior"
+  };
+  return true;
+}
+
+function mapWorkflowOwnerLabel(owner = "") {
+  const value = normaliseMatchText(owner || "");
+  if (!value) return "Concierge";
+  if (value.includes("bond") || value.includes("finance")) return "Bond originator";
+  if (value.includes("attorney")) return "Attorney";
+  if (value.includes("seller")) return "Seller";
+  if (value.includes("buyer")) return "Buyer";
+  if (value.includes("agent")) return "Agent";
+  if (value.includes("concierge")) return "Concierge";
+  return "Concierge";
+}
+
+function getLeadOutcomeWorkflow(session) {
+  const outcome = getLeadOutcomeSummary(session);
+  const timeline = buildTransactionTimelineSummary(session);
+  const commission = buildCommissionProtectionSummary(session);
+  const lifecycle = getLeadLifecycle(session);
+  const referred = isSessionReferred(session);
+  const responsibilityEnds = outcome.responsibilityEnds || isSessionClosed(session);
+  const nextMilestoneOwner = mapWorkflowOwnerLabel(timeline.nextMilestone?.owner || "");
+
+  let activeTrack = "undecided";
+  let queueLane = "qualification";
+  let trackingScope = "Lead qualification, routing, and first response.";
+  let automationFocus = "Capture intake cleanly, route fast, and confirm first response.";
+  let responsibilityBoundary = "Choose referral-only or managed transaction to lock the operating model.";
+  let primaryOwner = referred ? "Agent" : "Concierge";
+  let nextControl = referred ? "Confirm the operating model and the first dated update." : "Assign or confirm the receiving specialist.";
+  let documentScope = "intake-and-routing";
+
+  if (responsibilityEnds) {
+    activeTrack = "closed";
+    queueLane = "closure";
+    trackingScope = "Audit trail, payment proof, and closure evidence only.";
+    automationFocus = "Keep proof intact, suppress unnecessary chase work, and prepare archive.";
+    responsibilityBoundary = "Axiom responsibility has ended unless the case is reopened manually.";
+    primaryOwner = "Concierge";
+    nextControl =
+      outcome.commercialStatus === "referral_fee_paid"
+        ? "Store proof of payment and archive the referral."
+        : "Confirm closure evidence and archive the case.";
+    documentScope = "closure-proof";
+  } else if (outcome.caseMode === "managed_transaction") {
+    activeTrack = "managed-transaction";
+    queueLane = "managed-transaction";
+    trackingScope = "Full transaction tracking from handoff through registration and handover.";
+    automationFocus = "Milestones, stakeholder nudges, document readiness, and transfer recovery.";
+    responsibilityBoundary = "Axiom stays active until the transaction is closed or archived.";
+    primaryOwner = nextMilestoneOwner || mapWorkflowOwnerLabel(session.caseFile?.owner || "Agent");
+    nextControl = timeline.nextMilestone
+      ? `Advance ${timeline.nextMilestone.label} with ${nextMilestoneOwner || "the current owner"}.`
+      : "Keep the transaction moving and record the next dated milestone.";
+    documentScope = "full-transaction";
+  } else if (outcome.caseMode === "referral_only") {
+    activeTrack = "referral-protection";
+    queueLane = "referral-protection";
+    trackingScope = "Referral proof, agent accountability, and commission outcome only.";
+    automationFocus = "Handoff proof, contact confirmation, payout readiness, and fee chase.";
+    responsibilityBoundary = "Axiom tracks the referral until the fee is paid, waived, or archived.";
+    primaryOwner =
+      ["referral_fee_due", "referral_fee_paid"].includes(outcome.commercialStatus) || commission.payoutStatus === "Invoiced"
+        ? "Concierge"
+        : session.agentContact?.contactedAt
+          ? "Agent"
+          : referred
+            ? "Concierge"
+            : "Concierge";
+    nextControl =
+      outcome.commercialStatus === "referral_fee_due"
+        ? commission.nextAction || "Issue or chase the referral invoice."
+        : referred
+          ? "Protect the referral proof and get the next dated update from the receiving agent."
+          : "Complete the handoff and lock referral proof before the deal moves.";
+    documentScope = "referral-proof";
+  }
+
+  return {
+    ...outcome,
+    activeTrack,
+    queueLane,
+    trackingScope,
+    automationFocus,
+    responsibilityBoundary,
+    primaryOwner,
+    nextControl,
+    documentScope,
+    nextMilestoneOwner,
+    lifecycleLabel: lifecycle.label
+  };
+}
+
+function getOutcomeWorkflowDueAt(session, workflow) {
+  if (!workflow || workflow.activeTrack === "closed") return null;
+  if (workflow.activeTrack === "managed-transaction") {
+    return addMinutesIso(getLatestLeadActivityAt(session) || session.updatedAt || session.createdAt, 24 * 60);
+  }
+  if (workflow.activeTrack === "referral-protection") {
+    const commission = buildCommissionProtectionSummary(session);
+    return commission.payoutDueDate ? new Date(commission.payoutDueDate).toISOString() : addMinutesIso(getLatestLeadActivityAt(session) || session.updatedAt || session.createdAt, 48 * 60);
+  }
+  return addMinutesIso(session.updatedAt || session.createdAt, 4 * 60);
+}
+
+function applyOutcomeWorkflowBehavior(session, options = {}) {
+  const now = options.updatedAt || new Date().toISOString();
+  const workflow = getLeadOutcomeWorkflow(session);
+  const note = options.note || workflow.nextControl;
+  let targetStage = "intake-received";
+
+  if (workflow.activeTrack === "closed") {
+    targetStage = workflow.caseMode === "archived" || workflow.commercialStatus === "archived" ? "archived" : "sale-concluded";
+    session.lifecycleStage = {
+      code: "closed",
+      note,
+      updatedAt: now,
+      source: options.source || "outcome-behavior"
+    };
+  } else if (workflow.activeTrack === "managed-transaction") {
+    targetStage =
+      workflow.commercialStatus === "transaction_closed"
+        ? "sale-concluded"
+        : session.agentContact?.contactedAt || workflow.commercialStatus === "under_management"
+          ? "active-follow-up"
+          : isSessionReferred(session)
+            ? "specialist-assigned"
+            : "brief-qualified";
+    if (workflow.commercialStatus === "transaction_closed") {
+      maybeAdvanceLeadLifecycle(session, "sale-concluded", { note, updatedAt: now, source: options.source || "outcome-behavior" });
+    } else if (session.agentContact?.contactedAt) {
+      maybeAdvanceLeadLifecycle(session, "with-agent", { note, updatedAt: now, source: options.source || "outcome-behavior" });
+    } else if (isSessionReferred(session)) {
+      maybeAdvanceLeadLifecycle(session, "referred", { note, updatedAt: now, source: options.source || "outcome-behavior" });
+    }
+  } else if (workflow.activeTrack === "referral-protection") {
+    targetStage =
+      ["referral_fee_due", "referral_fee_paid"].includes(workflow.commercialStatus)
+        ? "sale-concluded"
+        : workflow.commercialStatus === "client_contacted"
+          ? "active-follow-up"
+          : isSessionReferred(session) || ["accepted_by_agent", "handed_off"].includes(workflow.commercialStatus)
+            ? "specialist-assigned"
+            : "brief-qualified";
+    if (workflow.commercialStatus === "client_contacted") {
+      maybeAdvanceLeadLifecycle(session, "contact-confirmed", { note, updatedAt: now, source: options.source || "outcome-behavior" });
+    }
+    if (["referral_fee_due", "referral_fee_paid"].includes(workflow.commercialStatus)) {
+      maybeAdvanceLeadLifecycle(session, "sale-concluded", { note, updatedAt: now, source: options.source || "outcome-behavior" });
+    } else if (isSessionReferred(session)) {
+      maybeAdvanceLeadLifecycle(session, "referred", { note, updatedAt: now, source: options.source || "outcome-behavior" });
+    }
+  } else {
+    targetStage = isSessionReferred(session) ? "specialist-assigned" : session.conciergeAcknowledgedAt ? "brief-qualified" : "intake-received";
+  }
+
+  updateLeadCaseStage(session, targetStage, {
+    source: options.source || "outcome-behavior",
+    actor: options.actor || "System",
+    note,
+    owner: workflow.primaryOwner,
+    dueAt: getOutcomeWorkflowDueAt(session, workflow),
+    allowBackward: workflow.activeTrack === "closed"
+  });
+
+  if (workflow.activeTrack !== "closed") {
+    const currentDeal = session.dealProtection || {};
+    session.dealProtection = {
+      status: currentDeal.status || "Active",
+      commissionAgreement: currentDeal.commissionAgreement || "Not discussed",
+      nextCheckIn: currentDeal.nextCheckIn || toDateInputValue(getOutcomeWorkflowDueAt(session, workflow)),
+      note: currentDeal.note || "",
+      updatedAt: currentDeal.updatedAt || now
+    };
+  }
+
+  return getLeadOutcomeWorkflow(session);
+}
+
 function updateLeadOutcome(session, patch = {}, actor = "Concierge", source = "lead-outcome") {
   const previous = getLeadOutcomeSummary(session);
   const caseMode = leadCaseModeOptions.includes(patch.caseMode) ? patch.caseMode : previous.caseMode;
@@ -7880,6 +10630,12 @@ function updateLeadOutcome(session, patch = {}, actor = "Concierge", source = "l
       note: note || "Lead moved into managed transaction mode"
     });
   }
+  applyOutcomeWorkflowBehavior(session, {
+    actor,
+    source,
+    note: note || `Operating mode: ${leadCaseModeLabels[session.outcome.caseMode]} / ${leadCommercialStatusLabels[session.outcome.commercialStatus]}`,
+    updatedAt: now
+  });
 
   appendLeadAuditEvent(session, {
     type: "outcome-updated",
@@ -7991,6 +10747,7 @@ app.get("/api/leads/recent", requireAdmin, (req, res) => {
       const agentMatch = buildAgentMatchRecommendation(session);
       const followUpIntelligence = buildFollowUpIntelligence(session);
       const intakeIntelligence = buildLeadIntakeIntelligence(session, session.scoring || null);
+      const outcomeWorkflow = getLeadOutcomeWorkflow(session);
       return {
         id: session.id,
         label: session.label,
@@ -8001,6 +10758,7 @@ app.get("/api/leads/recent", requireAdmin, (req, res) => {
         referred: isSessionReferred(session),
         queueStatus: isSessionClosed(session) ? "closed" : "open",
         outcome: getLeadOutcomeSummary(session),
+        outcomeWorkflow,
         lifecycle: getLeadLifecycle(session),
         dataClass: getSessionDataClass(session),
         scoring: session.scoring || null,
@@ -8018,13 +10776,18 @@ app.get("/api/leads/recent", requireAdmin, (req, res) => {
         dealProtection: session.dealProtection || null,
         dealProof: ensureDealProofState(session),
         commissionProtection: buildCommissionProtectionSummary(session),
+        commissionLock: buildCommissionLockSummary(session),
+        deadlineChase: buildLeadDeadlineChaseSummary(session),
         transactionTimeline: buildTransactionTimelineSummary(session),
         leadDocuments: getLeadDocumentSummary(session).slice(0, 12),
         missingLeadDocuments: getMissingLeadDocumentLabels(session),
         requiredLeadDocuments: getRequiredLeadDocumentLabels(session),
+        documentVaultSummary: buildLeadDocumentVaultSummary(session),
         documentReminderLog: getLeadDocumentReminderSummary(session),
+        deadlineReminderLog: getLeadDeadlineReminderSummary(session),
         caseFile: getLeadCaseFileSummary(session),
         escalationFlags: getLeadEscalationFlags(session),
+        escalationSummary: buildLeadEscalationSummary(session),
         proofTrail: ensureLeadAuditTrail(session).slice(-12),
         duplicateSignals,
         nextBestAction: buildNextBestAction(session),
@@ -8034,7 +10797,8 @@ app.get("/api/leads/recent", requireAdmin, (req, res) => {
         followUpIntelligence,
         agentUpdates: Array.isArray(session.agentUpdates) ? session.agentUpdates.slice(-5) : [],
         stakeholderUpdates: Array.isArray(session.stakeholderUpdates) ? session.stakeholderUpdates.slice(-10) : [],
-        stageUpdateNotifications: getLeadStageUpdateSummary(session)
+        stageUpdateNotifications: getLeadStageUpdateSummary(session),
+        wowAutomation: getLeadWowAutomationSummary(session)
       };
     });
   res.json({
@@ -8594,18 +11358,16 @@ app.post("/api/leads/:id/lifecycle", requireAdmin, (req, res) => {
   });
 });
 
-app.post("/api/leads/:id/agent-link", requireAdmin, rateLimit({ windowMs: 60000, max: 20 }), (req, res) => {
-  const id = req.params.id;
-  if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
-  const requestedName = (req.body?.agentName || "").toString().trim();
-  const requestedPhone = cleanPhoneNumber((req.body?.agentPhone || "").toString().trim());
-  const requestedAgency = (req.body?.agentAgency || "").toString().trim();
-  const refresh = Boolean(req.body?.refresh);
-  if (requestedName.length > 120) return res.status(400).json({ ok: false, error: "Agent name is too long" });
-  if (req.body?.agentPhone && !requestedPhone) return res.status(400).json({ ok: false, error: "Invalid agent cellphone number" });
-  if (requestedAgency.length > 160) return res.status(400).json({ ok: false, error: "Agency name is too long" });
+function prepareAgentHandoff(session, req, options = {}) {
+  const requestedName = (options.agentName || "").toString().trim();
+  const requestedPhone = cleanPhoneNumber((options.agentPhone || "").toString().trim());
+  const requestedAgency = (options.agentAgency || "").toString().trim();
+  const refresh = Boolean(options.refresh);
 
-  const session = leadSessions.get(id);
+  if (requestedName.length > 120) return { ok: false, status: 400, error: "Agent name is too long" };
+  if (options.agentPhone && !requestedPhone) return { ok: false, status: 400, error: "Invalid agent cellphone number" };
+  if (requestedAgency.length > 160) return { ok: false, status: 400, error: "Agency name is too long" };
+
   markConciergeAcknowledged(session, "agent-link");
   const agentName = requestedName || session.assignedAgent?.name || session.agentAccess?.agentName || "Receiving agent";
   const agentPhone = requestedPhone || session.assignedAgent?.phone || session.agentAccess?.agentPhone || "";
@@ -8665,17 +11427,95 @@ app.post("/api/leads/:id/agent-link", requireAdmin, rateLimit({ windowMs: 60000,
   });
 
   session.updatedAt = now;
-  leadSessions.set(id, session);
-  persistSessions();
-
-  return res.json({
+  return {
     ok: true,
-    id,
+    refresh,
+    agentName,
+    agentPhone,
+    agentAgency,
+    now,
     agentUrl: buildAgentUpdateUrl(req, session.agentAccess.token),
     agentShareText: buildAgentShareText(session, req),
     agentAccess: getAgentAccessSummary(session, req),
     caseFile: getLeadCaseFileSummary(session),
     acknowledgementText: REFERRAL_ACKNOWLEDGEMENT_TEXT
+  };
+}
+
+app.post("/api/leads/:id/agent-link", requireAdmin, rateLimit({ windowMs: 60000, max: 20 }), (req, res) => {
+  const id = req.params.id;
+  if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
+  const session = leadSessions.get(id);
+  const result = prepareAgentHandoff(session, req, req.body || {});
+  if (!result.ok) return res.status(result.status || 400).json(result);
+  leadSessions.set(id, session);
+  persistSessions();
+  return res.json({
+    ok: true,
+    id,
+    agentUrl: result.agentUrl,
+    agentShareText: result.agentShareText,
+    agentAccess: result.agentAccess,
+    caseFile: result.caseFile,
+    acknowledgementText: result.acknowledgementText
+  });
+});
+
+app.post("/api/leads/:id/agent-handoff-whatsapp", requireAdmin, rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
+  const id = req.params.id;
+  if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
+
+  const session = leadSessions.get(id);
+  const requestedName = (req.body?.agentName || "").toString().trim();
+  const requestedPhone = cleanPhoneNumber((req.body?.agentPhone || "").toString().trim());
+  const requestedAgency = (req.body?.agentAgency || "").toString().trim();
+  const seededName = requestedName || session.assignedAgent?.name || session.agentAccess?.agentName || "";
+  const seededPhone = requestedPhone || session.assignedAgent?.phone || session.agentAccess?.agentPhone || "";
+  const seededAgency = requestedAgency || session.assignedAgent?.agency || session.agentAccess?.agentAgency || "";
+
+  if (!seededName) return res.status(400).json({ ok: false, error: "Agent name is required before sending the handoff" });
+  if (!seededPhone) return res.status(400).json({ ok: false, error: "Agent cellphone is required before sending the handoff" });
+  const handoffResult = prepareAgentHandoff(session, req, {
+    ...(req.body || {}),
+    agentName: seededName,
+    agentPhone: seededPhone,
+    agentAgency: seededAgency
+  });
+  if (!handoffResult.ok) return res.status(handoffResult.status || 400).json(handoffResult);
+
+  const message = handoffResult.agentShareText || buildAgentShareText(session, req);
+  const recipientPhone = cleanPhoneNumber(handoffResult.agentAccess?.agentPhone || seededPhone);
+  const delivery = await sendWhatsAppText(message, { force: true, to: recipientPhone });
+  const fallbackUrl = buildDirectWhatsAppUrl(message, recipientPhone);
+  const now = new Date().toISOString();
+
+  session.agentAccess = session.agentAccess || {};
+  session.agentAccess.lastSentAt = now;
+  session.agentAccess.lastDeliveryStatus = delivery.status || null;
+  session.agentAccess.lastDeliveryReason = delivery.reason || null;
+  session.agentAccess.lastDeliveryRecipient = recipientPhone || null;
+  session.updatedAt = now;
+  appendLeadAuditEvent(session, {
+    type: "agent-handoff-whatsapp",
+    actor: "Concierge",
+    source: "operations",
+    summary: delivery.delivered ? "Agent handoff sent by WhatsApp" : "Agent handoff WhatsApp send failed",
+    details: recipientPhone ? `${recipientPhone} | ${delivery.reason || delivery.status || "No additional details"}` : (delivery.reason || delivery.status || "No recipient captured")
+  });
+  leadSessions.set(id, session);
+  persistSessions();
+
+  return res.status(delivery.delivered ? 200 : 502).json({
+    ok: delivery.delivered,
+    id,
+    delivery,
+    fallbackUrl,
+    agentUrl: handoffResult.agentUrl,
+    agentShareText: message,
+    agentAccess: getAgentAccessSummary(session, req),
+    handoff: buildAgentHandoffSummary(session, req),
+    caseFile: getLeadCaseFileSummary(session),
+    error: delivery.delivered ? null : delivery.reason || "WhatsApp handoff could not be delivered"
   });
 });
 
@@ -8872,6 +11712,8 @@ app.post("/api/stakeholder-lead/:token/update", rateLimit({ windowMs: 60000, max
     role,
     roleLabel,
     actorName,
+    advisoryOnly: true,
+    reviewState: "pending-concierge-review",
     status: status || null,
     medium: medium || null,
     nextCheckIn: nextCheckIn || null,
@@ -8879,33 +11721,12 @@ app.post("/api/stakeholder-lead/:token/update", rateLimit({ windowMs: 60000, max
   };
   session.stakeholderUpdates.push(updateEntry);
 
-  if (status || nextCheckIn || note) {
-    session.dealProtection = {
-      ...(session.dealProtection || {}),
-      status: status || session.dealProtection?.status || "Active",
-      nextCheckIn: nextCheckIn || session.dealProtection?.nextCheckIn || null,
-      note,
-      updatedAt: now,
-      source: "stakeholder-portal"
-    };
-  }
-  if (medium) {
-    session.agentContact = {
-      medium,
-      note,
-      contactedAt: now,
-      source: "stakeholder-portal",
-      actor: actorName
-    };
-    session.firstContactAt = session.firstContactAt || now;
-  }
-
   appendLeadAuditEvent(session, {
     type: "stakeholder-update",
     actor: actorName,
     source: "stakeholder-portal",
-    summary: `${roleLabel} shared a progress update`,
-    details: [status ? `Status: ${status}` : "", medium ? `Contact: ${medium}` : "", note].filter(Boolean).join(" | ")
+    summary: `${roleLabel} shared an advisory progress update`,
+    details: [status ? `Suggested status: ${status}` : "", medium ? `Suggested contact: ${medium}` : "", nextCheckIn ? `Suggested next check-in: ${nextCheckIn}` : "", note, "Concierge review still available"].filter(Boolean).join(" | ")
   });
   syncLeadCaseFile(session, {
     source: "stakeholder-update",
@@ -8920,7 +11741,59 @@ app.post("/api/stakeholder-lead/:token/update", rateLimit({ windowMs: 60000, max
   return res.json({
     ok: true,
     update: updateEntry,
+    updateReview: "pending-concierge-review",
     lead: buildStakeholderLeadSummary(session, role)
+  });
+});
+
+app.post("/api/leads/:id/stakeholder-updates/:updateId/review", requireAdmin, rateLimit({ windowMs: 60000, max: 40 }), (req, res) => {
+  const session = leadSessions.get(req.params.id);
+  if (!session) return res.status(404).json({ ok: false, error: "Lead not found" });
+  session.stakeholderUpdates = Array.isArray(session.stakeholderUpdates) ? session.stakeholderUpdates : [];
+  const update = session.stakeholderUpdates.find((item) => item.id === req.params.updateId);
+  if (!update) return res.status(404).json({ ok: false, error: "Stakeholder update not found" });
+
+  const action = (req.body?.action || "").toString().trim().toLowerCase();
+  const reviewStateMap = {
+    working: "in-concierge-workflow",
+    reference: "reference-only",
+    dismiss: "dismissed",
+    reopen: "pending-concierge-review"
+  };
+  if (!reviewStateMap[action]) {
+    return res.status(400).json({ ok: false, error: "Invalid review action" });
+  }
+
+  const now = new Date().toISOString();
+  update.reviewState = reviewStateMap[action];
+  update.reviewedAt = now;
+  update.reviewedBy = "Concierge";
+  update.reviewAction = action;
+
+  const actionLabelMap = {
+    working: "moved the advisory update into concierge workflow",
+    reference: "kept the advisory update as reference only",
+    dismiss: "dismissed the advisory update from the active queue",
+    reopen: "re-opened the advisory update for concierge review"
+  };
+
+  appendLeadAuditEvent(session, {
+    type: "stakeholder-update-review",
+    actor: "Concierge",
+    source: "mission-control",
+    summary: `Concierge ${actionLabelMap[action] || "reviewed a stakeholder update"}`,
+    details: [update.roleLabel || update.role || "Stakeholder", update.note || ""].filter(Boolean).join(" | ")
+  });
+
+  session.updatedAt = now;
+  leadSessions.set(session.id, session);
+  persistSessions();
+
+  return res.json({
+    ok: true,
+    reviewState: update.reviewState,
+    update,
+    lead: buildRecentLeadSummary(session, req)
   });
 });
 
@@ -10144,13 +13017,14 @@ app.post("/api/os/documents/action", requireOperationsSession, requireOperations
     addOperationsActivity("DOC", "Document approved", `${document.caseId} - ${document.name}`);
   } else {
     document.reminder = "WhatsApp - Just now";
+    const caseItem = findOperationsCase(document.caseId) || { id: document.caseId };
     queueOperationsNotification({
       caseId: document.caseId,
       channel: "auto",
       stakeholderCode: mapOwnerTextToStakeholderCode(document.owner),
       recipient: document.owner,
       template: "document-reminder",
-      message: document.name
+      message: buildGuidedDocumentRequestMessage(caseItem, document)
     });
     addOperationsTimeline(document.caseId, "Document reminder queued", `${document.owner} will receive a reminder for: ${document.name}.`);
     addOperationsActivity("MSG", "Document reminder queued", `${document.caseId} - ${document.name}`);
@@ -10167,6 +13041,7 @@ app.post("/api/os/documents", requireOperationsSession, requireOperationsRoles("
   if (!name) return res.status(400).json({ ok: false, error: "Document name is required" });
   const document = {
     id: randomUUID(),
+    createdAt: new Date().toISOString(),
     name,
     caseId: item.id,
     owner: sanitizeShortText(req.body?.owner || `${item.client} - ${item.owner}`, 180),
@@ -10183,7 +13058,7 @@ app.post("/api/os/documents", requireOperationsSession, requireOperationsRoles("
     stakeholderCode: mapOwnerTextToStakeholderCode(document.owner),
     recipient: document.owner,
     template: "document-request",
-    message: document.name
+    message: buildGuidedDocumentRequestMessage(item, document)
   });
   addOperationsAudit("document-requested", item.id, document.name);
   persistOperations();
@@ -10411,12 +13286,21 @@ function resolveInboundParticipantRole(item, sender = "", senderCellphone = "") 
   if (cleanSenderPhone) {
     const sellerPhone = resolveCaseParticipantPhone(item, "seller");
     const buyerPhone = resolveCaseParticipantPhone(item, "buyer");
+    const agentPhone = resolveGateOwnerRecipient(item, "AGENT").phone;
+    const attorneyPhone = resolveGateOwnerRecipient(item, "TRANS").phone;
+    const financePhone = resolveGateOwnerRecipient(item, "ORIG").phone;
     if (sellerPhone && cleanSenderPhone === sellerPhone) return "seller";
     if (buyerPhone && cleanSenderPhone === buyerPhone) return "buyer";
+    if (agentPhone && cleanSenderPhone === agentPhone) return "agent";
+    if (attorneyPhone && cleanSenderPhone === attorneyPhone) return "attorney";
+    if (financePhone && cleanSenderPhone === financePhone) return "finance";
   }
   const senderText = String(sender || "").toLowerCase();
   if (senderText.includes("seller")) return "seller";
   if (senderText.includes("buyer")) return "buyer";
+  if (senderText.includes("agent")) return "agent";
+  if (senderText.includes("attorney") || senderText.includes("convey")) return "attorney";
+  if (senderText.includes("finance") || senderText.includes("bond") || senderText.includes("originator")) return "finance";
   return null;
 }
 
@@ -10762,27 +13646,352 @@ function applyGasCoCInboundReply(item, { sender = "", senderCellphone = "", mess
   return true;
 }
 
-app.post("/api/webhooks/whatsapp/inbound", rateLimit({ windowMs: 60000, max: 120 }), (req, res) => {
-  const secret = (process.env.OPERATIONS_WEBHOOK_SECRET || "").trim();
-  if (!secret) return res.status(503).json({ ok: false, error: "Inbound WhatsApp webhook is not configured" });
-  if ((req.get("x-axiom-webhook-secret") || "").trim() !== secret) {
-    return res.status(401).json({ ok: false, error: "Webhook authentication failed" });
+const whatsappHumanTakeoverRules = [
+  { code: "anger", label: "Anger or frustration", weight: 3, critical: false, pattern: /\b(angry|upset|frustrated|frustrating|furious|ridiculous|unacceptable|terrible service|useless|complain|complaint|fed up|disappointed|annoyed)\b/i },
+  { code: "confusion", label: "Confusion or lack of clarity", weight: 2, critical: false, pattern: /\b(confused|confusing|don't understand|do not understand|not sure|unclear|what does this mean|please explain|make no sense|lost here)\b/i },
+  { code: "legal-risk", label: "Legal or compliance risk", weight: 5, critical: true, pattern: /\b(legal|lawyer|attorney|sue|court|fraud|misrepresent|breach|breached|compliance issue|fica issue|regulator|ombud|illegal|unlawful)\b/i },
+  { code: "commission-dispute", label: "Commission dispute", weight: 5, critical: true, pattern: /\b(commission dispute|commission issue|referral fee dispute|referral dispute|dispute commission|dispute the fee|not paying commission|won't pay commission|commission is wrong|fee dispute)\b/i },
+  { code: "human-request", label: "Explicit request for a person", weight: 5, critical: true, pattern: /\b(i want to speak to someone|let me speak to someone|speak to a person|speak to someone|human please|real person|call me now|manager please|agent please|need a human|need a person)\b/i }
+];
+
+function getWhatsappNegativeToneBoost(text = "", sourceType = "message") {
+  const combined = String(text || "").trim();
+  if (!combined) return 0;
+  let boost = 0;
+  if ((combined.match(/!/g) || []).length >= 2) boost += 1;
+  if (/\b(really|very|extremely|seriously|immediately|right now)\b/i.test(combined)) boost += 1;
+  if (sourceType === "voice-transcript" && /\b(tone|shouting|angry|upset|crying)\b/i.test(combined)) boost += 1;
+  return boost;
+}
+
+function analyzeWhatsappHumanTakeover({ message = "", voiceTranscript = "", voiceSummary = "" } = {}) {
+  const sources = [
+    { type: "message", text: message, multiplier: 1 },
+    { type: "voice-transcript", text: voiceTranscript, multiplier: 1.5 },
+    { type: "voice-summary", text: voiceSummary, multiplier: 1.2 }
+  ].filter((entry) => String(entry.text || "").trim());
+  if (!sources.length) return null;
+
+  const matched = new Map();
+  let totalScore = 0;
+  let critical = false;
+  for (const source of sources) {
+    for (const rule of whatsappHumanTakeoverRules) {
+      if (!rule.pattern.test(source.text)) continue;
+      const weightedScore = Math.max(1, Math.round((rule.weight || 1) * source.multiplier));
+      const existing = matched.get(rule.code);
+      if (!existing || weightedScore > existing.score) {
+        matched.set(rule.code, {
+          code: rule.code,
+          label: rule.label,
+          score: weightedScore,
+          source: source.type,
+          critical: Boolean(rule.critical)
+        });
+      }
+      if (rule.critical) critical = true;
+    }
+    totalScore += getWhatsappNegativeToneBoost(source.text, source.type);
   }
-  const caseId = sanitizeShortText(req.body?.caseId, 40);
-  const item = findOperationsCase(caseId);
-  if (!item) return res.status(404).json({ ok: false, error: "Case not found" });
-  const sender = sanitizeShortText(req.body?.sender || "WhatsApp participant", 160);
-  const senderCellphone = sanitizeShortText(req.body?.senderCellphone || req.body?.from || "", 40);
-  const message = sanitizeShortText(req.body?.message, 800);
-  if (!message) return res.status(400).json({ ok: false, error: "Message is required" });
+  for (const entry of matched.values()) totalScore += entry.score;
+  if (!matched.size) return null;
+
+  const severity =
+    critical || totalScore >= 8 ? "critical"
+      : totalScore >= 6 ? "high"
+      : totalScore >= 4 ? "medium"
+      : "low";
+  const shouldTakeOver = critical || totalScore >= 4;
+  if (!shouldTakeOver) return null;
+  const matches = [...matched.values()].sort((a, b) => b.score - a.score);
+  return {
+    reasonCodes: matches.map((rule) => rule.code),
+    reasonLabels: matches.map((rule) => rule.label),
+    score: totalScore,
+    severity,
+    matchedSignals: matches
+  };
+}
+
+function detectWhatsappHumanTakeover(text = "") {
+  return analyzeWhatsappHumanTakeover({ message: text });
+}
+
+function activateCaseHumanTakeover(item, {
+  reasons = null,
+  sender = "",
+  source = "whatsapp-inbound",
+  triggerMessage = "",
+  triggerMessageId = null
+} = {}) {
+  const takeover = getCaseHumanTakeoverState(item);
+  const now = new Date().toISOString();
+  const reasonCodes = Array.isArray(reasons?.reasonCodes) ? reasons.reasonCodes : [];
+  const reasonLabels = Array.isArray(reasons?.reasonLabels) ? reasons.reasonLabels : [];
+  takeover.active = true;
+  takeover.pauseAutomation = true;
+  takeover.flaggedAt = takeover.flaggedAt || now;
+  takeover.flaggedBy = sanitizeShortText(sender || "WhatsApp participant", 160) || "WhatsApp participant";
+  takeover.source = sanitizeShortText(source, 80) || "whatsapp-inbound";
+  takeover.reasonCodes = [...new Set([...takeover.reasonCodes, ...reasonCodes])];
+  takeover.reasonLabels = [...new Set([...takeover.reasonLabels, ...reasonLabels])];
+  takeover.triggerMessage = sanitizeShortText(triggerMessage || takeover.triggerMessage || "", 1200) || "";
+  takeover.triggerMessageId = triggerMessageId || takeover.triggerMessageId || null;
+  takeover.lastInboundAt = now;
+  takeover.resumedAt = null;
+  takeover.resumedBy = null;
+  takeover.resumeNote = "";
+
+  const reasonText = takeover.reasonLabels.join(", ") || "Human takeover required";
+  const dedupeKey = `human-takeover:${item.id}:${takeover.reasonCodes.sort().join("|") || "manual"}`;
+  if (!operationsStore.escalations.some((entry) => entry.dedupeKey === dedupeKey && entry.status === "open")) {
+    operationsStore.escalations.unshift(createOperationsEscalation({
+      item,
+      question: `Human takeover triggered from WhatsApp. Reason: ${reasonText}. Automation is paused until concierge resumes the case.`,
+      owner: item.concierge || "Concierge queue",
+      dedupeKey
+    }));
+  }
+  addOperationsTimeline(item.id, "Human takeover triggered", `${takeover.flaggedBy} triggered a human takeover. Reasons: ${reasonText}. Automation is now paused.`);
+  addOperationsActivity("HUMAN", "Human takeover triggered", `${item.id} - ${reasonText}`);
+  addOperationsAudit("whatsapp-human-takeover", item.id, `${takeover.flaggedBy}: ${reasonText}`);
+  return takeover;
+}
+
+function resumeCaseHumanTakeover(item, { actor = "Concierge", note = "" } = {}) {
+  const takeover = getCaseHumanTakeoverState(item);
+  const wasActive = Boolean(takeover.active);
+  takeover.active = false;
+  takeover.pauseAutomation = false;
+  takeover.resumedAt = new Date().toISOString();
+  takeover.resumedBy = sanitizeShortText(actor, 160) || "Concierge";
+  takeover.resumeNote = sanitizeShortText(note || "", 500) || "";
+  if (wasActive) {
+    addOperationsTimeline(item.id, "Human takeover resumed to automation", `${takeover.resumedBy} resumed automation${takeover.resumeNote ? `: ${takeover.resumeNote}` : "."}`);
+    addOperationsActivity("HUMAN", "Human takeover cleared", `${item.id} - ${takeover.resumedBy}`);
+    addOperationsAudit("whatsapp-human-takeover-resumed", item.id, `${takeover.resumedBy}${takeover.resumeNote ? `: ${takeover.resumeNote}` : ""}`);
+  }
+  return takeover;
+}
+
+function detectInboundWhatsappCommand(message = "") {
+  const normalized = String(message || "").trim().toLowerCase();
+  if (!normalized) return null;
+  if (/^(yes\b.*accept (the )?(referral|lead)|accept (the )?(referral|lead)\b)/.test(normalized)) return "accept-referral";
+  if (/^status\b/.test(normalized)) return "status";
+  if (/^docs?\b/.test(normalized) || normalized.includes("outstanding doc")) return "docs";
+  if (/^done\b/.test(normalized) || /^uploaded\b/.test(normalized)) return "done";
+  if (normalized.includes("call me") || normalized.includes("please call")) return "call-me";
+  return null;
+}
+
+function detectInboundWhatsappAppointmentCommand(message = "") {
+  const normalized = String(message || "").trim().toLowerCase();
+  if (!normalized) return null;
+  if (/^(confirm|confirmed|i confirm|will be there|see you then|ok confirm|okay confirm)\b/.test(normalized)) return "confirm";
+  if (/^(reschedule|reschedule please|need to reschedule|another time|can't make it|cannot make it)\b/.test(normalized)) return "reschedule";
+  if (/^(missed|we missed it|i missed it|didn't make it|did not make it|no show)\b/.test(normalized)) return "missed";
+  return null;
+}
+
+function getInboundRoleOutstandingDocuments(item, role = "") {
+  const docs = listOutstandingCaseDocuments(item.id);
+  if (!role) return docs;
+  return docs.filter((doc) => isOperationsDocumentRoleMatch(doc, role));
+}
+
+function markInboundDoneForCase(item, { sender = "", role = "", linkedDocumentIds = [] } = {}) {
+  const explicitDocs = listOutstandingCaseDocuments(item.id).filter((doc) => linkedDocumentIds.includes(doc.id));
+  const roleDocs = getInboundRoleOutstandingDocuments(item, role);
+  const target = explicitDocs[0] || roleDocs[0] || null;
+  if (!target) {
+    return { changed: false, reply: `${item.id}: thank you, your update has been captured. Concierge will review the file shortly.` };
+  }
+  if (!target.file?.uploadedAt) {
+    target.file = {
+      storageName: null,
+      originalName: "",
+      mimeType: "",
+      size: 0,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: `${sanitizeShortText(sender || "Participant", 120)} via WhatsApp confirmation`
+    };
+  }
+  target.status = "Uploaded";
+  target.reminder = "Marked DONE via WhatsApp - Awaiting concierge review";
+  addOperationsTimeline(item.id, `${target.name} marked done via WhatsApp`, `${sender || "Participant"} confirmed completion by replying DONE. Concierge review is now queued.`);
+  addOperationsActivity("DONE", "WhatsApp task marked done", `${item.id} - ${target.name}`);
+  addOperationsAudit("whatsapp-done", item.id, `${sender || "Participant"} marked ${target.name} done`);
+  return {
+    changed: true,
+    reply: `${item.id}: thank you, ${target.name} has been marked received and queued for concierge review.`
+  };
+}
+
+function acceptReferralFromInbound(item, { sender = "", role = "" } = {}) {
+  if (role && role !== "agent") {
+    return { changed: false, reply: `${item.id}: referral acceptance is only available to the receiving agent on this case.` };
+  }
+  item.status = "In progress";
+  item.owner = "Agent";
+  item.next = "Confirm first client contact";
+  item.progress = Math.max(Number(item.progress || 0), 28);
+  addOperationsTimeline(item.id, "Referral accepted by WhatsApp", `${sender || item.agent || "Receiving agent"} accepted the referral/lead by WhatsApp quick reply.`);
+  addOperationsActivity("AGT", "Referral accepted", `${item.id} - ${sender || item.agent || "Receiving agent"}`);
+  addOperationsAudit("whatsapp-referral-accepted", item.id, sender || item.agent || "Receiving agent");
+  return {
+    changed: true,
+    reply: `${item.id}: referral accepted. The file has been moved forward and the next step is to confirm first client contact.`
+  };
+}
+
+function applyInboundAppointmentCommand(item, command, { sender = "", senderCellphone = "", role = "" } = {}) {
+  const appointment = getCaseUpcomingAppointment(item.id, { role, phone: senderCellphone });
+  if (!appointment) {
+    return { changed: false, reply: `${item.id}: there is no active appointment linked to this chat right now.` };
+  }
+  const label = appointment.title || formatOperationsAppointmentKind(appointment.kind);
+  if (command === "confirm") {
+    appointment.status = "confirmed";
+    appointment.confirmedAt = new Date().toISOString();
+    appointment.updatedAt = new Date().toISOString();
+    addOperationsTimeline(item.id, "Appointment confirmed by WhatsApp", `${sender || appointment.participantName || "Participant"} confirmed ${label} for ${formatOperationsAppointmentTime(appointment.scheduledFor)}.`);
+    addOperationsActivity("BOOK", "Appointment confirmed", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-confirmed", item.id, `${appointment.id}: ${sender || appointment.participantName || "participant"}`);
+    return { changed: true, reply: buildAppointmentWhatsappMessage(item, appointment, { mode: "confirmed-ack" }) };
+  }
+  if (command === "reschedule") {
+    appointment.status = "reschedule-requested";
+    appointment.rescheduleRequestedAt = new Date().toISOString();
+    appointment.updatedAt = new Date().toISOString();
+    const escalationKey = `appointment-reschedule:${appointment.id}`;
+    if (!operationsStore.escalations.some((entry) => entry.dedupeKey === escalationKey)) {
+      operationsStore.escalations.unshift(createOperationsEscalation({
+        item,
+        question: `${label} needs a new time. ${sender || appointment.participantName || "Participant"} requested a reschedule by WhatsApp.`,
+        owner: item.concierge || "Concierge queue",
+        dedupeKey: escalationKey
+      }));
+    }
+    addOperationsTimeline(item.id, "Appointment reschedule requested", `${sender || appointment.participantName || "Participant"} asked to reschedule ${label}.`);
+    addOperationsActivity("BOOK", "Appointment reschedule requested", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-reschedule-requested", item.id, `${appointment.id}: ${sender || appointment.participantName || "participant"}`);
+    return { changed: true, reply: buildAppointmentWhatsappMessage(item, appointment, { mode: "reschedule-ack" }) };
+  }
+  if (command === "missed") {
+    appointment.status = "missed";
+    appointment.missedAt = new Date().toISOString();
+    appointment.updatedAt = new Date().toISOString();
+    const escalationKey = `appointment-missed:${appointment.id}`;
+    if (!operationsStore.escalations.some((entry) => entry.dedupeKey === escalationKey)) {
+      operationsStore.escalations.unshift(createOperationsEscalation({
+        item,
+        question: `${label} was marked missed by ${sender || appointment.participantName || "participant"}. Re-open the booking loop and record a dated next move.`,
+        owner: item.concierge || "Concierge queue",
+        dedupeKey: escalationKey
+      }));
+    }
+    addOperationsTimeline(item.id, "Appointment marked missed", `${sender || appointment.participantName || "Participant"} marked ${label} as missed by WhatsApp.`);
+    addOperationsActivity("BOOK", "Appointment missed", `${item.id} - ${label}`);
+    addOperationsAudit("appointment-missed", item.id, `${appointment.id}: ${sender || appointment.participantName || "participant"}`);
+    return { changed: true, reply: buildAppointmentWhatsappMessage(item, appointment, { mode: "missed-ack" }) };
+  }
+  return { changed: false, reply: "" };
+}
+
+function runInboundWhatsappCommand(item, command, { sender = "", senderCellphone = "", role = "", linkedDocumentIds = [] } = {}) {
+  if (command === "status") {
+    return { changed: false, reply: buildOperationsCaseSummary(item) };
+  }
+  if (command === "docs") {
+    const docs = role ? getRoleGuidedOutstandingDocuments(item.id, role).slice(0, 6) : listCaseDocuments(item.id).slice(0, 6);
+    if (!docs.length) return { changed: false, reply: `${item.id}: there are no case documents on file right now.` };
+    const nextDoc = role ? getCaseNextGuidedDocument(item, role) : null;
+    return {
+      changed: false,
+      reply: `${item.id}: ${nextDoc ? `the next required document is ${nextDoc.name}. ` : ""}Current documents are ${docs.map((doc) => `${doc.name} (${doc.status}${doc.due ? `, due ${doc.due}` : ""})`).join("; ")}.`
+    };
+  }
+  if (command === "done") {
+    return markInboundDoneForCase(item, { sender, role, linkedDocumentIds });
+  }
+  if (command === "call-me") {
+    return { changed: true, reply: `${item.id}: thank you, a concierge call-back request has been logged for follow-up.` };
+  }
+  if (command === "accept-referral") {
+    return acceptReferralFromInbound(item, { sender, role });
+  }
+  return { changed: false, reply: "" };
+}
+
+function buildInboundWhatsappCommandReply(item, command, context = {}) {
+  return runInboundWhatsappCommand(item, command, context).reply;
+}
+
+async function processInboundWhatsappPayload(payload = {}, { source = "whatsapp-webhook", autoReplyActor = "Axiom Concierge" } = {}) {
+  const requestedCaseId = sanitizeShortText(payload?.caseId, 40);
+  const sender = sanitizeShortText(payload?.sender || "WhatsApp participant", 160);
+  const senderCellphone = sanitizeShortText(payload?.senderCellphone || payload?.from || "", 40);
+  const attachments = parseInboundWhatsAppAttachments(payload);
+  const item = findOperationsCase(requestedCaseId) || findOperationsCaseByParticipantPhone(senderCellphone);
+  if (!item) return { ok: false, status: 404, error: "Case not found" };
+  const message = sanitizeShortText(payload?.message, 800);
+  if (!message && !attachments.length) return { ok: false, status: 400, error: "Message or attachment is required" };
+  const caseId = item.id;
   const role = resolveInboundParticipantRole(item, sender, senderCellphone);
+  const guidedDocBeforeUpload = role ? getCaseNextGuidedDocument(item, role) : null;
   const yesNo = parseYesNoReply(message);
+  const command = detectInboundWhatsappCommand(message);
+  const appointmentCommand = detectInboundWhatsappAppointmentCommand(message);
   let handledMovingReply = false;
   let handledBondReply = false;
   let handledLifeCoverReply = false;
   let handledElectricalReply = false;
   let handledGasReply = false;
-  if (yesNo && role === "seller") {
+  const ingestedAttachments = attachments.flatMap((attachment) =>
+    isInboundVoiceNoteAttachment(attachment)
+      ? [captureInboundVoiceNoteFromWhatsapp(item, { sender, senderRole: role, attachment, messageText: message })]
+      : upsertOperationsDocumentFromWhatsapp(item, {
+          sender,
+          senderRole: role,
+          attachment,
+          messageText: message
+        })
+  );
+  const linkedDocumentIds = ingestedAttachments.map((entry) => entry.documentId).filter(Boolean);
+  const voiceNotesCaptured = ingestedAttachments.filter((entry) => entry.kind === "voice-note");
+  const uploadedDocumentEntries = ingestedAttachments.filter((entry) => entry.documentId && ["uploaded", "linked"].includes(entry.ingestStatus));
+  const voiceSentimentSignals = voiceNotesCaptured
+    .map((entry) => entry.sentiment)
+    .filter((entry) => entry && Array.isArray(entry.reasonCodes));
+  const strongestVoiceSentiment = voiceSentimentSignals.sort((a, b) => (b.score || 0) - (a.score || 0))[0] || null;
+  const humanTakeoverReasons = analyzeWhatsappHumanTakeover({
+    message,
+    voiceTranscript: voiceNotesCaptured.map((entry) => entry.transcript || "").filter(Boolean).join(" \n "),
+    voiceSummary: voiceNotesCaptured.map((entry) => entry.summary || "").filter(Boolean).join(" \n ")
+  });
+  const takeoverSignalText = [
+    message,
+    ...voiceNotesCaptured.map((entry) => entry.transcript || ""),
+    ...voiceNotesCaptured.map((entry) => entry.summary || ""),
+    strongestVoiceSentiment ? `Voice sentiment risk: ${strongestVoiceSentiment.severity} (${strongestVoiceSentiment.score})` : ""
+  ].filter(Boolean).join(" \n ");
+  const commandOutcome = command
+    ? runInboundWhatsappCommand(item, command, {
+        sender,
+        senderCellphone,
+        role,
+        linkedDocumentIds
+      })
+    : null;
+  const appointmentOutcome = appointmentCommand
+    ? applyInboundAppointmentCommand(item, appointmentCommand, {
+        sender,
+        senderCellphone,
+        role
+      })
+    : null;
+  if (!humanTakeoverReasons && yesNo && role === "seller") {
     const hintedElectrical = /\b(coc|electrical|electrician|certificate)\b/i.test(message);
     const hintedGas = /\b(gas|lpg|geyser|stove|heater)\b/i.test(message);
     const hintedMoving = /\b(move|moving|removal)\b/i.test(message);
@@ -10795,7 +14004,7 @@ app.post("/api/webhooks/whatsapp/inbound", rateLimit({ windowMs: 60000, max: 120
       else if (pendingKind === "electrical-coc") handledElectricalReply = applyElectricalCoCInboundReply(item, { sender, senderCellphone, message });
       else if (pendingKind === "moving-services") handledMovingReply = applyMovingServicesInboundReply(item, { sender, senderCellphone, message });
     }
-  } else if (yesNo && role === "buyer") {
+  } else if (!humanTakeoverReasons && yesNo && role === "buyer") {
     const hintedBond = /\b(bond|originator|finance|bank|loan|mortgage|quote|quotes|pre-approval)\b/i.test(message);
     const hintedLifeCover = /\b(life cover|lifecover|insurance|assurance|policy)\b/i.test(message);
     const hintedMoving = /\b(move|moving|removal)\b/i.test(message);
@@ -10808,14 +14017,29 @@ app.post("/api/webhooks/whatsapp/inbound", rateLimit({ windowMs: 60000, max: 120
       else if (pendingKind === "bond-originator") handledBondReply = applyBondOriginatorInboundReply(item, { sender, senderCellphone, message });
       else if (pendingKind === "moving-services") handledMovingReply = applyMovingServicesInboundReply(item, { sender, senderCellphone, message });
     }
-  } else {
+  } else if (!humanTakeoverReasons) {
     handledMovingReply = applyMovingServicesInboundReply(item, { sender, senderCellphone, message });
     if (!handledMovingReply) handledBondReply = applyBondOriginatorInboundReply(item, { sender, senderCellphone, message });
     if (!handledMovingReply && !handledBondReply) handledLifeCoverReply = applyLifeCoverInboundReply(item, { sender, senderCellphone, message });
     if (!handledMovingReply && !handledBondReply && !handledLifeCoverReply) handledGasReply = applyGasCoCInboundReply(item, { sender, senderCellphone, message });
     if (!handledMovingReply && !handledBondReply && !handledLifeCoverReply && !handledGasReply) handledElectricalReply = applyElectricalCoCInboundReply(item, { sender, senderCellphone, message });
   }
-  addOperationsTimeline(caseId, "Inbound WhatsApp message received", `${sender}: ${message}`);
+  const threadMessage = appendOperationsWhatsappMessage({
+    caseId,
+    direction: "inbound",
+    senderName: sender,
+    senderPhone: senderCellphone,
+    senderRole: role,
+    text: message || (voiceNotesCaptured.length ? "Voice note received" : attachments.length ? "Attachment received" : ""),
+    source,
+    attachments: ingestedAttachments,
+    linkedDocumentIds
+  });
+  addOperationsTimeline(
+    caseId,
+    "Inbound WhatsApp message received",
+    `${sender}: ${message || (voiceNotesCaptured.length ? "Voice note received" : "Attachment received")}${ingestedAttachments.length ? ` (${ingestedAttachments.length} attachment${ingestedAttachments.length === 1 ? "" : "s"})` : ""}`
+  );
   addOperationsActivity("WA", "Inbound WhatsApp synced", `${caseId} - ${sender}`);
   const capturedSuffix = handledLifeCoverReply
     ? " (life cover preference captured)"
@@ -10828,9 +14052,110 @@ app.post("/api/webhooks/whatsapp/inbound", rateLimit({ windowMs: 60000, max: 120
     : handledMovingReply
       ? " (moving services preference captured)"
       : "";
-  addOperationsAudit("whatsapp-inbound", caseId, `${sender}: ${message}${capturedSuffix}`);
+  addOperationsAudit("whatsapp-inbound", caseId, `${sender}: ${message || "Attachment received"}${capturedSuffix}`);
+  let autoReply = null;
+  if (humanTakeoverReasons) {
+    activateCaseHumanTakeover(item, {
+      reasons: humanTakeoverReasons,
+      sender,
+      source,
+      triggerMessage: takeoverSignalText,
+      triggerMessageId: threadMessage.id
+    });
+    if (senderCellphone) {
+      autoReply = await sendManualWhatsappInboxReply({
+        item,
+        message: `${item.id}: thank you, a concierge has been flagged to take over this conversation and automation has been paused for now.`,
+        recipientName: sender,
+        recipientPhone: senderCellphone,
+        recipientRole: role,
+        source: "human-takeover-auto-ack",
+        actor: autoReplyActor
+      });
+    }
+  } else if (appointmentCommand && senderCellphone) {
+    autoReply = await sendManualWhatsappInboxReply({
+      item,
+      message: appointmentOutcome?.reply || `${item.id}: your appointment update has been captured.`,
+      recipientName: sender,
+      recipientPhone: senderCellphone,
+      recipientRole: role,
+      source: `inbound-appointment:${appointmentCommand}`,
+      actor: autoReplyActor
+    });
+  } else if (command && senderCellphone) {
+    if (command === "call-me") {
+      const escalation = createOperationsEscalation({
+        item,
+        question: `WhatsApp call-back requested by ${sender}.`,
+        owner: item.concierge || "Concierge queue"
+      });
+      operationsStore.escalations.unshift(escalation);
+      addOperationsActivity("CALL", "WhatsApp call-back requested", `${caseId} - ${sender}`);
+      addOperationsAudit("whatsapp-call-request", caseId, sender);
+    }
+    autoReply = await sendManualWhatsappInboxReply({
+      item,
+      message: commandOutcome?.reply || buildInboundWhatsappCommandReply(item, command, {
+        sender,
+        senderCellphone,
+        role,
+        linkedDocumentIds
+      }),
+      recipientName: sender,
+      recipientPhone: senderCellphone,
+      recipientRole: role,
+      source: `inbound-command:${command}`,
+      actor: autoReplyActor
+    });
+  } else if (senderCellphone && uploadedDocumentEntries.length && role) {
+    const uploadedNames = uploadedDocumentEntries.map((entry) => entry.documentName || entry.originalName || "document");
+    const guidedDocAfterUpload = getCaseNextGuidedDocument(item, role);
+    const matchedRequestedDoc = guidedDocBeforeUpload && uploadedDocumentEntries.some((entry) => entry.documentId === guidedDocBeforeUpload.id || normalizeLooseText(entry.documentName || "") === normalizeLooseText(guidedDocBeforeUpload.name || ""));
+    let followUpMessage = "";
+    if (guidedDocBeforeUpload && !matchedRequestedDoc && guidedDocAfterUpload?.id === guidedDocBeforeUpload.id) {
+      followUpMessage = `${item.id}: thank you, we received ${uploadedNames.join(", ")}. The next document we still need from you is ${guidedDocBeforeUpload.name}.${guidedDocBeforeUpload.due ? ` Due: ${guidedDocBeforeUpload.due}.` : ""} ${inferDocumentUploadHint(guidedDocBeforeUpload.name)}`;
+    } else if (guidedDocAfterUpload) {
+      followUpMessage = `${item.id}: thank you, we received ${uploadedNames.join(", ")}. ${buildGuidedDocumentRequestMessage(item, guidedDocAfterUpload, { includeQueueContext: true })}`;
+    } else {
+      followUpMessage = `${item.id}: thank you, we received ${uploadedNames.join(", ")}. There are no more required documents waiting from you right now.`;
+    }
+    autoReply = await sendManualWhatsappInboxReply({
+      item,
+      message: followUpMessage,
+      recipientName: sender,
+      recipientPhone: senderCellphone,
+      recipientRole: role,
+      source: "guided-document-followup",
+      actor: autoReplyActor
+    });
+  }
   persistOperations();
-  return res.json({ ok: true, handledMovingReply, handledBondReply, handledLifeCoverReply, handledElectricalReply, handledGasReply });
+  return {
+    ok: true,
+    caseId,
+    messageId: threadMessage.id,
+    senderRole: role,
+    handledMovingReply,
+    handledBondReply,
+    handledLifeCoverReply,
+    handledElectricalReply,
+    handledGasReply,
+    appointmentCommand,
+    command,
+    autoReply,
+    ingestedAttachments
+  };
+}
+
+app.post("/api/webhooks/whatsapp/inbound", rateLimit({ windowMs: 60000, max: 120 }), async (req, res) => {
+  const secret = (process.env.OPERATIONS_WEBHOOK_SECRET || "").trim();
+  if (!secret) return res.status(503).json({ ok: false, error: "Inbound WhatsApp webhook is not configured" });
+  if ((req.get("x-axiom-webhook-secret") || "").trim() !== secret) {
+    return res.status(401).json({ ok: false, error: "Webhook authentication failed" });
+  }
+  const result = await processInboundWhatsappPayload(req.body, { source: "whatsapp-webhook", autoReplyActor: "Axiom Concierge" });
+  return res.status(result.ok ? 200 : result.status || 400).json(result);
 });
 
 app.post("/api/leads", rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
