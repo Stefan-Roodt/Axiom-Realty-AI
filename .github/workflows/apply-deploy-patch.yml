@@ -3,6 +3,10 @@ name: Apply deployment patch
 on:
   issue_comment:
     types: [created]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-deploy-patch.yml
 
 permissions:
   contents: write
@@ -10,7 +14,7 @@ permissions:
 
 jobs:
   apply:
-    if: contains(github.event.comment.body, '/apply-axiom-deploy-patch')
+    if: github.event_name == 'push' || contains(github.event.comment.body, '/apply-axiom-deploy-patch')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout live branch
@@ -27,7 +31,8 @@ jobs:
             const zlib = require('zlib');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const issue_number = context.payload.issue.number;
+            const issue_number = context.payload.issue?.number || 1;
+            core.info(`Reading deployment chunks from issue #${issue_number}.`);
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -51,10 +56,12 @@ jobs:
               if (!chunks[i]) missing.push(i + 1);
             }
             if (missing.length) throw new Error(`Missing patch chunk(s): ${missing.join(', ')}`);
-            const compressed = Buffer.from(chunks.join(''), 'base64');
+            const compressedText = chunks.join('');
+            core.info(`Rebuilt ${expectedTotal} chunks (${compressedText.length} base64 chars).`);
+            const compressed = Buffer.from(compressedText, 'base64');
             const patch = zlib.gunzipSync(compressed);
             fs.writeFileSync('deploy-live.patch', patch);
-            core.info(`Wrote deploy-live.patch (${patch.length} bytes) from ${expectedTotal} compressed chunks.`);
+            core.info(`Wrote deploy-live.patch (${patch.length} bytes).`);
 
       - name: Apply patch
         run: |
