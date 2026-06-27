@@ -14,7 +14,7 @@ Copy-Item .env.example .env
 
 Then edit `.env`:
 
-- `ADMIN_PASSWORD=change-this-before-launch`
+- `ADMIN_PASSWORD=AxiomAdmin2026!`
 - `WHATSAPP_TO_NUMBER=27XXXXXXXXX` (your central concierge WhatsApp number, including country code)
 - `LEAD_DEDUPE_WINDOW_DAYS=45` (how far back duplicate lead checks should look)
 - Add WhatsApp Cloud API credentials when ready:
@@ -37,7 +37,7 @@ Open:
 Admin view:
 
 - `http://127.0.0.1:8080/?admin=1`
-- Unlock with the `ADMIN_PASSWORD` value in `.env`
+- Unlock with the `ADMIN_PASSWORD` value in `.env` or the built-in fallback `AxiomAdmin2026!`
 
 Or double-click:
 

@@ -34,7 +34,7 @@ const AUTO_CONCIERGE_DIGEST_MINUTE = Number(process.env.AUTO_CONCIERGE_DIGEST_MI
 const LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS || 1);
 const LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS || 1);
 const LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS || 7);
-const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "axiom-admin").trim();
+const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "AxiomAdmin2026!").trim();
 const dataDir = path.join(__dirname, "data");
 const sessionsFile = path.join(dataDir, "lead-sessions.json");
 const agentApplicationsFile = path.join(dataDir, "agent-applications.json");
@@ -154,7 +154,7 @@ const leadDocumentCategoryOptions = [
   "Bond documents",
   "Rates clearance",
   "Referral acceptance proof",
-  "Agent handoff proof",
+  "Agent introduction proof",
   "Milestone evidence",
   "Commission invoice",
   "Commission payment proof",
@@ -497,7 +497,7 @@ function createDefaultOperationsPlaybooks() {
         {
           id: "buyer-bond",
           title: "Bond approval and conditions",
-          description: "Track approval, conditions and guarantees before the transfer handoff.",
+          description: "Track approval, conditions and guarantees before the transfer handover.",
           owner: "finance",
           due: "Within 5 days",
           progress: 78,
@@ -4246,7 +4246,7 @@ function classifySmartReminderFlow(item, dueSignal, staleHours = 0) {
     return { id: "attorney-silence", label: "Attorney silence", stakeholderCode: "TRANS" };
   }
   if (/(agent|handoff|referral|accept.*lead|lead.*accept|client contact|contact.*client)/i.test(text)) {
-    return { id: "agent-handoff", label: "Agent handoff", stakeholderCode: "AGENT" };
+    return { id: "agent-handoff", label: "Agent introduction", stakeholderCode: "AGENT" };
   }
   if (/(payslip|bond|finance|guarantee|pre-approval|preapproval|approval|originator|bank)/i.test(text)) {
     return { id: "finance-delay", label: "Finance delay", stakeholderCode: ownerCode === "BUY" ? "BUY" : "ORIG" };
@@ -5208,7 +5208,6 @@ function getMissingFromSlots(slots) {
   const missing = [];
   if (!slots.fullName) missing.push("fullName");
   if (!slots.phone) missing.push("phone");
-  if (!slots.email) missing.push("email");
   if (!slots.intent) missing.push("intent");
   if (!slots.area) missing.push("area");
   if (!slots.priceDisplay) missing.push("price");
@@ -5328,7 +5327,7 @@ function isNegativeResponse(text) {
 function buildConciergeHandoffMessage(session, sessionId, followUpUrl) {
   const s = session.slots || createEmptySlots();
   const lines = [
-    "New Concierge Handoff",
+    "New Concierge Introduction",
     "",
     `- Intent: ${(s.intent || "unknown").toUpperCase()}`,
     `- Area: ${s.area || "Not provided"}`,
@@ -5375,7 +5374,7 @@ function getSessionCopilot(session) {
   return {
     snapshot: buildSessionSnapshot(session),
     firstReply: "Thanks for your request. I have your property brief and can help route it properly. Is a quick call in the next 10 minutes okay?",
-    nextAction: "Open the WhatsApp handoff and contact the lead while the request is still fresh.",
+    nextAction: "Open the WhatsApp introduction and contact the lead while the request is still fresh.",
     unknowns: []
   };
 }
@@ -5731,7 +5730,6 @@ function scoreLead(payload) {
   }
 
   const unknowns = [];
-  if (!(map["email address"] || "").includes("@")) unknowns.push("email");
   if (phone.length < 8) unknowns.push("phone");
   if (!map["province"]) unknowns.push("province");
   if (!map["preferred area"] && !map["property location"]) unknowns.push("area");
@@ -5797,7 +5795,6 @@ function buildLeadIntakeIntelligence(payloadOrSession = {}, scoringOverride = nu
   const criticalFields = [
     ["fullName", "Full name"],
     ["phone", "WhatsApp/contact number"],
-    ["email", "Email address"],
     ["intent", "Buy/sell intent"],
     ["province", "Province"],
     ["area", "Area/suburb"],
@@ -5849,7 +5846,7 @@ function buildLeadIntakeIntelligence(payloadOrSession = {}, scoringOverride = nu
   }
   if (!missingCritical.length && missingEnrichment.length) {
     actions.push({
-      label: "Enrich before handoff if time allows",
+      label: "Enrich before introduction if time allows",
       priority: priority === "High" ? "Medium" : "Low",
       detail: `Optional but useful: ${missingEnrichment.join(", ")}.`
     });
@@ -5904,7 +5901,7 @@ function buildAgentCopilotSummary(payload, scoring) {
   if (propertyType) snapshotParts.push(`type ${propertyType.toLowerCase()}`);
 
   let nextAction = "Central concierge should send WhatsApp follow-up and schedule a short qualification call.";
-  if (scoring.band === "Hot") nextAction = "Central concierge should call within 10 minutes and decide the next agent handoff.";
+  if (scoring.band === "Hot") nextAction = "Central concierge should call within 10 minutes and decide the next agent introduction.";
   if (payload.intent === "sell") nextAction += " Prepare valuation guidance or identify the best listing agent.";
   if (payload.intent === "buy") nextAction += " Prepare buyer requirements and identify a suitable agent conversation.";
 
@@ -5914,7 +5911,6 @@ function buildAgentCopilotSummary(payload, scoring) {
       : "Thanks for your request. I have your seller brief and can help route it properly. Is a quick call in the next 10 minutes okay?";
 
   const unknowns = [];
-  if (!map["email address"]) unknowns.push("Email address");
   if (!phone) unknowns.push("WhatsApp/contact number");
   if (!map["province"]) unknowns.push("Province");
   if (!map["preferred area"] && !map["property location"]) unknowns.push("Exact area");
@@ -6311,7 +6307,7 @@ function buildAgentHandoffSummary(session, req = null) {
       label: "Agent acceptance",
       complete: Boolean(acceptedAt),
       completedAt: acceptedAt,
-      detail: acceptedAt ? "Agent accepted the secure handoff and referral arrangement." : "Waiting for agent acknowledgement."
+      detail: acceptedAt ? "Agent accepted the secure introduction and referral arrangement." : "Waiting for agent acknowledgement."
     },
     {
       code: "contact-confirmation",
@@ -6334,11 +6330,11 @@ function buildAgentHandoffSummary(session, req = null) {
   ];
 
   let status = "not_started";
-  let label = "Not handed off";
-  let nextAction = "Assign an agent and create the secure handoff link.";
+  let label = "Not introduced";
+  let nextAction = "Assign an agent and create the secure introduction link.";
   if (hasAssignedAgent || hasActiveLink) {
     status = "sent";
-    label = "Handoff sent";
+    label = "Introduction sent";
     nextAction = "Wait for the agent to open the secure link and accept the referral arrangement.";
   }
   if (hasViewed && !acceptedAt) {
@@ -6358,13 +6354,13 @@ function buildAgentHandoffSummary(session, req = null) {
   }
   if (acceptedAt && contactedAt && termsProtected) {
     status = "complete";
-    label = "Handoff complete";
+    label = "Introduction complete";
     nextAction = "Track deal progress, commission status, and next dated check-in.";
   }
   if (access && !access.active && !acceptedAt) {
     status = "expired";
     label = "Link expired";
-    nextAction = "Refresh the secure agent handoff link.";
+    nextAction = "Refresh the secure agent introduction link.";
   }
 
   return {
@@ -6388,7 +6384,7 @@ function buildCommissionLockSummary(session) {
   const handoff = buildAgentHandoffSummary(session);
   const commission = buildCommissionProtectionSummary(session);
   const coreSteps = [
-    { code: "agent-acceptance", label: "Agent accepted handoff", complete: Boolean(handoff.gates?.[0]?.complete) },
+    { code: "agent-acceptance", label: "Agent accepted introduction", complete: Boolean(handoff.gates?.[0]?.complete) },
     { code: "contact-confirmation", label: "Client contact confirmed", complete: Boolean(handoff.gates?.[1]?.complete) },
     { code: "referral-terms", label: "Referral terms protected", complete: Boolean(handoff.gates?.[2]?.complete) }
   ];
@@ -6563,7 +6559,7 @@ function scoreAgentMatch(agent, slots) {
     reasons.push(`Province/region match: ${slots.province}`);
   } else if (agent.source === "handoff-history" && agent.priorAssignments > 0) {
     score += 8;
-    reasons.push("Known from previous handoff history");
+    reasons.push("Known from previous introduction history");
   } else {
     cautions.push("No exact area match captured");
   }
@@ -6598,7 +6594,7 @@ function scoreAgentMatch(agent, slots) {
       reasons.push("Lead price aligns with this specialist's historical range");
     } else if (variance <= 0.35) {
       score += 7;
-      reasons.push("Lead price is close to this specialist's average handoff range");
+      reasons.push("Lead price is close to this specialist's average introduction range");
     } else {
       cautions.push("Lead price is outside this specialist's typical historical range");
     }
@@ -6633,7 +6629,7 @@ function scoreAgentMatch(agent, slots) {
   }
   if (agent.priorAssignments > 0) {
     score += Math.min(agent.priorAssignments * 2, 8);
-    reasons.push(`${agent.priorAssignments} previous handoff${agent.priorAssignments === 1 ? "" : "s"}`);
+    reasons.push(`${agent.priorAssignments} previous introduction${agent.priorAssignments === 1 ? "" : "s"}`);
   }
   if (agent.hotLeadAssignments > 0) {
     score += Math.min(agent.hotLeadAssignments, 5);
@@ -6686,8 +6682,8 @@ function buildAgentMatchRecommendation(session) {
     recommendation: `${matchLabel}: ${best.name}${best.agency ? `, ${best.agency}` : ""}`,
     nextAction:
       best.score >= 50
-        ? "Review the reasons, confirm availability, then create the agent handoff."
-        : "Use this as a lead, but confirm area, property type, and referral terms before handoff.",
+        ? "Review the reasons, confirm availability, then create the agent introduction."
+        : "Use this as a lead, but confirm area, property type, and referral terms before introduction.",
     reasons: best.reasons,
     cautions: best.cautions,
     agent: {
@@ -6842,7 +6838,7 @@ function buildFollowUpIntelligence(session) {
       "Lock referral proof today",
       "High",
       "Referral-only mode is active, but the proof chain for the introduction is not secure yet.",
-      "Capture acceptance proof, communication evidence, and the first dated handoff update before the deal moves further.",
+      "Capture acceptance proof, communication evidence, and the first dated introduction update before the deal moves further.",
       {
         owner: "Concierge",
         lane: workflow.queueLane,
@@ -6954,8 +6950,8 @@ function buildFollowUpIntelligence(session) {
       "Ask agent to confirm contact",
       assignedMinutesAgo !== null && assignedMinutesAgo > SLA_MINUTES ? "High" : "Medium",
       assignedMinutesAgo !== null
-        ? `Agent handoff happened ${assignedMinutesAgo} minute${assignedMinutesAgo === 1 ? "" : "s"} ago.`
-        : "Agent handoff exists but client contact has not been confirmed.",
+        ? `Agent introduction happened ${assignedMinutesAgo} minute${assignedMinutesAgo === 1 ? "" : "s"} ago.`
+        : "Agent introduction exists but client contact has not been confirmed.",
       "Ask the agent to confirm client contact method and time.",
       {
         owner: "Agent",
@@ -7151,7 +7147,7 @@ function getTaskTiming(session, label) {
   const assignedAt = session.assignedAgent?.assignedAt || session.agentAccess?.createdAt || session.updatedAt || session.createdAt;
   if (label === "Call now") return { dueAt: new Date().toISOString(), cadence: "Immediate" };
   if (label === "WhatsApp within 10 minutes") return { dueAt: addMinutesIso(session.createdAt, SLA_MINUTES), cadence: "Within 10 minutes" };
-  if (label === "Ask agent to confirm contact") return { dueAt: addMinutesIso(assignedAt, SLA_MINUTES), cadence: "10 minutes after handoff" };
+  if (label === "Ask agent to confirm contact") return { dueAt: addMinutesIso(assignedAt, SLA_MINUTES), cadence: "10 minutes after introduction" };
   if (label.startsWith("Resolve ") && label.endsWith(" escalation")) {
     return { dueAt: new Date().toISOString(), cadence: "Escalation response" };
   }
@@ -7488,7 +7484,7 @@ function getLeadEscalationOwnerProfile(session, flag, workflow = getLeadOutcomeW
         ownerRole: "Agent",
         workflowLane: workflow.activeTrack === "managed-transaction" ? "managed-transaction" : "referral-protection",
         automationLabel: "Chase the receiving agent for proof of contact and next appointment.",
-        responseWindow: `${LEAD_REFERRED_CONTACT_ESCALATION_HOURS} hour post-handoff window`
+        responseWindow: `${LEAD_REFERRED_CONTACT_ESCALATION_HOURS} hour post-introduction window`
       };
     case "no-update-escalation":
       return {
@@ -7616,7 +7612,7 @@ function getLeadEscalationFlags(session) {
         category: "No contact",
         title: `Referred with no client contact for more than ${LEAD_REFERRED_CONTACT_ESCALATION_HOURS} hours`,
         priority: "High",
-        reason: "Specialist handoff exists, but no confirmed client contact has been captured.",
+        reason: "Specialist introduction exists, but no confirmed client contact has been captured.",
         nextAction: "Ask the receiving agent to confirm contact method, time, and next appointment.",
         dueAt,
         status: getTaskStatus(dueAt)
@@ -8294,7 +8290,7 @@ function buildAgentShareText(session, req) {
   ].join(" | ");
 
   return [
-    `Hi ${agentName}, Axiom Realty AI has a lead handoff for you.`,
+    `Hi ${agentName}, Axiom Realty AI has a lead introduction for you.`,
     session.assignedAgent?.phone || session.agentAccess?.agentPhone ? `Agent cellphone on record: ${session.assignedAgent?.phone || session.agentAccess?.agentPhone}` : "",
     session.assignedAgent?.agency || session.agentAccess?.agentAgency ? `Agency on record: ${session.assignedAgent?.agency || session.agentAccess?.agentAgency}` : "",
     "",
@@ -8303,7 +8299,7 @@ function buildAgentShareText(session, req) {
     REFERRAL_ACKNOWLEDGEMENT_TEXT,
     "",
     "Please open this secure acknowledgement link before working the lead or contacting the client.",
-    "Once accepted, the handoff is recorded and you can confirm first contact and deal progress in the same link:",
+    "Once accepted, the introduction is recorded and you can confirm first contact and deal progress in the same link:",
     buildAgentUpdateUrl(req, session.agentAccess.token)
   ].filter((line) => line !== "").join("\n");
 }
@@ -8386,7 +8382,7 @@ function getAnalyticsSummary() {
   let agentAcknowledgements = 0;
   let unacknowledgedAgentLinks = 0;
 
-  const missingFieldCounts = { intent: 0, area: 0, price: 0, timeline: 0, fullName: 0, phone: 0, email: 0 };
+  const missingFieldCounts = { intent: 0, area: 0, price: 0, timeline: 0, fullName: 0, phone: 0 };
 
   for (const session of sessions) {
     const intent = session.intent || "unknown";
@@ -8418,7 +8414,6 @@ function getAnalyticsSummary() {
     if (!slots.timeline) missing.push("timeline");
     if (!slots.fullName) missing.push("fullName");
     if (!slots.phone) missing.push("phone");
-    if (!slots.email) missing.push("email");
     if (missing.length === 0) completedSlots += 1;
     for (const key of missing) {
       if (missingFieldCounts[key] !== undefined) missingFieldCounts[key] += 1;
@@ -9315,7 +9310,6 @@ function validateLeadPayload(payload) {
   if (payload.additionalInfo && typeof payload.additionalInfo !== "string") return "Invalid additional info";
   const map = getAnswerMap(payload);
   const phone = cleanPhoneNumber(pickAnswer(map, ["contact / whatsapp number", "contact number", "whatsapp number"]));
-  const email = cleanEmailAddress(map["email address"]);
   const province = map["province"];
   const area = map["preferred area"] || map["property location"];
   const price = map["budget range (zar)"] || map["expected selling price (zar)"];
@@ -9327,8 +9321,6 @@ function validateLeadPayload(payload) {
   if (!timeline) return "Timeline is required";
   if (!map["full name"]) return "Full name is required";
   if (!phone) return "Valid WhatsApp/contact number is required";
-  if (!email) return "Valid email address is required";
-
   return null;
 }
 
@@ -9577,7 +9569,7 @@ async function sendWhatsAppText(text, { force = false, to: recipientOverride = "
     if (isWhatsAppWebTestModeEnabled()) return sendWhatsAppWebText(text, { to: recipientOverride });
     return {
       delivered: false,
-      reason: "Automatic WhatsApp delivery is disabled; use manual Operations handoff.",
+      reason: "Automatic WhatsApp delivery is disabled; use the manual Operations introduction.",
       status: "manual-handoff"
     };
   }
@@ -9679,7 +9671,7 @@ function buildLeadStageUpdateHeadline(session, code, label = "") {
 
   const headlines = {
     "agent-assigned": `We have assigned ${agentName}${agency} to your property request.`,
-    "referral-accepted": "Your receiving agent has accepted the referral terms and the handoff is protected.",
+    "referral-accepted": "Your receiving agent has accepted the referral terms and the introduction is protected.",
     "agent-contacted": `Your specialist has confirmed first contact${contactMedium}.`,
     "viewing-booked": "A viewing or valuation has been booked.",
     "offer-received": "An offer has been received on the property journey.",
@@ -9807,8 +9799,8 @@ function buildLeadWowAutomationMessage(session, { type = "", note = "" } = {}) {
 
   if (type === "partner-readiness") {
     return [
-      `Hi ${firstName}, Axiom Realty AI is preparing the next partner handoff around ${nextText}.`,
-      missingDocs.length ? `To keep that handoff smooth, please make sure these items are ready: ${missingDocs.join(", ")}.` : "Please keep any outstanding details ready so the next specialist can move quickly.",
+      `Hi ${firstName}, Axiom Realty AI is preparing the next partner step around ${nextText}.`,
+      missingDocs.length ? `To keep that step smooth, please make sure these items are ready: ${missingDocs.join(", ")}.` : "Please keep any outstanding details ready so the next specialist can move quickly.",
       noteText,
       "Reply to your concierge if you want us to confirm the exact requirement."
     ].join(" ");
@@ -10464,7 +10456,7 @@ function getLeadOutcomeWorkflow(session) {
   } else if (outcome.caseMode === "managed_transaction") {
     activeTrack = "managed-transaction";
     queueLane = "managed-transaction";
-    trackingScope = "Full transaction tracking from handoff through registration and handover.";
+    trackingScope = "Full transaction tracking from introduction through registration and handover.";
     automationFocus = "Milestones, stakeholder nudges, document readiness, and transfer recovery.";
     responsibilityBoundary = "Axiom stays active until the transaction is closed or archived.";
     primaryOwner = nextMilestoneOwner || mapWorkflowOwnerLabel(session.caseFile?.owner || "Agent");
@@ -10476,7 +10468,7 @@ function getLeadOutcomeWorkflow(session) {
     activeTrack = "referral-protection";
     queueLane = "referral-protection";
     trackingScope = "Referral proof, agent accountability, and commission outcome only.";
-    automationFocus = "Handoff proof, contact confirmation, payout readiness, and fee chase.";
+    automationFocus = "Introduction proof, contact confirmation, payout readiness, and fee chase.";
     responsibilityBoundary = "Axiom tracks the referral until the fee is paid, waived, or archived.";
     primaryOwner =
       ["referral_fee_due", "referral_fee_paid"].includes(outcome.commercialStatus) || commission.payoutStatus === "Invoiced"
@@ -10491,7 +10483,7 @@ function getLeadOutcomeWorkflow(session) {
         ? commission.nextAction || "Issue or chase the referral invoice."
         : referred
           ? "Protect the referral proof and get the next dated update from the receiving agent."
-          : "Complete the handoff and lock referral proof before the deal moves.";
+          : "Complete the introduction and lock referral proof before the deal moves.";
     documentScope = "referral-proof";
   }
 
@@ -11415,7 +11407,7 @@ function prepareAgentHandoff(session, req, options = {}) {
     {
       caseMode: inferLeadCaseMode(session),
       commercialStatus: "handed_off",
-      note: `Secure agent handoff prepared for ${agentName}`
+      note: `Secure agent introduction prepared for ${agentName}`
     },
     "Concierge",
     "agent-link"
@@ -11473,8 +11465,8 @@ app.post("/api/leads/:id/agent-handoff-whatsapp", requireAdmin, rateLimit({ wind
   const seededPhone = requestedPhone || session.assignedAgent?.phone || session.agentAccess?.agentPhone || "";
   const seededAgency = requestedAgency || session.assignedAgent?.agency || session.agentAccess?.agentAgency || "";
 
-  if (!seededName) return res.status(400).json({ ok: false, error: "Agent name is required before sending the handoff" });
-  if (!seededPhone) return res.status(400).json({ ok: false, error: "Agent cellphone is required before sending the handoff" });
+  if (!seededName) return res.status(400).json({ ok: false, error: "Agent name is required before sending the introduction" });
+  if (!seededPhone) return res.status(400).json({ ok: false, error: "Agent cellphone is required before sending the introduction" });
   const handoffResult = prepareAgentHandoff(session, req, {
     ...(req.body || {}),
     agentName: seededName,
@@ -11499,7 +11491,7 @@ app.post("/api/leads/:id/agent-handoff-whatsapp", requireAdmin, rateLimit({ wind
     type: "agent-handoff-whatsapp",
     actor: "Concierge",
     source: "operations",
-    summary: delivery.delivered ? "Agent handoff sent by WhatsApp" : "Agent handoff WhatsApp send failed",
+    summary: delivery.delivered ? "Agent introduction sent by WhatsApp" : "Agent introduction WhatsApp send failed",
     details: recipientPhone ? `${recipientPhone} | ${delivery.reason || delivery.status || "No additional details"}` : (delivery.reason || delivery.status || "No recipient captured")
   });
   leadSessions.set(id, session);
@@ -11515,7 +11507,7 @@ app.post("/api/leads/:id/agent-handoff-whatsapp", requireAdmin, rateLimit({ wind
     agentAccess: getAgentAccessSummary(session, req),
     handoff: buildAgentHandoffSummary(session, req),
     caseFile: getLeadCaseFileSummary(session),
-    error: delivery.delivered ? null : delivery.reason || "WhatsApp handoff could not be delivered"
+    error: delivery.delivered ? null : delivery.reason || "WhatsApp introduction could not be delivered"
   });
 });
 
@@ -11865,7 +11857,7 @@ app.post("/api/agent-lead/:token/update", rateLimit({ windowMs: 60000, max: 20 }
         acceptedAt: now,
         acceptedBy: session.agentAccess.agentName || session.assignedAgent?.name || "Agent",
         via: "Portal acknowledgement",
-        note: "Agent accepted referral arrangement through secure handoff link"
+        note: "Agent accepted referral arrangement through secure introduction link"
       };
       session.dealProof = proof;
     }
@@ -11875,7 +11867,7 @@ app.post("/api/agent-lead/:token/update", rateLimit({ windowMs: 60000, max: 20 }
       completedAt: now,
       actor: session.agentAccess.agentName || session.assignedAgent?.name || "Agent",
       via: "Portal acknowledgement",
-      note: "Agent accepted referral arrangement through secure handoff link",
+      note: "Agent accepted referral arrangement through secure introduction link",
       proofRef: ""
     });
   }
@@ -11937,7 +11929,7 @@ app.post("/api/agent-lead/:token/update", rateLimit({ windowMs: 60000, max: 20 }
     {
       caseMode: inferLeadCaseMode(session),
       commercialStatus: medium ? "client_contacted" : "accepted_by_agent",
-      note: medium ? contactNote || "Agent confirmed client contact" : "Agent accepted referral handoff"
+      note: medium ? contactNote || "Agent confirmed client contact" : "Agent accepted referral introduction"
     },
     session.agentAccess.agentName || session.assignedAgent?.name || "Agent",
     "agent-link"
@@ -12054,8 +12046,8 @@ app.get("/api/leads/:id/handoff", requireAdmin, (req, res) => {
     type: "handoff-opened",
     actor: "Concierge",
     source: "operations",
-    summary: "WhatsApp handoff opened",
-    details: "Concierge opened manual/assisted WhatsApp handoff."
+    summary: "WhatsApp introduction opened",
+    details: "Concierge opened manual/assisted WhatsApp introduction."
   });
   session.updatedAt = new Date().toISOString();
   leadSessions.set(id, session);
@@ -12200,7 +12192,7 @@ app.post("/api/concierge", rateLimit({ windowMs: 60000, max: 40 }), async (req, 
     handoffRecommendation:
       missingFields.length > 0
         ? `Collect missing fields: ${missingFields.join(", ")}.`
-        : "Lead brief is ready for Operations handoff."
+        : "Lead brief is ready for Operations introduction."
   });
 });
 
@@ -12279,13 +12271,13 @@ function buildClientJourneyPulse(item, user) {
   const handledForYou = role === "seller"
     ? [
         `${item.agent || "Your agent"} is connected to the market launch and buyer-feedback steps.`,
-        `${item.concierge || "Your concierge"} is monitoring document timing and partner handoffs.`,
+        `${item.concierge || "Your concierge"} is monitoring document timing and partner steps.`,
         "The shared timeline will confirm each completed step automatically."
       ]
     : [
         `${item.agent || "Your agent"} is connected to property matching and viewing coordination.`,
         `${item.finance || "Your finance partner"} is connected to finance-readiness requirements.`,
-        `${item.concierge || "Your concierge"} is monitoring timing and partner handoffs.`
+        `${item.concierge || "Your concierge"} is monitoring timing and partner steps.`
       ];
   return {
     generatedAt: new Date().toISOString(),

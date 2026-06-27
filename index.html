@@ -29,40 +29,60 @@
       <div class="hero-content wrapper">
         <div class="copy">
           <p class="eyebrow">AI Property Concierge</p>
-          <h1>Buying? Selling? Get the Personalised Service You Deserve. Quick.</h1>
+          <h1>Buying or selling property? Tell us once. We’ll connect you with the right help.</h1>
           <p class="subtext">
-            Tell us what you need once. Our AI concierge turns it into a clear brief
-            so the right person can follow up fast, with context.
+            Share the basics in under a minute. A concierge reviews your request and routes it to a suitable
+            property professional.
           </p>
           <p class="promise-text">
-            No cold forms. No repeating yourself. Just a faster route to a useful property conversation.
+            Less than 60 seconds. No obligation. Human-reviewed.
           </p>
 
           <div class="cta-group">
-            <button class="btn btn-primary" data-intent="buy">I Want to Buy</button>
-            <button class="btn btn-secondary" data-intent="sell">I Want to Sell</button>
+            <button class="btn btn-primary" data-intent="buy">I want to buy</button>
+            <button class="btn btn-secondary" data-intent="sell">I want to sell</button>
           </div>
 
           <ul class="trust-list">
-            <li>Say what you need in plain language</li>
-            <li>We capture the key details quickly</li>
-            <li>A concierge gets a specialist to contact you</li>
+            <li>Tell us the basics</li>
+            <li>We review and route the request</li>
+            <li>A suitable expert follows up</li>
           </ul>
           <div class="proof-row">
-            <span>Your needs captured in under 60 seconds</span>
-            <span>Concierge-ready context</span>
-            <span>We connect the best possible agent to you</span>
-            <span>Let us do the hard work</span>
+            <span>Under 60 seconds</span>
+            <span>No obligation</span>
+            <span>Human-reviewed request</span>
+            <span>No spam route</span>
           </div>
         </div>
 
         <div class="hero-visual">
           <img src="ai-hero.svg" alt="AI real estate skyline visualization" />
+          <div class="hero-signal-panel" aria-label="Concierge workflow preview">
+            <span>Next step</span>
+            <strong>Request captured -> concierge review -> expert follow-up</strong>
+            <small>Built to get the right person moving without making you repeat the story.</small>
+          </div>
         </div>
       </div>
     </header>
 
     <main>
+      <section class="section wrapper customer-paths" aria-label="Choose your property path">
+        <article class="customer-path-card buyer">
+          <span>Buyer path</span>
+          <h2>Looking to buy? Start with the basics.</h2>
+          <p>Tell us where, roughly how much, and how soon. The concierge can fill in the blanks from there.</p>
+          <button class="btn btn-primary" data-intent="buy">Start buyer request</button>
+        </article>
+        <article class="customer-path-card seller">
+          <span>Seller path</span>
+          <h2>Thinking of selling? Start the conversation.</h2>
+          <p>Share the location, expected price, and timing. The concierge can ask the deeper questions later.</p>
+          <button class="btn btn-secondary" data-intent="sell">Start seller request</button>
+        </article>
+      </section>
+
       <section class="section wrapper">
         <div class="section-heading">
           <p class="eyebrow">How It Works</p>
@@ -130,8 +150,26 @@
           <p class="eyebrow">For Agents / Experts</p>
           <h2>Are you a property expert?</h2>
           <p>
-            We partner with responsive, professional property experts who want properly qualified buyer and seller opportunities.
+            We partner with responsive, professional property experts who want properly qualified buyer and seller opportunities,
+            with the admin trail handled properly from first acceptance to next update.
           </p>
+        </div>
+        <div class="agent-benefit-panel">
+          <div>
+            <p class="eyebrow">Axiom Admin Support</p>
+            <h3>Cleaner leads. Better context. Less chasing.</h3>
+            <p>
+              Our admin system prepares the buyer or seller brief before you engage, records referral acceptance,
+              keeps WhatsApp follow-up visible, and tracks documents, case notes, and next actions in one place.
+            </p>
+          </div>
+          <ul>
+            <li>Qualified buyer and seller briefs before first contact</li>
+            <li>WhatsApp acknowledgement links for clear referral proof</li>
+            <li>Document and requirement tracking for each case</li>
+            <li>Voice notes, messages, and updates saved back to the file</li>
+          </ul>
+          <a class="btn btn-secondary" href="#expertApplicationForm">Apply as a property expert</a>
         </div>
         <form class="card expert-form" id="expertApplicationForm">
           <div class="expert-form-grid">
@@ -211,8 +249,8 @@
               <small>Intent, timing, source, and contact confidence in one intake record.</small>
             </article>
             <article class="mission-control-pill">
-              <span>Handoff</span>
-              <strong>Pass the right case forward fast</strong>
+              <span>Introduce</span>
+              <strong>Connect the right case forward fast</strong>
               <small>Agent acceptance, client contact, and referral terms stay visible.</small>
             </article>
             <article class="mission-control-pill">
@@ -240,7 +278,7 @@
               <div class="risk-topline">
                 <div>
                   <h3>Live Lead Radar</h3>
-                  <p class="small-note">Qualify, route, and work cases without losing sight of handoff, referral, or protection status.</p>
+                  <p class="small-note">Qualify, route, and work cases without losing sight of introduction, referral, or protection status.</p>
                 </div>
                 <span class="risk-badge" id="leadQueueCount">Latest leads</span>
               </div>
@@ -307,7 +345,7 @@
               <div class="risk-topline">
                 <div>
                   <h3>Action Queue</h3>
-                  <p class="small-note">AI-prioritised next moves from lead age, urgency, handoff status, contact confirmation, and commission risk.</p>
+                  <p class="small-note">AI-prioritised next moves from lead age, urgency, introduction status, contact confirmation, and commission risk.</p>
                 </div>
                 <span class="risk-badge" id="taskQueueCount">Tasks loading</span>
               </div>
@@ -458,7 +496,7 @@
               <div class="risk-topline">
                 <div>
                   <h3>Concierge Comms</h3>
-                  <p class="small-note">Pre-launch message bridge for concierge alerts, confirmations, and handoff packs.</p>
+                  <p class="small-note">Pre-launch message bridge for concierge alerts, confirmations, and agent packs.</p>
                 </div>
                 <span class="risk-badge" id="whatsappBridgeBadge">Checking</span>
               </div>
@@ -512,14 +550,17 @@
         <button class="close-modal" id="closeModal" aria-label="Close form">×</button>
         <p class="eyebrow" id="intakeEyebrow">Lead Intake</p>
         <h2 id="intakeTitle">Tell us about your request</h2>
-        <p class="progress-note" id="progressNote">Answer the essentials first. We only ask what the concierge needs to act fast.</p>
+          <p class="progress-note" id="progressNote">This should take less than a minute. The concierge can fill in the blanks later.</p>
         <form id="intakeForm">
           <div id="dynamicFields" class="dynamic-fields"></div>
-          <label for="additionalInfo">Anything else we should know? <span class="optional-label">Optional</span></label>
-          <textarea id="additionalInfo" name="additionalInfo" rows="3" placeholder="Bedrooms, bathrooms, finance status, or special instructions"></textarea>
-          <p class="privacy-note">
-            POPIA reassurance: we use your details only to prepare your property brief and connect you with the right specialist. We handle your information responsibly and do not sell your personal details.
-          </p>
+          <label id="additionalInfoLabel" for="additionalInfo">Anything important we should know? <span class="optional-label">Optional</span></label>
+          <textarea id="additionalInfo" name="additionalInfo" rows="3" placeholder="Bedrooms, bathrooms, garden, parking, urgency, finance status, mandate status, or special instructions"></textarea>
+          <div class="customer-reassurance" aria-label="How your request is handled">
+            <p><strong>No spam route.</strong> Your details are used to prepare this property brief and arrange the right follow-up.</p>
+            <p><strong>Human oversight.</strong> A concierge can review urgent, unclear, or sensitive requests before specialist introduction.</p>
+            <p><strong>POPIA aware.</strong> We do not sell your personal details.</p>
+          </div>
+          <p class="submit-trust-line">Your details are only used to help with this property request.</p>
           <label class="consent-label">
             <input id="leadConsent" name="consent" type="checkbox" required />
             <span>I agree that my details may be shared with a suitable property professional for the purpose of assisting me with my property request.</span>

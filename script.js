@@ -99,7 +99,7 @@ const leadDocumentCategoryOptions = [
   "Bond documents",
   "Rates clearance",
   "Referral acceptance proof",
-  "Agent handoff proof",
+  "Agent introduction proof",
   "Milestone evidence",
   "Commission invoice",
   "Commission payment proof",
@@ -134,15 +134,14 @@ const leadStageTabOptions = [
 
 const paths = {
   buy: {
-    label: "Buyer Lead",
-    intro: "I want to Buy",
+    label: "Buyer Brief",
+    intro: "Quick buyer request",
     submitText: "Find me a property expert",
     responseText:
       "Thank you. We’ve received your request and will match you with a suitable property expert.",
     questions: [
       { name: "fullName", label: "Full name", type: "text", required: true },
       { name: "phone", label: "Contact / WhatsApp number", type: "text", required: true },
-      { name: "email", label: "Email address", type: "email", required: true },
       {
         name: "province",
         label: "Province",
@@ -159,13 +158,6 @@ const paths = {
         provinceField: "province",
         placeholder: "Start typing town name"
       },
-      {
-        name: "propertyType",
-        label: "Property type",
-        type: "select",
-        required: false,
-        options: propertyTypeOptions
-      },
       { name: "budget", label: "Budget range (ZAR)", type: "text", required: true },
       {
         name: "timeline",
@@ -177,15 +169,14 @@ const paths = {
     ]
   },
   sell: {
-    label: "Seller Lead",
-    intro: "I want to Sell",
+    label: "Seller Brief",
+    intro: "Quick seller request",
     submitText: "Sell my property",
     responseText:
       "Thank you. We’ve received your request and will match you with a suitable property expert.",
     questions: [
       { name: "fullName", label: "Full name", type: "text", required: true },
       { name: "phone", label: "Contact / WhatsApp number", type: "text", required: true },
-      { name: "email", label: "Email address", type: "email", required: true },
       {
         name: "province",
         label: "Province",
@@ -201,13 +192,6 @@ const paths = {
         townLookupByProvince: true,
         provinceField: "province",
         placeholder: "Start typing town name"
-      },
-      {
-        name: "propertyType",
-        label: "Property type",
-        type: "select",
-        required: false,
-        options: propertyTypeOptions
       },
       {
         name: "expectedPrice",
@@ -233,6 +217,8 @@ const intakeTitle = document.getElementById("intakeTitle");
 const intakeEyebrow = document.getElementById("intakeEyebrow");
 const closeModal = document.getElementById("closeModal");
 const progressNote = document.getElementById("progressNote");
+const additionalInfoLabel = document.getElementById("additionalInfoLabel");
+const additionalInfoInput = document.getElementById("additionalInfo");
 const submitLeadBtn = document.getElementById("submitLeadBtn");
 const nextStepMessage = document.getElementById("nextStepMessage");
 const conciergeToggle = document.getElementById("conciergeToggle");
@@ -569,7 +555,7 @@ const staticLeads = [
     lifecycle: { code: "new-unacknowledged", label: "New / Unacknowledged", updatedAt: new Date(staticNow - 2 * 3600000).toISOString(), note: "" },
     delivery: { delivered: false, attemptedAt: new Date(staticNow - 110 * 60000).toISOString() },
     outcome: { caseMode: "undecided", caseModeLabel: "Undecided", commercialStatus: "new", commercialStatusLabel: "New" },
-    agentHandoff: { status: "not_started", label: "Not handed off", nextAction: "Assign a Cape Town buyer specialist and create handoff link." },
+    agentHandoff: { status: "not_started", label: "Not introduced", nextAction: "Assign a Cape Town buyer specialist and create the introduction link." },
     dealProtection: { status: "Active", commissionAgreement: "Not discussed" },
     commissionProtection: { protected: false, referralPercent: 12.5, payoutStatus: "Not due", priority: "Medium", nextAction: "Confirm referral terms when assigning agent." },
     intakeIntelligence: {
@@ -598,7 +584,7 @@ const staticLeads = [
       available: true,
       recommendation: "Buyer specialist available for Cape Town flats.",
       confidence: 81,
-      nextAction: "Load the recommended specialist into the handoff fields.",
+      nextAction: "Load the recommended specialist into the introduction fields.",
       agent: { name: "Mia Petersen", phone: "+27 84 555 0144", agency: "Seeff", email: "mia@example.com", metrics: { priorAssignments: 4, averageResponseMinutes: 22 } },
       reasons: ["Cape Town buyer focus", "Apartment experience"],
       cautions: ["Confirm bond readiness"],
@@ -824,7 +810,7 @@ function installStaticApi() {
     if (path === "/api/leads") {
       return staticJson({
         delivered: false,
-        manualHandoffUrl: "https://wa.me/?text=Axiom%20static%20mode%20lead%20handoff",
+        manualHandoffUrl: "https://wa.me/?text=Axiom%20static%20mode%20lead%20introduction",
         lead: staticLeads[0]
       });
     }
@@ -837,7 +823,7 @@ function installStaticApi() {
     }
     if (path === "/api/agent-applications") return staticJson({ ok: true });
     if (/\/api\/leads\/[^/]+\/handoff$/.test(path)) {
-      return staticJson({ whatsappUrl: "https://wa.me/?text=Axiom%20lead%20handoff%20(static%20mode)" });
+      return staticJson({ whatsappUrl: "https://wa.me/?text=Axiom%20lead%20introduction%20(static%20mode)" });
     }
     if (/\/api\/leads\/[^/]+\/documents\/[^/]+\/download$/.test(path)) {
       return Promise.resolve(
@@ -853,7 +839,7 @@ function installStaticApi() {
     return staticJson({
       ok: true,
       agentUrl: "agent-update.html?token=static",
-      agentShareText: "Axiom static agent handoff: agent-update.html?token=static",
+      agentShareText: "Axiom static agent introduction: agent-update.html?token=static",
       stakeholderUrl: "stakeholder-update.html?token=static",
       stakeholderShareText: "Axiom static stakeholder portal: stakeholder-update.html?token=static",
       sharePackText: "Static stakeholder share pack created."
@@ -931,7 +917,19 @@ function createField(field) {
   label.setAttribute("for", field.name);
   label.textContent = field.label;
 
-  if (field.type === "select") {
+  if (field.townLookupByProvince) {
+    input = document.createElement("select");
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Select a province first";
+    placeholderOption.disabled = true;
+    placeholderOption.defaultSelected = true;
+    placeholderOption.selected = true;
+    input.appendChild(placeholderOption);
+    input.disabled = true;
+    input.dataset.townLookup = "true";
+    input.dataset.provinceField = field.provinceField || "province";
+  } else if (field.type === "select") {
     input = document.createElement("select");
     const placeholderOption = document.createElement("option");
     placeholderOption.value = "";
@@ -947,6 +945,12 @@ function createField(field) {
       option.textContent = optionValue;
       input.appendChild(option);
     });
+  } else if (field.type === "textarea") {
+    input = document.createElement("textarea");
+    input.rows = field.rows || 3;
+    if (field.placeholder) {
+      input.placeholder = field.placeholder;
+    }
   } else {
     input = document.createElement("input");
     input.type = field.type || "text";
@@ -956,18 +960,6 @@ function createField(field) {
     }
     if (field.placeholder) {
       input.placeholder = field.placeholder;
-    }
-    if (field.townLookupByProvince) {
-      const listId = `${field.name}List`;
-      input.setAttribute("list", listId);
-      input.setAttribute("autocomplete", "off");
-
-      const datalist = document.createElement("datalist");
-      datalist.id = listId;
-      wrap.appendChild(datalist);
-      input.dataset.townLookup = "true";
-      input.dataset.provinceField = field.provinceField || "province";
-      input.dataset.listId = listId;
     }
   }
 
@@ -1020,42 +1012,38 @@ function createField(field) {
 }
 
 function updateTownDatalistForProvince(container) {
-  const townInputs = container.querySelectorAll("input[data-town-lookup='true']");
-  townInputs.forEach((input) => {
-    const provinceFieldName = input.dataset.provinceField || "province";
+  const townSelects = container.querySelectorAll("select[data-town-lookup='true']");
+  townSelects.forEach((townSelect) => {
+    const provinceFieldName = townSelect.dataset.provinceField || "province";
     const provinceSelect = container.querySelector(`[name='${provinceFieldName}']`);
-    const listId = input.dataset.listId;
-    const datalist = listId ? container.querySelector(`#${listId}`) : null;
-    if (!provinceSelect || !datalist) return;
+    if (!provinceSelect) return;
 
-    const renderMatches = (towns, term) => {
-      const query = (term || "").trim().toLowerCase();
-      const matches = query
-        ? towns.filter((town) => town.toLowerCase().startsWith(query) || town.toLowerCase().includes(query)).slice(0, 25)
-        : [];
-      datalist.innerHTML = "";
-      matches.forEach((town) => {
+    const renderTownOptions = (towns, selectedTown = "") => {
+      townSelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = towns.length ? "Select preferred area" : "Select a province first";
+      placeholder.disabled = true;
+      placeholder.selected = !selectedTown;
+      townSelect.appendChild(placeholder);
+      towns.forEach((town) => {
         const option = document.createElement("option");
         option.value = town;
-        datalist.appendChild(option);
+        option.textContent = town;
+        if (town === selectedTown) option.selected = true;
+        townSelect.appendChild(option);
       });
+      townSelect.disabled = !towns.length;
     };
 
     const syncList = () => {
       const provinceValue = provinceSelect.value;
       const towns = (townsByProvince[provinceValue] || []).slice().sort((a, b) => a.localeCompare(b));
-      if (input.value && !towns.includes(input.value) && !input.value.includes("(device location)")) {
-        input.value = "";
-      }
-      renderMatches(towns, input.value);
+      const currentTown = towns.includes(townSelect.value) ? townSelect.value : "";
+      renderTownOptions(towns, currentTown);
     };
 
     provinceSelect.addEventListener("change", syncList);
-    input.addEventListener("input", () => {
-      const provinceValue = provinceSelect.value;
-      const towns = (townsByProvince[provinceValue] || []).slice().sort((a, b) => a.localeCompare(b));
-      renderMatches(towns, input.value);
-    });
     syncList();
   });
 }
@@ -1076,9 +1064,21 @@ function openIntake(intent) {
   activeIntent = paths[intent] ? intent : "buy";
   const config = paths[activeIntent];
 
-  intakeEyebrow.textContent = "Property request";
+  intakeEyebrow.textContent = activeIntent === "sell" ? "Seller path" : "Buyer path";
   intakeTitle.textContent = config.intro;
-  progressNote.textContent = "Answer the essentials first. We only ask what the concierge needs to act fast.";
+  progressNote.textContent = activeIntent === "sell"
+    ? "Share the basics. The concierge can fill in valuation, mandate, and occupancy details later."
+    : "Share the basics. The concierge can fill in finance and property preference details later.";
+  if (additionalInfoLabel) {
+    additionalInfoLabel.innerHTML = activeIntent === "sell"
+      ? 'Anything the property expert should know before calling? <span class="optional-label">Optional</span>'
+      : 'Please tell us what your property should ideally have <span class="optional-label">Optional</span>';
+  }
+  if (additionalInfoInput) {
+    additionalInfoInput.placeholder = activeIntent === "sell"
+      ? "Example: valuation done, current mandate, tenant/owner occupied, urgency, access notes, or special instructions"
+      : "Example: bedrooms, bathrooms, garden, parking, security, pet-friendly, finance status, or special instructions";
+  }
   submitLeadBtn.textContent = config.submitText;
   dynamicFields.innerHTML = "";
 
@@ -1246,7 +1246,7 @@ function renderInboxCommandDeck(leads = []) {
 
   const cards = [
     ["First contact", `${firstContactPending} pending`, "Cases still waiting for confirmed human contact", firstContactPending ? "warn" : "good"],
-    ["Handoffs", `${handoffPending} open`, "Cases not yet fully accepted or routed", handoffPending ? "warn" : "good"],
+    ["Introductions", `${handoffPending} open`, "Cases not yet fully accepted or routed", handoffPending ? "warn" : "good"],
     ["Commission shield", `${commissionExposed} exposed`, "Referral cases still missing full protection", commissionExposed ? "warn" : "good"],
     ["Vault blockers", `${vaultBlocked} blocked`, "Cases waiting on required documents", vaultBlocked ? "warn" : "good"],
     ["Managed cases", `${managedCases} active`, "Transactions staying under full Axiom oversight", managedCases ? "active" : ""]
@@ -1362,7 +1362,7 @@ function renderFollowupControlGrid(leads = []) {
     ["No-contact", noContact, "Leads needing first human confirmation", noContact ? "warn" : "good"],
     ["No-update", noUpdate, "Active matters with stale movement", noUpdate ? "warn" : "good"],
     ["Wow touches", wowSent, "Leads already receiving proactive reassurance", wowSent ? "active" : ""],
-    ["Commission locked", locked, "Handoffs with protection steps in place", locked ? "good" : "warn"],
+    ["Commission locked", locked, "Introductions with protection steps in place", locked ? "good" : "warn"],
     ["Vault blocked", docsBlocked, `Average vault readiness ${avgReadiness}%`, docsBlocked ? "warn" : "good"]
   ];
   followupControlGrid.innerHTML = cards
@@ -2313,7 +2313,7 @@ function getSystemTrackCards(lead) {
       note: wow.activeTypes?.length ? wow.activeTypes.join(" | ") : "Next-step briefs, reassurance touches and readiness nudges are available."
     },
     {
-      title: "4. Handoff & Lock",
+      title: "4. Introduce & Lock",
       tone: lock.locked ? "good" : "warn",
       value: lock.label || "Not locked",
       note: lock.totalSteps ? `${lock.completedSteps || 0}/${lock.totalSteps} lock steps complete` : "Secure the referral before momentum outruns proof."
@@ -2862,8 +2862,8 @@ function formatAgentLinkPanel(lead) {
     ? `Acknowledged ${new Date(access.acknowledgedAt).toLocaleString()}`
     : "Acknowledgement pending";
   const lastSent = access?.lastSentAt
-    ? `WhatsApp handoff sent ${new Date(access.lastSentAt).toLocaleString()}`
-    : "WhatsApp handoff not sent yet";
+    ? `WhatsApp introduction sent ${new Date(access.lastSentAt).toLocaleString()}`
+    : "WhatsApp introduction not sent yet";
   const deliveryState = access?.lastDeliveryStatus
     ? `${access.lastDeliveryStatus}${access?.lastDeliveryReason ? ` | ${access.lastDeliveryReason}` : ""}`
     : "No delivery status yet";
@@ -2874,10 +2874,10 @@ function formatAgentLinkPanel(lead) {
       <div>
         <div class="agent-match-topline">
           <div>
-            <strong>Agent Handoff</strong>
-            <div class="small-note">${esc(handoff.nextAction || "Create the secure handoff link and track agent acceptance.")}</div>
+            <strong>Agent Introduction</strong>
+            <div class="small-note">${esc(handoff.nextAction || "Create the secure introduction link and track agent acceptance.")}</div>
           </div>
-          <span class="match-confidence handoff-status ${esc(handoff.status || "not_started")}">${esc(handoff.label || "Not handed off")}</span>
+          <span class="match-confidence handoff-status ${esc(handoff.status || "not_started")}">${esc(handoff.label || "Not introduced")}</span>
         </div>
         <div class="small-note">Status: ${isActive ? "Active" : "Not active"} | Created: ${esc(created)} | Expires: ${esc(expires)}</div>
         <div class="small-note">${esc(acknowledged)} | ${esc(viewed)}</div>
@@ -2921,7 +2921,7 @@ function formatAgentHandoffGates(gates) {
 function formatAgentLinkActions(lead, isActive) {
   return `
     <div class="risk-actions">
-      <button class="location-btn" type="button" data-agent-link="${esc(lead.id)}">${isActive ? "Copy Agent Handoff" : "Create Agent Handoff"}</button>
+      <button class="location-btn" type="button" data-agent-link="${esc(lead.id)}">${isActive ? "Copy Agent Introduction" : "Create Agent Introduction"}</button>
       <button class="location-btn ghost-action" type="button" data-agent-handoff-whatsapp="${esc(lead.id)}">${isActive ? "Send to Agent on WhatsApp" : "Create + Send on WhatsApp"}</button>
       ${isActive ? `<button class="location-btn ghost-action" type="button" data-agent-link-refresh="${esc(lead.id)}">Refresh Secure Link</button>` : ""}
     </div>
@@ -3147,7 +3147,7 @@ function getAgentMatchSummary(match) {
   const alternatives = Array.isArray(match.alternatives) ? match.alternatives : [];
   const metrics = agent.metrics || {};
   const metricsBits = [
-    Number.isFinite(metrics.priorAssignments) ? `${metrics.priorAssignments} prior handoff${metrics.priorAssignments === 1 ? "" : "s"}` : "",
+    Number.isFinite(metrics.priorAssignments) ? `${metrics.priorAssignments} prior introduction${metrics.priorAssignments === 1 ? "" : "s"}` : "",
     Number.isFinite(metrics.hotLeadAssignments) && metrics.hotLeadAssignments > 0
       ? `${metrics.hotLeadAssignments} hot lead${metrics.hotLeadAssignments === 1 ? "" : "s"}`
       : "",
@@ -3223,7 +3223,7 @@ function formatAgentMatchPanel(lead) {
       ${formatAgentMatchCard(agent, metricsBits)}
       <div class="match-grid">
         ${formatMatchInsightColumn("Why this match", reasons, "No strong match signals yet.")}
-        ${formatMatchInsightColumn("Check before handoff", cautions, "No cautions flagged.")}
+        ${formatMatchInsightColumn("Check before introduction", cautions, "No cautions flagged.")}
       </div>
       ${formatAgentAlternatives(alternatives)}
       ${formatRecommendedAgentAction(agent, canUseRecommendation)}
@@ -3426,7 +3426,7 @@ function guessDocumentCategoryFromLabels(labels = []) {
   if (joined.includes("bond")) return "Bond documents";
   if (joined.includes("rates")) return "Rates clearance";
   if (joined.includes("referral")) return "Referral acceptance proof";
-  if (joined.includes("handoff")) return "Agent handoff proof";
+  if (joined.includes("handoff")) return "Agent introduction proof";
   if (joined.includes("invoice")) return "Commission invoice";
   if (joined.includes("commission")) return "Commission payment proof";
   return "Milestone evidence";
@@ -3505,7 +3505,7 @@ function getEscalationPlaybook(lead, flag) {
           message: "Ready to confirm client contact."
         },
         {
-          label: "Open handoff",
+          label: "Open introduction",
           section: "handoff",
           selector: "[data-assign-agent] input[name='agentName']",
           prefill: assignedAgent?.name
@@ -3566,7 +3566,7 @@ function getEscalationPlaybook(lead, flag) {
     return {
       ...defaults,
       title: "Document recovery",
-      objective: "Close vault gaps before they slow handoff, offer, transfer, or commission protection.",
+      objective: "Close vault gaps before they slow introduction, offer, transfer, or commission protection.",
       firstMove: `Request ${missingDocs.join(", ") || "the missing documents"} from the current owner and upload them to the vault.`,
       steps: [
         `Name the missing items clearly: ${missingDocs.join(", ") || "required proof still outstanding"}.`,
@@ -4230,7 +4230,7 @@ function formatLeadDetailMeta(summary, lead) {
     <div class="small-note">Automatic acknowledgement: ${esc(summary.autoAcknowledgementText)}</div>
     <div class="small-note">Delivery: ${esc(summary.deliveryText)}</div>
     <div class="small-note">Client confirmation: ${esc(summary.confirmationText)}</div>
-    <div class="small-note">Agent handoff: ${esc(summary.assignedText)}</div>
+    <div class="small-note">Agent introduction: ${esc(summary.assignedText)}</div>
     <div class="small-note">Acquisition source: ${esc(summary.acquisitionText)}</div>
   `;
 }
@@ -4325,12 +4325,12 @@ function formatHandoffControlStrip(lead, summary) {
     : "Client contact still needs confirmation";
   const accessNote = access.active
     ? `Viewed: ${access.lastViewedAt ? new Date(access.lastViewedAt).toLocaleDateString() : "Not yet"}`
-    : "Create a secure handoff link";
+    : "Create a secure introduction link";
 
   return `
     <div class="handoff-desk-grid">
       ${formatHandoffDeskCard("Receiving agent", assignedAgent, summary.assignedAgent?.agency || "Select or confirm the specialist", summary.assignedAgent?.name ? "active" : "warn")}
-      ${formatHandoffDeskCard("Handoff status", handoff.label || "Not handed off", handoff.nextAction || "Create the secure handoff and protect the terms.", handoff.status === "accepted" ? "good" : "warn")}
+      ${formatHandoffDeskCard("Introduction status", handoff.label || "Not introduced", handoff.nextAction || "Create the secure introduction and protect the terms.", handoff.status === "accepted" ? "good" : "warn")}
       ${formatHandoffDeskCard("Client contact", contactLabel, contactNote, contact.contactedAt ? "good" : "warn")}
       ${formatHandoffDeskCard("Party links", `${activeStakeholderLinks} live`, accessNote, activeStakeholderLinks ? "active" : "")}
     </div>
@@ -4445,7 +4445,7 @@ function formatEvidenceWorkspace(columns) {
 function formatLeadPrimaryActions(lead, delivery) {
   return `
     <div class="risk-actions">
-      <button class="location-btn" type="button" data-open-handoff="${esc(lead.id)}">Open WhatsApp Handoff</button>
+      <button class="location-btn" type="button" data-open-handoff="${esc(lead.id)}">Open WhatsApp Introduction</button>
       <button class="location-btn" type="button" data-client-confirmation="${esc(lead.id)}">Send Client Confirmation</button>
       ${delivery.delivered ? "" : `<button class="location-btn" type="button" data-retry-delivery="${esc(lead.id)}">Retry Auto Delivery</button>`}
     </div>
@@ -4472,7 +4472,7 @@ function formatAgentAssignmentForm(lead, assignedAgent) {
             <span class="agency-menu" data-agency-menu hidden></span>
           </span>
         </label>
-        <button class="location-btn" type="submit">Save Handoff</button>
+        <button class="location-btn" type="submit">Save Introduction</button>
       </div>
     </form>
   `;
@@ -4527,7 +4527,7 @@ function formatAssistItem(lead) {
       "snapshot"
     ),
     formatCaseWorkspaceSection(
-      "Handoff Control",
+      "Introduction Control",
       "Move the case to the right person while keeping acceptance, contact, and visibility intact.",
       [
         formatHandoffControlStrip(lead, summary),
@@ -4831,7 +4831,7 @@ function renderProtectionDeskSummary(leads = []) {
   const cards = [
     ["Referred cases", `${referred} live`, "Cases with a live receiving-agent relationship", referred ? "active" : ""],
     ["Commission exposure", `${exposed} open`, "Cases still missing full fee protection", exposed ? "warn" : "good"],
-    ["Transfer flow", `${transferActive} active`, "Cases already moving beyond handoff", transferActive ? "active" : ""],
+    ["Transfer flow", `${transferActive} active`, "Cases already moving beyond introduction", transferActive ? "active" : ""],
     ["Locked referrals", `${locked} secured`, "Cases with referral lock steps in place", locked ? "good" : "warn"],
     ["Vault blockers", `${vaultBlocked} blocked`, "Cases still waiting on required proof", vaultBlocked ? "warn" : "good"]
   ];
@@ -5015,7 +5015,7 @@ async function refreshAgentAssist() {
         if (nameInput) nameInput.value = button.getAttribute("data-agent-name") || "";
         if (phoneInput) phoneInput.value = button.getAttribute("data-agent-phone") || "";
         if (agencyInput) agencyInput.value = button.getAttribute("data-agent-agency") || "";
-        setAdminMessage("Recommended specialist loaded into the handoff fields. Review, then save the handoff.");
+        setAdminMessage("Recommended specialist loaded into the introduction fields. Review, then save the introduction.");
       });
     });
     agentAssistList.querySelectorAll("[data-acknowledge-lead]").forEach((button) => {
@@ -5330,14 +5330,14 @@ async function refreshAgentAssist() {
           const data = await response.json().catch(() => ({}));
           if (response.ok) {
             await refreshLeadWorkspace();
-            setAdminMessage(formatStageUpdateDeliveryMessage(data?.stageUpdateDelivery, "Handoff saved."));
+            setAdminMessage(formatStageUpdateDeliveryMessage(data?.stageUpdateDelivery, "Introduction saved."));
           } else {
             button.disabled = false;
-            button.textContent = "Save Handoff";
+            button.textContent = "Save Introduction";
           }
         } catch {
           button.disabled = false;
-          button.textContent = "Save Handoff";
+          button.textContent = "Save Introduction";
         }
       });
     });
@@ -5363,13 +5363,13 @@ async function refreshAgentAssist() {
           const data = await response.json();
           if (data?.agentUrl) {
             await navigator.clipboard.writeText(data.agentShareText || data.agentUrl);
-            setAdminMessage("Secure agent handoff copied. Send it only to the receiving agent.");
+            setAdminMessage("Secure agent introduction copied. Send it only to the receiving agent.");
           }
           button.textContent = "Copied";
           await refreshOperationsSuite({ analytics: true, followups: true, assist: true });
         } catch {
           button.disabled = false;
-          button.textContent = oldText || "Create Agent Handoff";
+          button.textContent = oldText || "Create Agent Introduction";
           setAdminMessage("Could not create or copy the agent update link. Please try again.", true);
         }
       });
@@ -5394,15 +5394,15 @@ async function refreshAgentAssist() {
           const data = await response.json().catch(() => ({}));
           if (!response.ok) {
             if (data?.fallbackUrl) window.open(data.fallbackUrl, "_blank", "noopener");
-            throw new Error(data?.error || "Agent WhatsApp handoff could not be sent");
+            throw new Error(data?.error || "Agent WhatsApp introduction could not be sent");
           }
           button.textContent = "Sent";
-          setAdminMessage("Agent handoff sent on WhatsApp with acknowledgement required before client work continues.");
+          setAdminMessage("Agent introduction sent on WhatsApp with acknowledgement required before client work continues.");
           await refreshOperationsSuite({ analytics: true, followups: true, assist: true, whatsapp: true });
         } catch (error) {
           button.disabled = false;
           button.textContent = oldText || "Send to Agent on WhatsApp";
-          setAdminMessage(error?.message || "Could not send the WhatsApp handoff to the agent.", true);
+          setAdminMessage(error?.message || "Could not send the WhatsApp introduction to the agent.", true);
         }
       });
     });
@@ -5502,17 +5502,17 @@ async function refreshAgentAssist() {
           const response = await fetch(`/api/leads/${encodeURIComponent(id)}/handoff`, {
             headers: adminHeaders()
           });
-          if (!response.ok) throw new Error("Handoff unavailable");
+          if (!response.ok) throw new Error("Introduction unavailable");
           const data = await response.json();
           if (data?.whatsappUrl) openWhatsAppUrl(data.whatsappUrl);
           button.textContent = "Opened";
           setTimeout(() => {
             button.disabled = false;
-            button.textContent = "Open WhatsApp Handoff";
+            button.textContent = "Open WhatsApp Introduction";
           }, 1400);
         } catch {
           button.disabled = false;
-          button.textContent = "Open WhatsApp Handoff";
+          button.textContent = "Open WhatsApp Introduction";
         }
       });
     });
@@ -5946,7 +5946,7 @@ if (expertApplicationForm) {
 
 intakeForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  progressNote.textContent = "Saving your request and preparing the concierge handoff...";
+  progressNote.textContent = "Saving your request and preparing the concierge introduction...";
   submitLeadBtn.disabled = true;
   submitLeadBtn.textContent = "Sending...";
   const formData = new FormData(intakeForm);
@@ -5976,7 +5976,7 @@ intakeForm.addEventListener("submit", (event) => {
       nextStepMessage.textContent = needsManualHandoff
         ? `${activeConfig.responseText} WhatsApp is opening with your brief so you can send it directly to the concierge.`
         : !result.delivered
-          ? "Your request has been saved, but the WhatsApp concierge handoff is temporarily unavailable. Please try again shortly."
+          ? "Your request has been saved, but the WhatsApp concierge introduction is temporarily unavailable. Please try again shortly."
           : activeConfig.responseText;
       nextStepMessage.classList.remove("hidden");
       if (isAdminUnlocked()) {
@@ -6047,7 +6047,7 @@ if (conciergeForm) {
         appendConciergeMessage("bot", "WhatsApp is opening with your brief so you can send it directly to the concierge.");
         openWhatsAppUrl(data.handoff.manualHandoffUrl);
       } else if (data?.closed && data?.handoff && !data.handoff.delivered) {
-        appendConciergeMessage("bot", "Your brief has been saved, but the WhatsApp concierge handoff is temporarily unavailable. Please try again shortly.");
+        appendConciergeMessage("bot", "Your brief has been saved, but the WhatsApp concierge introduction is temporarily unavailable. Please try again shortly.");
       }
     } catch {
       appendConciergeMessage("bot", "I could not reach the AI service right now. Please continue with the intake form.");
