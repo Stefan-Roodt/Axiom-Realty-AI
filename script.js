@@ -221,12 +221,14 @@ const additionalInfoLabel = document.getElementById("additionalInfoLabel");
 const additionalInfoInput = document.getElementById("additionalInfo");
 const submitLeadBtn = document.getElementById("submitLeadBtn");
 const nextStepMessage = document.getElementById("nextStepMessage");
+const serverStatusBanner = document.getElementById("serverStatusBanner");
 const conciergeToggle = document.getElementById("conciergeToggle");
 const conciergePanel = document.getElementById("conciergePanel");
 const conciergeClose = document.getElementById("conciergeClose");
 const conciergeMessages = document.getElementById("conciergeMessages");
 const conciergeForm = document.getElementById("conciergeForm");
 const conciergeInput = document.getElementById("conciergeInput");
+const appBuildLabel = document.getElementById("appBuildLabel");
 const mTotalLeads = document.getElementById("mTotalLeads");
 const mAvgScore = document.getElementById("mAvgScore");
 const mCompletion = document.getElementById("mCompletion");
@@ -851,6 +853,34 @@ installStaticApi();
 
 function adminHeaders() {
   return adminToken ? { "x-admin-password": adminToken } : {};
+}
+
+function setServerOnlineStatus(isOnline) {
+  serverStatusBanner?.classList.toggle("hidden", Boolean(isOnline));
+  conciergeToggle?.classList.toggle("server-offline", !isOnline);
+}
+
+async function checkLocalServerHealth() {
+  try {
+    const response = await fetch(`/healthz?ts=${Date.now()}`, { cache: "no-store" });
+    setServerOnlineStatus(response.ok);
+    return response.ok;
+  } catch {
+    setServerOnlineStatus(false);
+    return false;
+  }
+}
+
+async function refreshAppStatus() {
+  if (!appBuildLabel) return;
+  try {
+    const response = await fetch(`/api/app-status?ts=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("status-unavailable");
+    const status = await response.json();
+    appBuildLabel.textContent = `Build ${status.build || "local"} · ${status.environment || "local"}`;
+  } catch {
+    appBuildLabel.textContent = "Build status unavailable";
+  }
 }
 
 function isAdminUnlocked() {
@@ -5638,9 +5668,11 @@ if (adminGate) {
 
     try {
       const response = await fetch("/api/analytics", { headers: adminHeaders() });
-      if (!response.ok) throw new Error("Invalid admin password");
+      if (response.status === 401) throw new Error("bad-password");
+      if (!response.ok) throw new Error("server-error");
       sessionStorage.setItem("axiomAdminPassword", adminToken);
       unlockOperations();
+      setServerOnlineStatus(true);
       setAdminMessage("Mission Control unlocked for this browser session.");
       if (adminPassword) adminPassword.value = "";
       await refreshOperationsSuite({
@@ -5652,10 +5684,15 @@ if (adminGate) {
         registers: true,
         whatsapp: true
       });
-    } catch {
+    } catch (error) {
       adminToken = "";
       sessionStorage.removeItem("axiomAdminPassword");
-      setAdminMessage("That key did not unlock Mission Control.", true);
+      if (error?.message === "bad-password") {
+        setAdminMessage("That key did not unlock Mission Control.", true);
+      } else {
+        setServerOnlineStatus(false);
+        setAdminMessage("Mission Control cannot reach the local server. Reopen START-DEVELOPING.cmd, refresh, then try again.", true);
+      }
     }
   });
 }
@@ -6024,14 +6061,24 @@ if (conciergeForm) {
     event.preventDefault();
     const message = (conciergeInput?.value || "").trim();
     if (!message) return;
+    const sendButton = conciergeForm.querySelector("button[type='submit']");
+    const originalButtonText = sendButton?.textContent || "Send";
     appendConciergeMessage("user", message);
     conciergeInput.value = "";
+    if (sendButton) {
+      sendButton.disabled = true;
+      sendButton.textContent = "Sending...";
+    }
+    if (conciergeInput) conciergeInput.disabled = true;
     try {
+      const serverOnline = await checkLocalServerHealth();
+      if (!serverOnline) throw new Error("server-offline");
       const response = await fetch("/api/concierge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, sessionId: activeSessionId, dataMode: getAcquisitionContext().dataMode })
       });
+      if (!response.ok) throw new Error("concierge-request-failed");
       const data = await response.json();
       if (data?.sessionId) {
         activeSessionId = data.sessionId;
@@ -6050,7 +6097,16 @@ if (conciergeForm) {
         appendConciergeMessage("bot", "Your brief has been saved, but the WhatsApp concierge introduction is temporarily unavailable. Please try again shortly.");
       }
     } catch {
-      appendConciergeMessage("bot", "I could not reach the AI service right now. Please continue with the intake form.");
+      appendConciergeMessage("bot", "I cannot reach the local server right now. Please reopen START-DEVELOPING.cmd, then refresh this page and try again.");
+    } finally {
+      if (sendButton) {
+        sendButton.disabled = false;
+        sendButton.textContent = originalButtonText;
+      }
+      if (conciergeInput) {
+        conciergeInput.disabled = false;
+        conciergeInput.focus();
+      }
     }
   });
 }
@@ -6059,6 +6115,10 @@ const year = document.getElementById("year");
 if (year) {
   year.textContent = new Date().getFullYear();
 }
+
+checkLocalServerHealth();
+refreshAppStatus();
+setInterval(checkLocalServerHealth, 10000);
 
 if (adminToken) {
   unlockOperations();

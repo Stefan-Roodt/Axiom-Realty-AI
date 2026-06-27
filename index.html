@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="server-status-banner hidden" id="serverStatusBanner" role="status">
+      Local server is offline. Reopen START-DEVELOPING.cmd, then refresh this page.
+    </div>
     <header class="hero" id="top">
       <div class="mesh" aria-hidden="true"></div>
       <nav class="nav wrapper">
@@ -81,6 +84,27 @@
           <p>Share the location, expected price, and timing. The concierge can ask the deeper questions later.</p>
           <button class="btn btn-secondary" data-intent="sell">Start seller request</button>
         </article>
+      </section>
+
+      <section class="wrapper trustpilot-panel" aria-label="Trust and review signal">
+        <div>
+          <p class="eyebrow">Trust Signal</p>
+          <h2>Use us once. Review us honestly.</h2>
+          <p>
+            We are building this around real customer feedback, clear consent, and no spam. A verified review channel
+            can be connected here as soon as the Trustpilot profile is live.
+          </p>
+        </div>
+        <div class="trustpilot-mark" aria-label="Trustpilot-ready review area">
+          <span>Trustpilot-ready</span>
+          <strong>Independent reviews</strong>
+          <small>No fake ratings. No borrowed stars. Real feedback only.</small>
+        </div>
+        <ul class="trustproof-list">
+          <li>Human-reviewed request</li>
+          <li>No obligation to proceed</li>
+          <li>Your details stay tied to this property request</li>
+        </ul>
       </section>
 
       <section class="section wrapper">
@@ -572,7 +596,7 @@
 
     <footer class="footer">
       <div class="wrapper">
-        <p><span id="year"></span> Axiom Realty AI. All rights reserved.</p>
+        <p><span id="year"></span> Axiom Realty AI. All rights reserved. <span id="appBuildLabel" class="app-build-label"></span></p>
       </div>
     </footer>
 
@@ -589,10 +613,20 @@
         <button id="conciergeClose" class="concierge-close" aria-label="Close concierge">×</button>
       </div>
       <div class="concierge-messages" id="conciergeMessages">
-        <p class="bot-msg">Hi, I am your AI property concierge. Tell me what you need to buy or sell, and I will turn it into a clear brief for fast follow-up.</p>
+        <p class="bot-msg">Hi, I am your AI property concierge. Tell me what you need to buy or sell, and I will help capture the basics quickly.</p>
       </div>
       <form id="conciergeForm" class="concierge-form">
-        <input id="conciergeInput" type="text" placeholder="" aria-label="Message the AI property concierge" />
+        <input
+          id="conciergeInput"
+          type="text"
+          placeholder="Example: I want to buy a flat in Sandton"
+          aria-label="Message the AI property concierge"
+          autocomplete="off"
+          autocapitalize="sentences"
+          autocorrect="off"
+          spellcheck="false"
+          name="axiom-concierge-message"
+        />
         <button type="submit" class="btn btn-primary">Send</button>
       </form>
       <p class="privacy-note compact">
@@ -601,7 +635,7 @@
     </section>
 
     <script src="towns-by-province.js"></script>
-    <script src="script.js?v=20260530-auto-ack"></script>
+    <script src="script.js"></script>
   </body>
 </html>
 

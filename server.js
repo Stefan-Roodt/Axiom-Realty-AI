@@ -35,6 +35,9 @@ const LEAD_DEADLINE_CHASE_CASE_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CH
 const LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_CHECKIN_WINDOW_DAYS || 1);
 const LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS = Number(process.env.LEAD_DEADLINE_CHASE_COMMISSION_WINDOW_DAYS || 7);
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "AxiomAdmin2026!").trim();
+const APP_VERSION = (process.env.APP_VERSION || "local-dev").trim();
+const APP_COMMIT = (process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || process.env.GIT_COMMIT || "").trim();
+const APP_BUILD_LABEL = APP_COMMIT ? APP_COMMIT.slice(0, 7) : APP_VERSION;
 const dataDir = path.join(__dirname, "data");
 const sessionsFile = path.join(dataDir, "lead-sessions.json");
 const agentApplicationsFile = path.join(dataDir, "agent-applications.json");
@@ -5302,7 +5305,7 @@ function buildConciergeReply(slots, missingFields, extracted, urgent, hasPriorAs
   }
 
   if (missingFields.length > 0) {
-    lines.push(`To complete your questionnaire, I still need: ${formatMissingChecklist(missingFields)}.`);
+    lines.push(`To finish the quick request, I still need: ${formatMissingChecklist(missingFields)}.`);
     lines.push(buildClarifyingQuestion(missingFields[0], slots));
     slots.lastAskedField = missingFields[0];
   } else if (!slots.finalPromptAsked) {
@@ -14236,6 +14239,19 @@ app.get("/healthz", (_req, res) => {
     ok: true,
     service: "axiom-realty-ai",
     status: "up",
+    version: APP_VERSION,
+    build: APP_BUILD_LABEL,
+    checkedAt: new Date().toISOString()
+  });
+});
+
+app.get("/api/app-status", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "axiom-realty-ai",
+    version: APP_VERSION,
+    build: APP_BUILD_LABEL,
+    environment: process.env.RENDER ? "render" : "local",
     checkedAt: new Date().toISOString()
   });
 });
