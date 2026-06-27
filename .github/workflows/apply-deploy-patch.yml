@@ -19,11 +19,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Rebuild patch from issue comments
+      - name: Rebuild compressed patch from issue comments
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
+            const zlib = require('zlib');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue_number = context.payload.issue.number;
@@ -36,7 +37,7 @@ jobs:
             const chunks = [];
             let expectedTotal = null;
             for (const comment of comments) {
-              const match = comment.body.match(/AXIOM_DEPLOY_PATCH_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
+              const match = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
               if (!match) continue;
               const index = Number(match[1]);
               const total = Number(match[2]);
@@ -44,15 +45,16 @@ jobs:
               if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
               chunks[index - 1] = match[3].replace(/\s+/g, '');
             }
-            if (!expectedTotal) throw new Error('No patch chunks found.');
+            if (!expectedTotal) throw new Error('No compressed patch chunks found.');
             const missing = [];
             for (let i = 0; i < expectedTotal; i += 1) {
               if (!chunks[i]) missing.push(i + 1);
             }
             if (missing.length) throw new Error(`Missing patch chunk(s): ${missing.join(', ')}`);
-            const patch = Buffer.from(chunks.join(''), 'base64');
+            const compressed = Buffer.from(chunks.join(''), 'base64');
+            const patch = zlib.gunzipSync(compressed);
             fs.writeFileSync('deploy-live.patch', patch);
-            core.info(`Wrote deploy-live.patch (${patch.length} bytes) from ${expectedTotal} chunks.`);
+            core.info(`Wrote deploy-live.patch (${patch.length} bytes) from ${expectedTotal} compressed chunks.`);
 
       - name: Apply patch
         run: |
