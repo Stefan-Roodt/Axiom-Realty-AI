@@ -1,0 +1,86 @@
+name: Apply deployment patch
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  apply:
+    if: contains(github.event.comment.body, '/apply-axiom-deploy-patch')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout live branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Rebuild patch from issue comments
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+            const chunks = [];
+            let expectedTotal = null;
+            for (const comment of comments) {
+              const match = comment.body.match(/AXIOM_DEPLOY_PATCH_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
+              if (!match) continue;
+              const index = Number(match[1]);
+              const total = Number(match[2]);
+              expectedTotal = expectedTotal || total;
+              if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
+              chunks[index - 1] = match[3].replace(/\s+/g, '');
+            }
+            if (!expectedTotal) throw new Error('No patch chunks found.');
+            const missing = [];
+            for (let i = 0; i < expectedTotal; i += 1) {
+              if (!chunks[i]) missing.push(i + 1);
+            }
+            if (missing.length) throw new Error(`Missing patch chunk(s): ${missing.join(', ')}`);
+            const patch = Buffer.from(chunks.join(''), 'base64');
+            fs.writeFileSync('deploy-live.patch', patch);
+            core.info(`Wrote deploy-live.patch (${patch.length} bytes) from ${expectedTotal} chunks.`);
+
+      - name: Apply patch
+        run: |
+          git apply --check deploy-live.patch
+          git apply deploy-live.patch
+          rm deploy-live.patch
+
+      - name: Install production dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --omit=dev || npm install --omit=dev
+          else
+            npm install --omit=dev
+          fi
+
+      - name: Run syntax checks
+        run: npm run check
+
+      - name: Commit and push live update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Harden launch flow and polish UI"
+          git push origin HEAD:main
