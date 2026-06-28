@@ -1,214 +1,40 @@
-const southAfricanProvinces = [
-  "Eastern Cape",
-  "Free State",
-  "Gauteng",
-  "KwaZulu-Natal",
-  "Limpopo",
-  "Mpumalanga",
-  "North West",
-  "Northern Cape",
-  "Western Cape"
-];
+function requireAxiomBrowserModule(name) {
+  const module = window[name];
+  if (!module) throw new Error(`${name} failed to load before script.js`);
+  return module;
+}
 
-const fallbackTownsByProvince = {
-  "Eastern Cape": ["Butterworth", "Dikeni", "East London", "Gqeberha", "Graaff-Reinet", "Kariega", "Komani", "Makhanda", "Mthatha", "Qonce", "Zwelitsha"],
-  "Free State": ["Bethlehem", "Bloemfontein", "Jagersfontein", "Kroonstad", "Odendaalsrus", "Parys", "Phuthaditjhaba", "Sasolburg", "Virginia", "Welkom"],
-  Gauteng: ["Benoni", "Boksburg", "Brakpan", "Carletonville", "Germiston", "Johannesburg", "Krugersdorp", "Pretoria", "Randburg", "Randfontein", "Roodepoort", "Soweto", "Springs", "Vanderbijlpark", "Vereeniging"],
-  "KwaZulu-Natal": ["Durban", "Empangeni", "Newcastle", "Pietermaritzburg", "Pinetown", "Ulundi", "Umlazi", "uMnambithi"],
-  Limpopo: ["Giyani", "Lebowakgomo", "Musina", "Phalaborwa", "Polokwane", "Seshego", "Sibasa", "Thabazimbi"],
-  Mpumalanga: ["Emalahleni", "Mbombela", "Secunda"],
-  "North West": ["Klerksdorp", "Mahikeng", "Mmabatho", "Potchefstroom", "Rustenburg"],
-  "Northern Cape": ["Kimberley", "Kuruman", "Port Nolloth"],
-  "Western Cape": ["Bellville", "Cape Town", "Constantia", "George", "Hopefield", "Oudtshoorn", "Paarl", "Simon's Town", "Stellenbosch", "Swellendam", "Worcester"]
-};
-const townsByProvince = window.townsByProvinceData || fallbackTownsByProvince;
-const propertyTypeOptions = ["Land", "Duplex", "Simplex", "Flat", "House", "Farm"];
-const estateAgencyOptions = [
-  "3%.Com Properties",
-  "@Realty",
-  "Acutts",
-  "AIDA",
-  "Apple Property",
-  "Better Homes",
-  "Century 21",
-  "Chas Everitt",
-  "Dormehl Phalane Property Group",
-  "Engel & Volkers",
-  "eXp South Africa",
-  "Fine & Country",
-  "Greeff Christie's International Real Estate",
-  "Harcourts",
-  "Huizemark",
-  "Jawitz Properties",
-  "Just Property",
-  "Keller Williams",
-  "Leapfrog",
-  "Lew Geffen Sotheby's International Realty",
-  "Meridian Realty",
-  "Only Realty",
-  "Other / Independent",
-  "Pam Golding Properties",
-  "Property.CoZa",
-  "Rawson Properties",
-  "RealNet",
-  "RE/MAX",
-  "Seeff",
-  "Sotheby's International Realty",
-  "Tyson Properties",
-  "Urban Link",
-  "Wakefields"
-];
-const manualLifecycleStageOptions = [
-  { value: "acknowledged", label: "Acknowledged" },
-  { value: "with-agent", label: "With agent" },
-  { value: "sale-pending", label: "Sale pending" },
-  { value: "sale-concluded", label: "Sale concluded" },
-  { value: "closed", label: "Closed" }
-];
-const referralAcceptanceViaOptions = ["Signed form", "Portal acknowledgement", "WhatsApp", "Phone call", "Email", "SMS", "In person", "Other"];
-const dealMilestoneOptions = [
-  { value: "referral-accepted", label: "Referral accepted" },
-  { value: "agent-contacted", label: "Agent contacted client" },
-  { value: "viewing-booked", label: "Viewing/valuation booked" },
-  { value: "offer-received", label: "Offer received" },
-  { value: "otp-signed", label: "Offer to purchase signed" },
-  { value: "sale-pending", label: "Sale pending" },
-  { value: "suspensive-conditions", label: "Suspensive conditions tracked" },
-  { value: "bond-approval", label: "Bond approval confirmed" },
-  { value: "guarantees-issued", label: "Guarantees issued" },
-  { value: "transfer-instruction", label: "Transfer instruction sent" },
-  { value: "fica-complete", label: "FICA complete" },
-  { value: "compliance-certificates", label: "Compliance certificates ready" },
-  { value: "rates-clearance", label: "Rates clearance issued" },
-  { value: "transfer-documents-signed", label: "Transfer documents signed" },
-  { value: "bond-documents-signed", label: "Bond documents signed" },
-  { value: "lodged", label: "Lodged at Deeds Office" },
-  { value: "registered", label: "Registered" },
-  { value: "sale-concluded", label: "Sale concluded" },
-  { value: "handover-complete", label: "Handover complete" },
-  { value: "deal-lost", label: "Deal lost/closed" }
-];
-const commissionPayoutStatusOptions = ["Not due", "Due", "Invoiced", "Paid", "Disputed", "Waived"];
-const leadDocumentCategoryOptions = [
-  "FICA",
-  "Offer to Purchase (OTP)",
-  "Certificates",
-  "Proof of payment",
-  "Compliance documents",
-  "Transfer documents",
-  "Bond documents",
-  "Rates clearance",
-  "Referral acceptance proof",
-  "Agent introduction proof",
-  "Milestone evidence",
-  "Commission invoice",
-  "Commission payment proof",
-  "Communication log",
-  "Other"
-];
-const leadCaseModeOptions = [
-  { value: "undecided", label: "Undecided" },
-  { value: "referral_only", label: "Referral-only" },
-  { value: "managed_transaction", label: "Managed transaction" },
-  { value: "archived", label: "Archived" }
-];
-const leadCommercialStatusOptions = [
-  { value: "new", label: "New" },
-  { value: "handed_off", label: "Handed off" },
-  { value: "accepted_by_agent", label: "Accepted by agent" },
-  { value: "client_contacted", label: "Client contacted" },
-  { value: "referral_fee_due", label: "Referral fee due" },
-  { value: "referral_fee_paid", label: "Referral fee paid" },
-  { value: "under_management", label: "Under management" },
-  { value: "transaction_closed", label: "Transaction closed" },
-  { value: "archived", label: "Archived" }
-];
-const leadStageTabOptions = [
-  { value: "all", label: "All" },
-  { value: "new-unacknowledged", label: "New" },
-  { value: "in-progress", label: "In progress" },
-  { value: "with-agent", label: "With agent" },
-  { value: "sale-pending", label: "Sale pending" },
-  { value: "closed", label: "Closed" }
-];
+const publicUi = requireAxiomBrowserModule("AxiomPublicUi");
+const adminControl = requireAxiomBrowserModule("AxiomAdminControl");
+const apiClient = requireAxiomBrowserModule("AxiomApiClient");
+const communicationsModule = requireAxiomBrowserModule("AxiomCommunications");
+const dataWorkflows = requireAxiomBrowserModule("AxiomDataWorkflows");
 
-const paths = {
-  buy: {
-    label: "Buyer Brief",
-    intro: "Quick buyer request",
-    submitText: "Find me a property expert",
-    responseText:
-      "Thank you. We’ve received your request and will match you with a suitable property expert.",
-    questions: [
-      { name: "fullName", label: "Full name", type: "text", required: true },
-      { name: "phone", label: "Contact / WhatsApp number", type: "text", required: true },
-      {
-        name: "province",
-        label: "Province",
-        type: "select",
-        required: true,
-        options: southAfricanProvinces
-      },
-      {
-        name: "area",
-        label: "Preferred area",
-        type: "text",
-        required: true,
-        townLookupByProvince: true,
-        provinceField: "province",
-        placeholder: "Start typing town name"
-      },
-      { name: "budget", label: "Budget range (ZAR)", type: "text", required: true },
-      {
-        name: "timeline",
-        label: "Timeline to buy",
-        type: "select",
-        required: true,
-        options: ["Immediately", "Within 1 month", "Within 3 months", "Within 6 months", "6+ months"]
-      }
-    ]
-  },
-  sell: {
-    label: "Seller Brief",
-    intro: "Quick seller request",
-    submitText: "Sell my property",
-    responseText:
-      "Thank you. We’ve received your request and will match you with a suitable property expert.",
-    questions: [
-      { name: "fullName", label: "Full name", type: "text", required: true },
-      { name: "phone", label: "Contact / WhatsApp number", type: "text", required: true },
-      {
-        name: "province",
-        label: "Province",
-        type: "select",
-        required: true,
-        options: southAfricanProvinces
-      },
-      {
-        name: "location",
-        label: "Property location",
-        type: "text",
-        required: true,
-        townLookupByProvince: true,
-        provinceField: "province",
-        placeholder: "Start typing town name"
-      },
-      {
-        name: "expectedPrice",
-        label: "Expected selling price (ZAR)",
-        type: "text",
-        required: true
-      },
-      {
-        name: "timeline",
-        label: "Timeline to sell",
-        type: "select",
-        required: true,
-        options: ["Immediately", "Within 1 month", "Within 3 months", "Within 6 months", "6+ months"]
-      }
-    ]
-  }
-};
+const {
+  southAfricanProvinces,
+  fallbackTownsByProvince,
+  townsByProvince,
+  normalizedTownsByProvince,
+  FALLBACK_PROVINCE_PLACEHOLDER,
+  propertyTypeOptions,
+  normalizeProvinceName,
+  getTownsByProvinceName,
+  createTownDatalist
+} = publicUi;
+const {
+  estateAgencyOptions,
+  manualLifecycleStageOptions,
+  referralAcceptanceViaOptions,
+  dealMilestoneOptions,
+  commissionPayoutStatusOptions,
+  leadDocumentCategoryOptions,
+  leadCaseModeOptions,
+  leadCommercialStatusOptions,
+  leadStageTabOptions,
+  operationsRoleProfiles
+} = adminControl;
+const { routes: whatsappRoutes } = communicationsModule;
+const { paths } = dataWorkflows;
 
 const intakeOverlay = document.getElementById("intakeOverlay");
 const intakeForm = document.getElementById("intakeForm");
@@ -284,10 +110,20 @@ const taskQueueCount = document.getElementById("taskQueueCount");
 const leadStageTabs = document.getElementById("leadStageTabs");
 const operationsTabs = [...document.querySelectorAll("[data-operations-tab]")];
 const operationsTabPanels = [...document.querySelectorAll("[data-operations-panel]")];
+const operationsRoleSelect = document.getElementById("operationsRole");
+const operationsRoleHint = document.getElementById("operationsRoleHint");
 const adminGate = document.getElementById("adminGate");
 const adminPassword = document.getElementById("adminPassword");
 const adminMessage = document.getElementById("adminMessage");
+const adminMessageAction = document.getElementById("adminMessageAction");
 const operationsPanel = document.getElementById("operationsPanel");
+const systemHealthStrip = document.getElementById("systemHealthStrip");
+const systemHealthSummary = document.getElementById("systemHealthSummary");
+const systemHealthChecks = document.getElementById("systemHealthChecks");
+const downloadSystemExport = document.getElementById("downloadSystemExport");
+const buyerProgressCount = document.getElementById("buyerProgressCount");
+const buyerProgressSummary = document.getElementById("buyerProgressSummary");
+const buyerProgressBoard = document.getElementById("buyerProgressBoard");
 const whatsappBridgeBadge = document.getElementById("whatsappBridgeBadge");
 const whatsappBridgeStatus = document.getElementById("whatsappBridgeStatus");
 const whatsappQrWrap = document.getElementById("whatsappQrWrap");
@@ -337,6 +173,11 @@ const adminMode =
   urlParams.get("admin") === "1" ||
   window.location.hash.toLowerCase() === "#admin" ||
   Boolean(adminToken);
+let operationsRole = normalizeOperationsRole(urlParams.get("role") || sessionStorage.getItem("axiomOperationsRole") || "admin");
+if (!urlParams.get("role") && !sessionStorage.getItem("axiomOperationsRole")) {
+  operationsRole = adminMode ? "admin" : "buyer";
+}
+sessionStorage.setItem("axiomOperationsRole", operationsRole);
 
 const staticNow = Date.now();
 const staticLeads = [
@@ -862,9 +703,9 @@ function setServerOnlineStatus(isOnline) {
 
 async function checkLocalServerHealth() {
   try {
-    const response = await fetch(`/healthz?ts=${Date.now()}`, { cache: "no-store" });
-    setServerOnlineStatus(response.ok);
-    return response.ok;
+    await apiClient.getJson(`${whatsappRoutes.health()}?ts=${Date.now()}`);
+    setServerOnlineStatus(true);
+    return true;
   } catch {
     setServerOnlineStatus(false);
     return false;
@@ -874,12 +715,42 @@ async function checkLocalServerHealth() {
 async function refreshAppStatus() {
   if (!appBuildLabel) return;
   try {
-    const response = await fetch(`/api/app-status?ts=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) throw new Error("status-unavailable");
-    const status = await response.json();
-    appBuildLabel.textContent = `Build ${status.build || "local"} · ${status.environment || "local"}`;
+    const status = await apiClient.getJson(`${whatsappRoutes.appStatus()}?ts=${Date.now()}`);
+    const failures = Number(status?.diagnostics?.failures || 0);
+    const warnings = Number(status?.diagnostics?.warnings || 0);
+    const health = failures ? `${failures} blocker${failures === 1 ? "" : "s"}` : warnings ? `${warnings} warning${warnings === 1 ? "" : "s"}` : "healthy";
+    appBuildLabel.textContent = `Build ${status.build || "local"} · ${status.environment || "local"} · ${health}`;
   } catch {
     appBuildLabel.textContent = "Build status unavailable";
+  }
+}
+
+async function refreshSystemStatus() {
+  if (!adminToken || !systemHealthStrip) return;
+  try {
+    const data = await apiClient.getJson(`${whatsappRoutes.systemStatus()}?ts=${Date.now()}`, { headers: adminHeaders() });
+    const diagnostics = data?.diagnostics || {};
+    const failures = Array.isArray(diagnostics.failures) ? diagnostics.failures : [];
+    const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+    const checks = Array.isArray(diagnostics.checks) ? diagnostics.checks : [];
+    systemHealthStrip.classList.toggle("at-risk", Boolean(failures.length || warnings.length));
+    if (systemHealthSummary) {
+      systemHealthSummary.textContent = failures.length
+        ? `${failures.length} system blocker${failures.length === 1 ? "" : "s"}`
+        : warnings.length
+        ? `${warnings.length} system warning${warnings.length === 1 ? "" : "s"}`
+        : "System healthy";
+    }
+    if (systemHealthChecks) {
+      const failed = checks.filter((item) => !item.ready).slice(0, 3);
+      systemHealthChecks.textContent = failed.length
+        ? failed.map((item) => item.label).join(" | ")
+        : `Storage, modules and deployment checks passed at ${new Date(diagnostics.checkedAt || Date.now()).toLocaleTimeString()}`;
+    }
+  } catch (error) {
+    systemHealthStrip.classList.add("at-risk");
+    if (systemHealthSummary) systemHealthSummary.textContent = "System status unavailable";
+    if (systemHealthChecks) systemHealthChecks.textContent = error?.message || "Could not load deployment diagnostics.";
   }
 }
 
@@ -887,11 +758,176 @@ function isAdminUnlocked() {
   return Boolean(adminToken && operationsPanel && !operationsPanel.classList.contains("hidden"));
 }
 
-function setAdminMessage(text, isError = false) {
+function normalizeOperationsRole(value) {
+  const normalized = (value || "").toString().trim().toLowerCase();
+  return operationsRoleProfiles[normalized] ? normalized : "admin";
+}
+
+function getOperationsRoleProfile(role = operationsRole) {
+  return operationsRoleProfiles[normalizeOperationsRole(role)] || operationsRoleProfiles.admin;
+}
+
+function getAllowedOperationsTabs(role = operationsRole) {
+  return new Set((getOperationsRoleProfile(role).allowedTabs || []).map((tab) => String(tab)));
+}
+
+function getDefaultOperationsTab(role = operationsRole) {
+  return getOperationsRoleProfile(role).defaultTab || "inbox";
+}
+
+function syncOperationsRoleFromUrl(roleFromUrl = null) {
+  if (!roleFromUrl) return operationsRole;
+  const normalized = normalizeOperationsRole(roleFromUrl);
+  if (normalized !== operationsRole) {
+    operationsRole = normalized;
+    sessionStorage.setItem("axiomOperationsRole", operationsRole);
+  }
+  if (operationsRoleSelect) operationsRoleSelect.value = operationsRole;
+  return operationsRole;
+}
+
+function applyOperationsRoleSettings() {
+  const profile = getOperationsRoleProfile();
+  if (operationsRoleSelect) {
+    operationsRoleSelect.value = operationsRole;
+    operationsRoleSelect.setAttribute("aria-label", `Experience: ${profile.label}`);
+  }
+  if (operationsRoleHint) {
+    operationsRoleHint.textContent = `${profile.label}: ${operationsRole === "admin" ? "full overview" : operationsRole === "agent" ? "action queue + intake radar" : "case progress and next steps only"}`;
+  }
+
+  const allowedTabs = getAllowedOperationsTabs();
+  operationsTabs.forEach((button) => {
+    const tab = button.getAttribute("data-operations-tab");
+    const allowed = allowedTabs.has(tab);
+    button.hidden = !allowed;
+    button.setAttribute("aria-hidden", String(!allowed));
+    button.setAttribute("tabindex", allowed ? "0" : "-1");
+  });
+
+  operationsTabPanels.forEach((panel) => {
+    const panelId = panel.getAttribute("data-operations-panel");
+    panel.hidden = !allowedTabs.has(panelId);
+    panel.classList.remove("active");
+  });
+  const target = getDefaultOperationsTab();
+  const currentTab = operationsTabs.find((button) => button.classList.contains("active"))?.getAttribute("data-operations-tab");
+  setOperationsTab(allowedTabs.has(currentTab) ? currentTab : target, false);
+  return allowedTabs;
+}
+
+function coerceRoleRestrictedTab(name, role = operationsRole) {
+  const allowedTabs = getAllowedOperationsTabs(role);
+  const normalized = (name || "").toString();
+  if (allowedTabs.has(normalized)) return normalized;
+  return getDefaultOperationsTab(role);
+}
+
+function refreshOperationsRole() {
+  if (operationsRoleSelect) {
+    const selected = operationsRoleSelect.value;
+    const role = normalizeOperationsRole(selected);
+    if (role !== operationsRole) {
+      operationsRole = role;
+      sessionStorage.setItem("axiomOperationsRole", operationsRole);
+      setAdminMessage(`Mission Control now using ${operationsRoleProfiles[operationsRole].label.toLowerCase()}.`, false);
+    }
+  }
+  applyOperationsRoleSettings();
+  if (isAdminUnlocked()) {
+    if (operationsRole === "admin") {
+      refreshOperationsSuite({ analytics: true, risk: true, followups: true, daily: true, assist: true, registers: true, whatsapp: true });
+      refreshSystemStatus();
+    } else if (operationsRole === "agent") {
+      refreshOperationsSuite({ analytics: true, risk: true, followups: true, assist: true });
+    } else {
+      refreshOperationsSuite({ progress: true });
+    }
+  }
+}
+
+function setAdminMessage(text, isError = false, details = null) {
   if (!adminMessage) return;
   adminMessage.textContent = text;
   adminMessage.classList.remove("hidden");
   adminMessage.classList.toggle("error-note", isError);
+  adminMessage.classList.toggle("success-note", !isError);
+  adminMessage.setAttribute("role", isError ? "alert" : "status");
+
+  if (adminMessageAction) {
+    adminMessageAction.classList.remove("hidden");
+    adminMessageAction.textContent = "";
+
+    if (!details) {
+      adminMessageAction.classList.add("hidden");
+      return;
+    }
+
+    if (details.type === "referral-acknowledgement-required") {
+      const wrapper = document.createElement("div");
+      const message = document.createElement("span");
+      message.textContent = "Open the agent acknowledgement link before continuing to avoid blocked actions.";
+      wrapper.appendChild(message);
+
+      if (details.agentAckUrl) {
+        const link = document.createElement("a");
+        link.href = details.agentAckUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = details.hasActiveAgentLink ? "Open acknowledgement link" : "Open new agent link";
+        link.style.marginLeft = "0.35rem";
+        wrapper.appendChild(link);
+      } else if (details.hasActiveAgentLink === false) {
+        const warn = document.createElement("span");
+        warn.textContent = "No active agent link found yet. Create one in the introduction block, then have the agent acknowledge it.";
+        warn.style.marginLeft = "0.35rem";
+        wrapper.appendChild(warn);
+      }
+      adminMessageAction.appendChild(wrapper);
+      return;
+    }
+
+    if (typeof details === "string") {
+      adminMessageAction.textContent = details;
+      return;
+    }
+
+    if (details.note) {
+      adminMessageAction.textContent = details.note;
+      return;
+    }
+
+    adminMessageAction.classList.add("hidden");
+  }
+}
+
+async function extractAdminActionError(response) {
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+  const message = (payload && typeof payload.error === "string" && payload.error.trim()) || "Request could not be completed.";
+  return {
+    status: response.status,
+    code: payload?.code || null,
+    message,
+    agentAckUrl: payload?.agentAckUrl || null,
+    hasActiveAgentLink: typeof payload?.hasActiveAgentLink === "boolean" ? payload.hasActiveAgentLink : false,
+    leadId: payload?.leadId || null
+  };
+}
+
+function buildReferralBlockActionPayload(errorInfo, fallbackText = "Referral acceptance is required before this action can continue.") {
+  if (!errorInfo || errorInfo.code !== "referral-acceptance-required") return null;
+  return {
+    type: "referral-acknowledgement-required",
+    leadId: errorInfo.leadId,
+    agentAckUrl: errorInfo.agentAckUrl,
+    hasActiveAgentLink: errorInfo.hasActiveAgentLink,
+    note: fallbackText
+  };
 }
 
 function unlockOperations() {
@@ -901,19 +937,31 @@ function unlockOperations() {
   adminGate.classList.add("compact-admin");
 }
 
+if (operationsRoleSelect) {
+  operationsRoleSelect.addEventListener("change", refreshOperationsRole);
+}
+
 function setOperationsTab(name = "inbox") {
+  const selectedTab = coerceRoleRestrictedTab(name);
   operationsTabs.forEach((button) => {
-    const isActive = button.getAttribute("data-operations-tab") === name;
+    const isActive = button.getAttribute("data-operations-tab") === selectedTab;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
   operationsTabPanels.forEach((panel) => {
-    const isActive = panel.getAttribute("data-operations-panel") === name;
+    const panelName = panel.getAttribute("data-operations-panel");
+    const isActive = panelName === selectedTab;
+    const allowedTabs = getAllowedOperationsTabs();
+    panel.hidden = !allowedTabs.has(panelName);
     panel.classList.toggle("active", isActive);
-    panel.hidden = !isActive;
+    if (isActive) panel.hidden = false;
   });
-  if (name === "whatsapp" && isAdminUnlocked()) {
+
+  if (selectedTab === "whatsapp" && isAdminUnlocked()) {
     refreshOperationsSuite({ whatsapp: true });
+  }
+  if (selectedTab === "progress" && isAdminUnlocked()) {
+    refreshOperationsSuite({ progress: true });
   }
 }
 
@@ -948,17 +996,17 @@ function createField(field) {
   label.textContent = field.label;
 
   if (field.townLookupByProvince) {
-    input = document.createElement("select");
-    const placeholderOption = document.createElement("option");
-    placeholderOption.value = "";
-    placeholderOption.textContent = "Select a province first";
-    placeholderOption.disabled = true;
-    placeholderOption.defaultSelected = true;
-    placeholderOption.selected = true;
-    input.appendChild(placeholderOption);
+    const townLookup = createTownDatalist(field);
+    input = document.createElement("input");
+    input.type = "text";
+    input.setAttribute("list", townLookup.id);
+    input.placeholder = FALLBACK_PROVINCE_PLACEHOLDER;
     input.disabled = true;
     input.dataset.townLookup = "true";
     input.dataset.provinceField = field.provinceField || "province";
+    input.dataset.townList = townLookup.id;
+    input.autocomplete = "off";
+    wrap.appendChild(townLookup.list);
   } else if (field.type === "select") {
     input = document.createElement("select");
     const placeholderOption = document.createElement("option");
@@ -1042,38 +1090,48 @@ function createField(field) {
 }
 
 function updateTownDatalistForProvince(container) {
-  const townSelects = container.querySelectorAll("select[data-town-lookup='true']");
+  const townSelects = container.querySelectorAll("input[data-town-lookup='true']");
   townSelects.forEach((townSelect) => {
     const provinceFieldName = townSelect.dataset.provinceField || "province";
     const provinceSelect = container.querySelector(`[name='${provinceFieldName}']`);
     if (!provinceSelect) return;
+    const listId = townSelect.dataset.townList;
+    const datalist = listId ? container.querySelector(`datalist#${CSS.escape(listId)}`) : null;
+    if (!datalist) return;
 
     const renderTownOptions = (towns, selectedTown = "") => {
-      townSelect.innerHTML = "";
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = towns.length ? "Select preferred area" : "Select a province first";
-      placeholder.disabled = true;
-      placeholder.selected = !selectedTown;
-      townSelect.appendChild(placeholder);
+      datalist.innerHTML = "";
       towns.forEach((town) => {
         const option = document.createElement("option");
         option.value = town;
         option.textContent = town;
-        if (town === selectedTown) option.selected = true;
-        townSelect.appendChild(option);
+        datalist.appendChild(option);
       });
-      townSelect.disabled = !towns.length;
+      const hasProvince = Boolean(provinceSelect.value);
+      townSelect.disabled = !hasProvince;
+      townSelect.placeholder = hasProvince
+        ? towns.length
+          ? "Start typing town name"
+          : "Type your area and we'll match it"
+        : FALLBACK_PROVINCE_PLACEHOLDER;
+      if (!hasProvince) {
+        townSelect.value = "";
+        return;
+      }
+      if (selectedTown && !towns.includes(selectedTown)) {
+        townSelect.value = selectedTown;
+      }
     };
 
     const syncList = () => {
       const provinceValue = provinceSelect.value;
-      const towns = (townsByProvince[provinceValue] || []).slice().sort((a, b) => a.localeCompare(b));
+      const towns = getTownsByProvinceName(provinceValue).slice().sort((a, b) => a.localeCompare(b));
       const currentTown = towns.includes(townSelect.value) ? townSelect.value : "";
       renderTownOptions(towns, currentTown);
     };
 
     provinceSelect.addEventListener("change", syncList);
+    provinceSelect.addEventListener("input", syncList);
     syncList();
   });
 }
@@ -1110,6 +1168,9 @@ function openIntake(intent) {
       : "Example: bedrooms, bathrooms, garden, parking, security, pet-friendly, finance status, or special instructions";
   }
   submitLeadBtn.textContent = config.submitText;
+  submitLeadBtn.classList.remove("is-loading");
+  nextStepMessage?.classList.add("hidden");
+  nextStepMessage?.classList.remove("success", "error");
   dynamicFields.innerHTML = "";
 
   const personalHeading = document.createElement("div");
@@ -1140,7 +1201,10 @@ function closeIntake() {
   intakeOverlay.classList.add("hidden");
   intakeOverlay.setAttribute("aria-hidden", "true");
   conciergeToggle?.classList.remove("hidden");
-  if (submitLeadBtn) submitLeadBtn.disabled = false;
+  if (submitLeadBtn) {
+    submitLeadBtn.disabled = false;
+    submitLeadBtn.classList.remove("is-loading");
+  }
 }
 
 function openWhatsAppUrl(url) {
@@ -1524,7 +1588,7 @@ async function refreshDailyControlPanel() {
 async function refreshWhatsAppBridgeStatus() {
   if (!adminToken || !whatsappBridgeStatus) return;
   try {
-    const response = await fetch("/api/whatsapp/status", { headers: adminHeaders() });
+    const response = await fetch(whatsappRoutes.whatsappStatus(), { headers: adminHeaders() });
     if (!response.ok) return;
     const data = await response.json();
     renderWhatsAppBridgeStatus(data.whatsapp);
@@ -1677,7 +1741,7 @@ function renderWhatsappCaseList() {
       const selected = getSelectedWhatsappCase();
       if (selected?.unreadCount) {
         try {
-          await fetch(`/api/whatsapp/inbox/${encodeURIComponent(caseId)}/read`, {
+          await fetch(whatsappRoutes.whatsappInboxRead(caseId), {
             method: "POST",
             headers: adminHeaders()
           });
@@ -1763,7 +1827,7 @@ function renderWhatsappThread() {
     button.addEventListener("click", async () => {
       const docId = button.getAttribute("data-download-whatsapp-doc");
       const downloadPath = button.getAttribute("data-download-whatsapp-path") || "";
-      const target = downloadPath || (docId ? `/api/whatsapp/inbox/documents/${encodeURIComponent(docId)}/download` : "");
+      const target = downloadPath || (docId ? whatsappRoutes.whatsappDocumentDownload(docId) : "");
       if (!target) return;
       try {
         const response = await fetch(target, {
@@ -1800,7 +1864,7 @@ function renderWhatsappThread() {
       button.disabled = true;
       button.textContent = "Saving...";
       try {
-        const response = await fetch(`/api/whatsapp/inbox/appointments/${encodeURIComponent(appointmentId)}/action`, {
+        const response = await fetch(whatsappRoutes.whatsappAppointmentAction(appointmentId), {
           method: "POST",
           headers: { ...adminHeaders(), "Content-Type": "application/json" },
           body: JSON.stringify({ action })
@@ -1841,7 +1905,7 @@ function renderWhatsappThread() {
         submitButton.textContent = "Booking...";
       }
       try {
-        const response = await fetch(`/api/whatsapp/inbox/${encodeURIComponent(caseId)}/appointments`, {
+        const response = await fetch(whatsappRoutes.whatsappInboxAppointments(caseId), {
           method: "POST",
           headers: { ...adminHeaders(), "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1881,7 +1945,7 @@ function renderWhatsappThread() {
         button.disabled = true;
         button.textContent = "Resuming...";
         try {
-          const response = await fetch(`/api/whatsapp/inbox/${encodeURIComponent(caseId)}/human-takeover`, {
+          const response = await fetch(whatsappRoutes.whatsappHumanTakeover(caseId), {
             method: "POST",
             headers: { ...adminHeaders(), "Content-Type": "application/json" },
             body: JSON.stringify({ action: "resume", note: "Resumed by concierge from WhatsApp inbox." })
@@ -1909,7 +1973,7 @@ function renderWhatsappInbox() {
 async function refreshWhatsAppInbox({ preserveSelection = true } = {}) {
   if (!adminToken || !whatsappCaseList) return;
   try {
-    const response = await fetch("/api/whatsapp/inbox", { headers: adminHeaders() });
+    const response = await fetch(whatsappRoutes.whatsappInbox(), { headers: adminHeaders() });
     if (!response.ok) return;
     const data = await response.json();
     whatsappInboxState.cases = Array.isArray(data.inbox) ? data.inbox : [];
@@ -1932,21 +1996,46 @@ async function refreshOperationsSuite({
   assist = false,
   registers = false,
   whatsapp = false,
+  progress = false,
   skipExpandedAssist = false
 } = {}) {
-  if (analytics) await refreshAnalytics();
-  if (risk) await refreshRiskQueue();
-  if (followups) await refreshFollowUpTasks();
-  if (daily) await refreshDailyControlPanel();
-  if (assist && (!skipExpandedAssist || !hasExpandedLeadRows())) await refreshAgentAssist();
-  if (registers) await refreshAdminRegisters();
-  if (whatsapp) {
+  const roleProfile = getOperationsRoleProfile();
+  const roleRefresh = roleProfile.refreshTargets || {};
+  const shouldRun = (flagName) => {
+    if (!flagName) return false;
+    return roleRefresh[flagName] !== false ? true : false;
+  };
+  const hasProgress = roleProfile.allowedTabs.includes("progress");
+  if (progress && shouldRun("progress") && hasProgress) await refreshBuyerProgressSuite();
+  if (analytics && shouldRun("analytics") && roleProfile.allowedTabs.includes("metrics")) await refreshAnalytics();
+  if (risk && shouldRun("risk") && roleProfile.allowedTabs.includes("risk")) await refreshRiskQueue();
+  if (followups && shouldRun("followups") && roleProfile.allowedTabs.includes("followups")) await refreshFollowUpTasks();
+  if (daily && shouldRun("daily") && roleProfile.allowedTabs.includes("metrics")) await refreshDailyControlPanel();
+  if (
+    assist &&
+    roleProfile.allowedTabs.includes("inbox") &&
+    shouldRun("assist") &&
+    (!skipExpandedAssist || !hasExpandedLeadRows())
+  ) {
+    await refreshAgentAssist();
+  }
+  if (registers && shouldRun("registers") && roleProfile.allowedTabs.includes("registers")) await refreshAdminRegisters();
+  if (whatsapp && shouldRun("whatsapp") && roleProfile.allowedTabs.includes("whatsapp")) {
     await refreshWhatsAppBridgeStatus();
     await refreshWhatsAppInbox({ preserveSelection: true });
   }
 }
 
 async function refreshLeadWorkspace() {
+  if (!adminToken) return;
+  if (operationsRole === "buyer") {
+    await refreshOperationsSuite({ progress: true });
+    return;
+  }
+  if (operationsRole === "agent") {
+    await refreshOperationsSuite({ analytics: true, risk: true, followups: true, assist: true });
+    return;
+  }
   await refreshOperationsSuite({ analytics: true, risk: true, followups: true, assist: true });
 }
 
@@ -1974,8 +2063,103 @@ function formatRiskItem(lead) {
       <div class="small-note">${lead.snapshot || "No snapshot available."}</div>
       <div class="small-note">Next intervention: ${esc(nextAction)}</div>
       ${formatContactForm(lead)}
+  </article>
+  `;
+}
+
+function isBuyerProgressLead(lead) {
+  const lifecycleCode = (lead?.lifecycle?.code || "").toLowerCase();
+  return !["closed", "sale-concluded", "archived"].includes(lifecycleCode);
+}
+
+function formatBuyerProgressBoardProgress(lead) {
+  const timeline = lead.transactionTimeline || {};
+  const progress = Number.isFinite(Number(timeline.progress)) ? `${timeline.progress}%` : "Not set";
+  const currentMilestone = timeline.currentMilestone?.label || lead.lifecycle?.label || "Open";
+  const nextMilestone = timeline.nextMilestone?.label || "Waiting for next step";
+  const owner = lead.assignedAgent?.name || "Concierge";
+  const area = [lead.slots?.area, lead.slots?.province].filter(Boolean).join(", ") || "Area not captured";
+  const timelineWidth = Math.max(0, Math.min(100, Number(timeline.progress || 0)));
+  const tone = timelineWidth >= 70 ? "good" : timelineWidth >= 35 ? "active" : "warn";
+  const actionLabel = lead.nextBestAction?.title || lead.followUpIntelligence?.primary || "Waiting for next update";
+
+  return `
+    <article class="progress-case-card ${tone}">
+      <div class="progress-case-head">
+        <strong>${esc(getLeadDisplayName(lead) || `Case ${esc(lead.id || "pending")}`)}</strong>
+        <span>${esc((lead.intent || "unknown").toUpperCase())}</span>
+      </div>
+      <p class="small-note">${esc(area)} · ${esc(actionLabel)}</p>
+      <p class="progress-case-stage">Current: ${esc(currentMilestone)} · Next: ${esc(nextMilestone)}</p>
+      <div class="progress-case-track" aria-label="progress track">
+        <span style="width:${timelineWidth}%;"></span>
+      </div>
+      <small>${esc(progress)} complete · Owner: ${esc(owner)}</small>
+      <small>${esc(lead.updatedAt ? `Updated ${new Date(lead.updatedAt).toLocaleDateString()}` : "Awaiting update")}</small>
+    </article>`;
+}
+
+function renderBuyerProgressViews(leads = []) {
+  if (!buyerProgressSummary || !buyerProgressBoard) return;
+  const activeLeads = Array.isArray(leads) ? leads.filter(isBuyerProgressLead) : [];
+  const buyerCount = activeLeads.filter((lead) => lead.intent === "buy").length;
+  const sellerCount = activeLeads.filter((lead) => lead.intent === "sell").length;
+  const withAgent = activeLeads.filter((lead) => lead.assignedAgent?.name).length;
+  const atRisk = activeLeads.filter((lead) => lead.outcome?.commercialStatus === "at-risk" || lead.outcome?.commercialStatus === "commission risk").length;
+
+  if (buyerProgressCount) {
+    buyerProgressCount.textContent = `${activeLeads.length} active case${activeLeads.length === 1 ? "" : "s"}`;
+  }
+
+  buyerProgressSummary.innerHTML = `
+    <article class="progress-desk-card good">
+      <span>Active leads</span>
+      <strong>${activeLeads.length}</strong>
+      <small>Buyer: ${buyerCount}, Seller: ${sellerCount}</small>
+    </article>
+    <article class="progress-desk-card ${withAgent ? "active" : "warn"}">
+      <span>Assigned</span>
+      <strong>${withAgent}</strong>
+      <small>${withAgent ? "Specialist connected" : "Still waiting for specialist handoff"}</small>
+    </article>
+    <article class="progress-desk-card ${atRisk ? "warn" : "good"}">
+      <span>Needs attention</span>
+      <strong>${atRisk}</strong>
+      <small>Active escalations flagged by the operating system</small>
+    </article>
+    <article class="progress-desk-card ${activeLeads.length ? "active" : "warn"}">
+      <span>Latest update</span>
+      <strong>${activeLeads[0] ? (formatRegisterDate(activeLeads[0].updatedAt || activeLeads[0].createdAt) || "No updates yet") : "No updates yet"}</strong>
+      <small>${activeLeads[0] ? `Case: ${esc(getLeadDisplayName(activeLeads[0]))}` : "New leads will appear as soon as they are captured"}</small>
     </article>
   `;
+
+  const ordered = activeLeads
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+  if (!ordered.length) {
+    buyerProgressBoard.innerHTML = `<p class=\"small-note\">No active cases yet. A new buyer or seller brief will appear here within 30 seconds.</p>`;
+    return;
+  }
+  buyerProgressBoard.innerHTML = `<div class=\"progress-case-board\">${ordered.map(formatBuyerProgressBoardProgress).join("")}</div>`;
+}
+
+async function refreshBuyerProgressSuite() {
+  if (!buyerProgressBoard || !adminToken) return;
+  try {
+    const response = await fetch("/api/leads/recent?limit=100&sort=latest&status=all&dataset=live&referral=all&period=all", { headers: adminHeaders() });
+    if (response.status === 401) throw new Error("Admin password needed");
+    if (!response.ok) return;
+    const data = await response.json();
+    renderBuyerProgressViews(Array.isArray(data?.leads) ? data.leads : []);
+  } catch {
+    if (buyerProgressSummary) {
+      buyerProgressSummary.innerHTML = `<p class=\"small-note\">Could not load your live progress. Check Mission Control access.</p>`;
+    }
+    if (buyerProgressBoard) {
+      buyerProgressBoard.innerHTML = `<p class=\"small-note\">Progress data is unavailable while the control session is disconnected.</p>`;
+    }
+  }
 }
 
 function renderRiskCommandDeck(leads = []) {
@@ -4714,12 +4898,19 @@ function bindContactForms(container, onSaved) {
         if (response.ok) {
           await onSaved();
         } else {
+          const errorInfo = await extractAdminActionError(response);
+          const referralAction = buildReferralBlockActionPayload(
+            errorInfo,
+            "This lead cannot be worked until the receiving agent has acknowledged the referral terms."
+          );
+          setAdminMessage(errorInfo.message, true, referralAction);
           button.disabled = false;
           button.textContent = "Confirm Contact";
         }
       } catch {
         button.disabled = false;
         button.textContent = "Confirm Contact";
+        setAdminMessage("Could not confirm contact. Please try again.", true);
       }
     });
   });
@@ -5074,6 +5265,7 @@ async function refreshAgentAssist() {
         const id = form.getAttribute("data-lifecycle");
         const button = form.querySelector("button[type='submit']");
         if (!id || !button) return;
+        let errorActionDetails = null;
         const payload = {
           stage: form.querySelector("select[name='stage']")?.value || "acknowledged",
           note: form.querySelector("input[name='note']")?.value || ""
@@ -5086,12 +5278,20 @@ async function refreshAgentAssist() {
             headers: { ...adminHeaders(), "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
-          if (!response.ok) throw new Error("Could not save pipeline stage");
+          if (!response.ok) {
+            const errorInfo = await extractAdminActionError(response);
+            errorActionDetails = buildReferralBlockActionPayload(
+              errorInfo,
+              "This lead cannot be moved to another stage until the receiving agent has acknowledged the referral terms."
+            );
+            setAdminMessage(errorInfo.message, true, errorActionDetails);
+            throw new Error(errorInfo.message);
+          }
           await refreshLeadWorkspace();
-        } catch {
+        } catch (error) {
           button.disabled = false;
           button.textContent = "Save Stage";
-          setAdminMessage("Could not save the pipeline stage. Please try again.", true);
+          setAdminMessage(error?.message || "Could not save the pipeline stage. Please try again.", true, errorActionDetails);
         }
       });
     });
@@ -5101,6 +5301,7 @@ async function refreshAgentAssist() {
         const id = form.getAttribute("data-outcome-mode");
         const button = form.querySelector("button[type='submit']");
         if (!id || !button) return;
+        let errorActionDetails = null;
         const payload = {
           caseMode: form.querySelector("select[name='caseMode']")?.value || "undecided",
           commercialStatus: form.querySelector("select[name='commercialStatus']")?.value || "new",
@@ -5115,15 +5316,25 @@ async function refreshAgentAssist() {
             body: JSON.stringify(payload)
           });
           if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data?.error || "Could not save outcome mode");
+            const errorInfo = await extractAdminActionError(response);
+            const fallback = errorInfo.message || "Could not save outcome mode";
+            errorActionDetails = buildReferralBlockActionPayload(
+              errorInfo,
+              "This lead cannot be updated until the receiving agent has acknowledged the referral terms."
+            );
+            setAdminMessage(fallback, true, errorActionDetails);
+            throw new Error(fallback);
           }
           await refreshOperationsSuite({ analytics: true, risk: true, followups: true, registers: true, assist: true });
           setAdminMessage("Outcome mode saved.");
         } catch (error) {
           button.disabled = false;
           button.textContent = "Save Outcome Mode";
-          setAdminMessage(error?.message || "Could not save outcome mode. Please try again.", true);
+          setAdminMessage(
+            error?.message || "Could not save outcome mode. Please try again.",
+            true,
+            errorActionDetails
+          );
         }
       });
     });
@@ -5133,6 +5344,7 @@ async function refreshAgentAssist() {
         const id = form.getAttribute("data-deal-protection");
         const button = form.querySelector("button[type='submit']");
         if (!id || !button) return;
+        let errorActionDetails = null;
         const payload = {
           status: form.querySelector("select[name='status']")?.value || "Active",
           commissionAgreement: form.querySelector("select[name='commissionAgreement']")?.value || "Not discussed",
@@ -5150,12 +5362,19 @@ async function refreshAgentAssist() {
           if (response.ok) {
             await refreshOperationsSuite({ analytics: true, followups: true, assist: true });
           } else {
+            const errorInfo = await extractAdminActionError(response);
+            errorActionDetails = buildReferralBlockActionPayload(
+              errorInfo,
+              "Update will remain blocked until the receiving agent confirms acknowledgement."
+            );
+            setAdminMessage(errorInfo.message, true, errorActionDetails);
             button.disabled = false;
             button.textContent = "Save Deal Status";
           }
-        } catch {
+        } catch (error) {
           button.disabled = false;
           button.textContent = "Save Deal Status";
+          setAdminMessage(error?.message || "Could not save deal status. Please try again.", true, errorActionDetails);
         }
       });
     });
@@ -5165,6 +5384,7 @@ async function refreshAgentAssist() {
         const id = form.getAttribute("data-deal-acceptance");
         const button = form.querySelector("button[type='submit']");
         if (!id || !button) return;
+        let errorActionDetails = null;
         const payload = {
           acceptedBy: (form.querySelector("input[name='acceptedBy']")?.value || "").trim(),
           via: form.querySelector("select[name='via']")?.value || "Signed form",
@@ -5182,14 +5402,22 @@ async function refreshAgentAssist() {
             headers: { ...adminHeaders(), "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
-          if (!response.ok) throw new Error("Could not save referral acceptance");
+          if (!response.ok) {
+            const errorInfo = await extractAdminActionError(response);
+            errorActionDetails = buildReferralBlockActionPayload(
+              errorInfo,
+              "Please get the receiving agent to acknowledge referral terms before continuing."
+            );
+            setAdminMessage(errorInfo.message, true, errorActionDetails);
+            throw new Error(errorInfo.message);
+          }
           const data = await response.json();
           await refreshLeadWorkspace();
           setAdminMessage(formatStageUpdateDeliveryMessage(data?.stageUpdateDelivery, "Referral acceptance saved with timestamp."));
-        } catch {
+        } catch (error) {
           button.disabled = false;
           button.textContent = "Confirm Referral Acceptance";
-          setAdminMessage("Could not save referral acceptance. Please try again.", true);
+          setAdminMessage(error?.message || "Could not save referral acceptance. Please try again.", true, errorActionDetails);
         }
       });
     });
@@ -5199,6 +5427,7 @@ async function refreshAgentAssist() {
         const id = form.getAttribute("data-deal-milestone");
         const button = form.querySelector("button[type='submit']");
         if (!id || !button) return;
+        let errorActionDetails = null;
         const payload = {
           code: form.querySelector("select[name='code']")?.value || "agent-contacted",
           actor: (form.querySelector("input[name='actor']")?.value || "Concierge").trim(),
@@ -5215,13 +5444,28 @@ async function refreshAgentAssist() {
             body: JSON.stringify(payload)
           });
           const data = await response.json();
-          if (!response.ok) throw new Error("Could not save milestone");
+          if (!response.ok) {
+            const errorInfo = {
+              status: response.status,
+              code: data?.code || null,
+              message: data?.error || "Could not save milestone",
+              agentAckUrl: data?.agentAckUrl || null,
+              hasActiveAgentLink: typeof data?.hasActiveAgentLink === "boolean" ? data.hasActiveAgentLink : false,
+              leadId: data?.leadId || id
+            };
+            errorActionDetails = buildReferralBlockActionPayload(
+              errorInfo,
+              "Please confirm receipt of referral acknowledgement before saving milestone evidence."
+            );
+            setAdminMessage(errorInfo.message, true, errorActionDetails);
+            throw new Error(errorInfo.message);
+          }
           await refreshLeadWorkspace();
           setAdminMessage(formatStageUpdateDeliveryMessage(data?.stageUpdateDelivery, "Milestone evidence saved."));
-        } catch {
+        } catch (error) {
           button.disabled = false;
           button.textContent = "Add Milestone Evidence";
-          setAdminMessage("Could not save milestone evidence. Please try again.", true);
+          setAdminMessage(error?.message || "Could not save milestone evidence. Please try again.", true, errorActionDetails);
         }
       });
     });
@@ -5231,6 +5475,7 @@ async function refreshAgentAssist() {
         const id = form.getAttribute("data-deal-commission");
         const button = form.querySelector("button[type='submit']");
         if (!id || !button) return;
+        let errorActionDetails = null;
         const saleValueRaw = (form.querySelector("input[name='saleValue']")?.value || "").replace(/\D/g, "");
         const payload = {
           saleValue: saleValueRaw ? Number(saleValueRaw) : 0,
@@ -5248,13 +5493,21 @@ async function refreshAgentAssist() {
             headers: { ...adminHeaders(), "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
-          if (!response.ok) throw new Error("Could not save commission tracker");
+          if (!response.ok) {
+            const errorInfo = await extractAdminActionError(response);
+            errorActionDetails = buildReferralBlockActionPayload(
+              errorInfo,
+              "Please get the receiving agent to acknowledge the referral terms before saving commission tracking."
+            );
+            setAdminMessage(errorInfo.message, true, errorActionDetails);
+            throw new Error(errorInfo.message);
+          }
           await refreshLeadWorkspace();
           setAdminMessage("Commission tracker saved.");
-        } catch {
+        } catch (error) {
           button.disabled = false;
           button.textContent = "Save Commission Tracker";
-          setAdminMessage("Could not save commission tracker. Please try again.", true);
+          setAdminMessage(error?.message || "Could not save commission tracker. Please try again.", true, errorActionDetails);
         }
       });
     });
@@ -5656,7 +5909,10 @@ document.querySelectorAll("[data-intent]").forEach((button) => {
 });
 
 if (adminGate) {
-  if (adminMode) showAdminGate();
+  if (adminMode) {
+    showAdminGate();
+    applyOperationsRoleSettings();
+  }
 
   adminGate.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -5676,14 +5932,9 @@ if (adminGate) {
       setAdminMessage("Mission Control unlocked for this browser session.");
       if (adminPassword) adminPassword.value = "";
       await refreshOperationsSuite({
-        analytics: true,
-        risk: true,
-        followups: true,
-        daily: true,
-        assist: true,
-        registers: true,
-        whatsapp: true
+        ...operationsRoleProfiles[operationsRole].refreshTargets
       });
+      await refreshSystemStatus();
     } catch (error) {
       adminToken = "";
       sessionStorage.removeItem("axiomAdminPassword");
@@ -5701,6 +5952,7 @@ if (leadFilterForm) {
   let leadSearchTimer = null;
   [leadPeriod, leadSort, leadReferral, leadDataset, leadStatus].forEach((control) => {
     control?.addEventListener("change", () => {
+      if (!getOperationsRoleProfile().allowedTabs.includes("inbox")) return;
       if (control === leadSort) {
         leadColumnSort = {
           field: "received",
@@ -5712,7 +5964,11 @@ if (leadFilterForm) {
   });
   leadSearch?.addEventListener("input", () => {
     clearTimeout(leadSearchTimer);
-    leadSearchTimer = setTimeout(() => refreshAgentAssist(), 250);
+    leadSearchTimer = setTimeout(() => {
+      if (getOperationsRoleProfile().allowedTabs.includes("inbox")) {
+        refreshAgentAssist();
+      }
+    }, 250);
   });
 }
 
@@ -5731,7 +5987,9 @@ if (clearLeadFilters) {
     activeLeadStage = "all";
     renderLeadStageTabs();
     leadColumnSort = { field: "received", direction: "desc" };
-    refreshAgentAssist();
+    if (getOperationsRoleProfile().allowedTabs.includes("inbox")) {
+      refreshAgentAssist();
+    }
   });
 }
 
@@ -5740,7 +5998,7 @@ if (startWhatsappBridge) {
     startWhatsappBridge.disabled = true;
     startWhatsappBridge.textContent = "Starting...";
     try {
-      const response = await fetch("/api/whatsapp-web/start", {
+      const response = await fetch(whatsappRoutes.whatsappWebStart(), {
         method: "POST",
         headers: adminHeaders()
       });
@@ -5762,7 +6020,7 @@ if (sendWhatsappBridgeTest) {
     sendWhatsappBridgeTest.disabled = true;
     sendWhatsappBridgeTest.textContent = "Sending...";
     try {
-      const response = await fetch("/api/whatsapp/test", {
+      const response = await fetch(whatsappRoutes.whatsappTest(), {
         method: "POST",
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ text: `Axiom Realty AI WhatsApp Web test alert (${new Date().toLocaleString()})` })
@@ -5810,7 +6068,7 @@ if (whatsappReplyForm) {
     if (whatsappReplyInput) whatsappReplyInput.disabled = true;
     if (whatsappReplyRecipient) whatsappReplyRecipient.disabled = true;
     try {
-      const response = await fetch(`/api/whatsapp/inbox/${encodeURIComponent(selectedCase.caseId)}/reply`, {
+      const response = await fetch(whatsappRoutes.whatsappInboxReply(selectedCase.caseId), {
         method: "POST",
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ message, recipientPhone, recipientName, recipientRole })
@@ -5860,7 +6118,7 @@ if (runSmartReminders) {
     runSmartReminders.textContent = "Running...";
     if (smartReminderStatus) smartReminderStatus.textContent = "Running smart reminder sweep...";
     try {
-      const response = await fetch("/api/whatsapp/smart-reminders/run", {
+      const response = await fetch(whatsappRoutes.whatsappSmartRemindersRun(), {
         method: "POST",
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ processQueue: true })
@@ -5889,7 +6147,7 @@ if (processWhatsappQueue) {
     processWhatsappQueue.textContent = "Processing...";
     if (smartReminderStatus) smartReminderStatus.textContent = "Processing queued WhatsApp reminders...";
     try {
-      const response = await fetch("/api/whatsapp/queue/process", {
+      const response = await fetch(whatsappRoutes.whatsappQueueProcess(), {
         method: "POST",
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ forceRetry: true })
@@ -5916,7 +6174,7 @@ if (logoutWhatsappBridge) {
     logoutWhatsappBridge.disabled = true;
     logoutWhatsappBridge.textContent = "Logging out...";
     try {
-      const response = await fetch("/api/whatsapp-web/logout", {
+      const response = await fetch(whatsappRoutes.whatsappWebLogout(), {
         method: "POST",
         headers: adminHeaders()
       });
@@ -5935,6 +6193,45 @@ if (logoutWhatsappBridge) {
 if (downloadDailyReport) {
   downloadDailyReport.addEventListener("click", () => {
     window.open("/api/concierge-daily-report?format=csv", "_blank", "noopener");
+  });
+}
+
+if (downloadSystemExport) {
+  downloadSystemExport.addEventListener("click", async () => {
+    if (!adminToken) {
+      setAdminMessage("Unlock Mission Control before exporting a backup.", true);
+      return;
+    }
+    downloadSystemExport.disabled = true;
+    downloadSystemExport.textContent = "Exporting...";
+    try {
+      const response = await apiClient.request(whatsappRoutes.adminExport(), {
+        headers: adminHeaders(),
+        responseType: "raw"
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || "Export failed");
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const match = /filename="([^"]+)"/i.exec(disposition);
+      const filename = match?.[1] || `axiom-export-${new Date().toISOString().slice(0, 10)}.json`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setAdminMessage("System export downloaded.");
+    } catch (error) {
+      setAdminMessage(error?.message || "Could not export the system backup.", true);
+    } finally {
+      downloadSystemExport.disabled = false;
+      downloadSystemExport.textContent = "Export Backup";
+    }
   });
 }
 
@@ -5983,9 +6280,12 @@ if (expertApplicationForm) {
 
 intakeForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  progressNote.textContent = "Saving your request and preparing the concierge introduction...";
+  progressNote.textContent = "Saving your request...";
   submitLeadBtn.disabled = true;
+  submitLeadBtn.classList.add("is-loading");
   submitLeadBtn.textContent = "Sending...";
+  nextStepMessage.classList.add("hidden");
+  nextStepMessage.classList.remove("success", "error");
   const formData = new FormData(intakeForm);
   const activeConfig = paths[activeIntent];
   const payload = getLeadPayload(formData);
@@ -6011,11 +6311,12 @@ intakeForm.addEventListener("submit", (event) => {
     .then((result) => {
       const needsManualHandoff = !result.delivered && Boolean(result.manualHandoffUrl);
       nextStepMessage.textContent = needsManualHandoff
-        ? `${activeConfig.responseText} WhatsApp is opening with your brief so you can send it directly to the concierge.`
+        ? "Lead saved. WhatsApp is opening so you can send the brief now."
         : !result.delivered
-          ? "Your request has been saved, but the WhatsApp concierge introduction is temporarily unavailable. Please try again shortly."
-          : activeConfig.responseText;
+          ? "Lead saved. Concierge delivery is queued; we will follow up as soon as the channel is ready."
+          : "Lead routed. A property concierge will contact you with the next step.";
       nextStepMessage.classList.remove("hidden");
+      nextStepMessage.classList.add("success");
       if (isAdminUnlocked()) {
         refreshAnalytics();
         refreshRiskQueue();
@@ -6027,9 +6328,11 @@ intakeForm.addEventListener("submit", (event) => {
       }
     })
     .catch((error) => {
-      nextStepMessage.textContent = `We could not save your request yet (${error?.message || "validation error"}). Please check your answers and try again.`;
+      nextStepMessage.textContent = `Not saved yet. ${error?.message || "Check the highlighted answers, then try again."}`;
       nextStepMessage.classList.remove("hidden");
+      nextStepMessage.classList.add("error");
       submitLeadBtn.disabled = false;
+      submitLeadBtn.classList.remove("is-loading");
       submitLeadBtn.textContent = activeConfig.submitText;
     });
 });
@@ -6122,27 +6425,34 @@ setInterval(checkLocalServerHealth, 10000);
 
 if (adminToken) {
   unlockOperations();
+  applyOperationsRoleSettings();
+  syncOperationsRoleFromUrl(urlParams.get("role"));
   refreshOperationsSuite({
-    analytics: true,
-    risk: true,
-    followups: true,
-    daily: true,
-    assist: true,
-    registers: true,
-    whatsapp: true
+    ...operationsRoleProfiles[operationsRole].refreshTargets
   });
+  refreshSystemStatus();
 }
 
 setInterval(() => {
   if (!isAdminUnlocked()) return;
-  refreshOperationsSuite({
-    analytics: true,
-    risk: true,
-    followups: true,
-    daily: true,
-    assist: true,
-    registers: true,
-    whatsapp: true,
-    skipExpandedAssist: true
-  });
+  const profile = getOperationsRoleProfile();
+  if (operationsRole === "buyer") {
+    refreshOperationsSuite({ ...profile.refreshTargets, progress: true, skipExpandedAssist: true });
+  } else if (operationsRole === "agent") {
+    refreshOperationsSuite({
+      ...profile.refreshTargets,
+      skipExpandedAssist: true
+    });
+  } else {
+    refreshOperationsSuite({
+      analytics: true,
+      risk: true,
+      followups: true,
+      daily: true,
+      assist: true,
+      registers: true,
+      whatsapp: true,
+      skipExpandedAssist: true
+    });
+  }
 }, 30000);

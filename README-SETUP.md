@@ -43,6 +43,20 @@ Or double-click:
 
 - `Open Axiom Realty AI.bat`
 
+To push to GitHub + Render in one step (once configured), use:
+
+```text
+.\Deploy.cmd
+```
+
+Or run:
+
+```text
+npm run deploy:live
+```
+
+Set `RENDER_DEPLOY_HOOK_URL` if you want an immediate Render trigger after push; otherwise Render deploys on git push automatically. The deploy helper only stages website/deployment files, not local drafts or secrets.
+
 There is also a desktop shortcut-style starter:
 
 - `C:\Users\Hugo\Desktop\buy-sell-website\Open Axiom Realty AI.bat`

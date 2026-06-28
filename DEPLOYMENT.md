@@ -66,3 +66,33 @@ Then open:
 ```text
 http://127.0.0.1:8080/?admin=1#admin
 ```
+
+## Fast deploy from Windows
+
+Double-click:
+
+```text
+Deploy.cmd
+```
+
+This runs:
+
+1. `git pull --rebase origin main`
+2. dependency install (`npm ci --omit=dev`, with fallback to `npm install --omit=dev`)
+3. syntax sanity check (`node --check server.js`)
+4. commit + push
+5. optional Render deploy hook (`RENDER_DEPLOY_HOOK_URL`), if set
+
+You can also run:
+
+```text
+npm run deploy:live
+```
+
+or provide a custom commit message:
+
+```text
+.\Deploy.cmd "Deploy latest lead engine changes"
+```
+
+The deploy helper stages only website/deployment files so local Word drafts, temporary files, data exports, logs, and secrets do not get published by accident.

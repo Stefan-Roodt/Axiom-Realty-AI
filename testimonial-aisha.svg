@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Aisha Khan portrait">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fb7185"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="80" fill="url(#bg)"/>
+  <path d="M30 145c8-33 28-50 50-50s42 17 50 50" fill="#ecfeff"/>
+  <circle cx="80" cy="68" r="26" fill="#a16207"/>
+  <path d="M48 74c0-29 14-47 34-47 18 0 31 15 31 42-13-18-35-21-65 5z" fill="#1e293b"/>
+  <path d="M48 74c6 22 18 33 32 33s26-11 33-33c-19 13-42 13-65 0z" fill="#1e293b"/>
+  <circle cx="71" cy="70" r="3" fill="#111827"/>
+  <circle cx="91" cy="70" r="3" fill="#111827"/>
+  <path d="M70 84c8 6 15 6 23 0" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
+</svg>

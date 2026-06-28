@@ -1,0 +1,38 @@
+name: Axiom CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      ADMIN_PASSWORD: CI-Axiom-Admin-Only-2026!
+      ENFORCE_PRODUCTION_ENV: "false"
+      HOST: 127.0.0.1
+      PORT: 8080
+      PUBLIC_BASE_URL: http://127.0.0.1:8080
+      ALLOWED_ORIGIN: http://127.0.0.1:8080
+      WHATSAPP_WEB_TEST_MODE: "false"
+      LM_STUDIO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --omit=dev
+      - run: npm run check
+      - run: |
+          npm start &
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - run: npm run smoke

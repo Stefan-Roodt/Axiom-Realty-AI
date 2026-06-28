@@ -1,4 +1,3 @@
-﻿import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
@@ -7,8 +6,15 @@ import { createRequire } from "module";
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "crypto";
 import fs from "fs";
 import dotenv from "dotenv";
+import { writeJsonFile } from "./server/json-store.js";
+import {
+  assertProductionSafety,
+  buildStartupDiagnostics,
+  logStartupDiagnostics,
+  publicStatusFromDiagnostics
+} from "./server/diagnostics.js";
 
-dotenv.config({ override: true });
+dotenv.config({ override: false });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +34,13 @@ const LEAD_MISSING_DOCS_ESCALATION_HOURS = Number(process.env.LEAD_MISSING_DOCS_
 const LEAD_DELAYED_TRANSFER_ESCALATION_DAYS = Number(process.env.LEAD_DELAYED_TRANSFER_ESCALATION_DAYS || 7);
 const AUTO_LEAD_AUTOMATION_ENABLED = String(process.env.AUTO_LEAD_AUTOMATION_ENABLED || "true").toLowerCase() === "true";
 const LEAD_AUTOMATION_INTERVAL_MS = Number(process.env.LEAD_AUTOMATION_INTERVAL_MS || 60000);
+const LEAD_PROACTIVE_ACK_DAYS = Number(process.env.LEAD_PROACTIVE_ACK_DAYS || 0);
+const LEAD_PROACTIVE_MISSING_DOCS_DAYS = Number(process.env.LEAD_PROACTIVE_MISSING_DOCS_DAYS || 1);
+const LEAD_PROACTIVE_STATUS_CHECK_DAYS = Number(process.env.LEAD_PROACTIVE_STATUS_CHECK_DAYS || 3);
+const LEAD_PROACTIVE_REACTIVATION_DAYS = Number(process.env.LEAD_PROACTIVE_REACTIVATION_DAYS || 7);
+const LEAD_PROACTIVE_COOLDOWN_HOURS = Number(process.env.LEAD_PROACTIVE_COOLDOWN_HOURS || 6);
+const LEAD_PROACTIVE_QUIET_START_HOUR = Number(process.env.LEAD_PROACTIVE_QUIET_START_HOUR || 8);
+const LEAD_PROACTIVE_QUIET_END_HOUR = Number(process.env.LEAD_PROACTIVE_QUIET_END_HOUR || 19);
 const AUTO_CONCIERGE_DIGEST_ENABLED = String(process.env.AUTO_CONCIERGE_DIGEST_ENABLED || "true").toLowerCase() === "true";
 const AUTO_CONCIERGE_DIGEST_HOUR = Number(process.env.AUTO_CONCIERGE_DIGEST_HOUR || 8);
 const AUTO_CONCIERGE_DIGEST_MINUTE = Number(process.env.AUTO_CONCIERGE_DIGEST_MINUTE || 0);
@@ -38,10 +51,25 @@ const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "AxiomAdmin2026!").trim();
 const APP_VERSION = (process.env.APP_VERSION || "local-dev").trim();
 const APP_COMMIT = (process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || process.env.GIT_COMMIT || "").trim();
 const APP_BUILD_LABEL = APP_COMMIT ? APP_COMMIT.slice(0, 7) : APP_VERSION;
+const LM_STUDIO_ENABLED = String(process.env.LM_STUDIO_ENABLED || (process.env.RENDER ? "false" : "true")).toLowerCase() === "true";
+const LM_STUDIO_BASE_URL = (process.env.LM_STUDIO_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
+const LM_STUDIO_MODEL = (process.env.LM_STUDIO_MODEL || "").trim();
+const LM_STUDIO_API_KEY = (process.env.LM_STUDIO_API_KEY || "lm-studio").trim();
+const LM_STUDIO_TIMEOUT_MS = Number(process.env.LM_STUDIO_TIMEOUT_MS || 1800);
+const WHATSAPP_VOICE_TRANSCRIBE_URL = (process.env.WHATSAPP_VOICE_TRANSCRIBE_URL || "").trim();
+const WHATSAPP_VOICE_TRANSCRIBE_API_KEY = (process.env.WHATSAPP_VOICE_TRANSCRIBE_API_KEY || "").trim();
+const WHATSAPP_VOICE_TRANSCRIBE_MODEL = (process.env.WHATSAPP_VOICE_TRANSCRIBE_MODEL || "whisper-1").trim();
+const WHATSAPP_VOICE_TRANSCRIBE_TIMEOUT_MS = Number(process.env.WHATSAPP_VOICE_TRANSCRIBE_TIMEOUT_MS || 30000);
+const WHATSAPP_VOICE_TRANSCRIBE_REQUIRED = String(process.env.WHATSAPP_VOICE_TRANSCRIBE_REQUIRED || "false").toLowerCase() === "true";
+const WHATSAPP_VOICE_TRANSCRIBE_MAX_BYTES = Number(process.env.WHATSAPP_VOICE_TRANSCRIBE_MAX_BYTES || 16 * 1024 * 1024);
+const ENFORCE_PRODUCTION_ENV = String(process.env.ENFORCE_PRODUCTION_ENV || (process.env.RENDER ? "true" : "false")).toLowerCase() === "true";
+let lmStudioModelCache = null;
+let lmStudioLastStatus = { enabled: LM_STUDIO_ENABLED, connected: false, model: null, checkedAt: null };
 const dataDir = path.join(__dirname, "data");
 const sessionsFile = path.join(dataDir, "lead-sessions.json");
 const agentApplicationsFile = path.join(dataDir, "agent-applications.json");
 const operationsFile = path.join(dataDir, "operations-store.json");
+const dataBackupsDir = path.join(dataDir, "backups");
 const secureDocumentsDir = path.join(dataDir, "secure-documents");
 const leadVaultDir = path.join(secureDocumentsDir, "lead-vault");
 const whatsappWebAuthDir = path.join(dataDir, "whatsapp-web-auth");
@@ -278,6 +306,7 @@ app.use(express.static(__dirname, { dotfiles: "deny" }));
 const leadSessions = new Map();
 const agentApplications = [];
 let operationsStore = createDefaultOperationsStore();
+let startupDiagnostics = null;
 const operationsUsers = createOperationsUsers();
 
 function rateLimit({ windowMs = 60000, max = 30 } = {}) {
@@ -319,10 +348,14 @@ const canonicalProvinceMap = {
   "western cape": "Western Cape"
 };
 const provinceNames = Object.keys(canonicalProvinceMap);
-const townToProvince = buildTownProvinceIndex();
+const townDirectory = buildTownDirectory();
+const townToProvince = townDirectory.provinceByTown;
+const knownTownByKey = townDirectory.townsByKey;
+const knownTownEntries = townDirectory.entries;
 
 function ensureDataDir() {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  if (!fs.existsSync(dataBackupsDir)) fs.mkdirSync(dataBackupsDir, { recursive: true });
   if (!fs.existsSync(secureDocumentsDir)) fs.mkdirSync(secureDocumentsDir, { recursive: true });
   if (!fs.existsSync(leadVaultDir)) fs.mkdirSync(leadVaultDir, { recursive: true });
 }
@@ -347,7 +380,7 @@ function persistSessions() {
   try {
     ensureDataDir();
     const list = Array.from(leadSessions.values());
-    fs.writeFileSync(sessionsFile, JSON.stringify(list, null, 2), "utf8");
+    writeJsonFile(sessionsFile, list, { backupDir: dataBackupsDir });
   } catch {
     // Ignore persistence errors for now to avoid API hard-failure.
   }
@@ -370,7 +403,7 @@ function loadAgentApplications() {
 function persistAgentApplications() {
   try {
     ensureDataDir();
-    fs.writeFileSync(agentApplicationsFile, JSON.stringify(agentApplications, null, 2), "utf8");
+    writeJsonFile(agentApplicationsFile, agentApplications, { backupDir: dataBackupsDir });
   } catch {
     // Ignore persistence errors for now to avoid API hard-failure.
   }
@@ -633,6 +666,8 @@ function createDefaultOperationsStore() {
       lastPhase2Summary: null,
       lastLeadAutomationRunAt: null,
       lastLeadAutomationSummary: null,
+      lastLeadProactiveAutomationRunAt: null,
+      lastLeadProactiveAutomationSummary: null,
       lastLeadDeadlineAutomationRunAt: null,
       lastLeadDeadlineAutomationSummary: null,
       lastConciergeDigestDay: null,
@@ -780,7 +815,7 @@ function loadPersistedOperations() {
 function persistOperations() {
   try {
     ensureDataDir();
-    fs.writeFileSync(operationsFile, JSON.stringify(operationsStore, null, 2), "utf8");
+    writeJsonFile(operationsFile, operationsStore, { backupDir: dataBackupsDir });
   } catch {
     // Keep the local prototype responsive if a write fails.
   }
@@ -1051,6 +1086,128 @@ function decodeInboundAttachmentBytes(attachment) {
   }
 }
 
+function toSafeNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+async function fetchInboundAttachmentBytes(url) {
+  const mediaUrl = String(url || "").trim();
+  if (!mediaUrl) return null;
+  if (!/^https?:\/\//i.test(mediaUrl)) return null;
+  try {
+    const response = await fetch(mediaUrl);
+    if (!response.ok) return null;
+    const length = Number(response.headers.get("content-length") || 0);
+    if (length > 0 && length > WHATSAPP_VOICE_TRANSCRIBE_MAX_BYTES) {
+      return null;
+    }
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!bytes.length) return null;
+    if (bytes.length > WHATSAPP_VOICE_TRANSCRIBE_MAX_BYTES) return null;
+    return {
+      bytes,
+      mimeType: sanitizeShortText(response.headers.get("content-type") || "", 120).toLowerCase()
+    };
+  } catch {
+    return null;
+  }
+}
+
+function inferVoiceTranscriptResult(raw, source) {
+  if (!raw) return "";
+  if (typeof raw === "string") return sanitizeShortText(raw, 8000);
+  if (typeof raw.text === "string") return sanitizeShortText(raw.text, 8000);
+  if (typeof raw.transcript === "string") return sanitizeShortText(raw.transcript, 8000);
+  if (typeof raw.data === "string") return sanitizeShortText(raw.data, 8000);
+  if (Array.isArray(raw.segments)) {
+    const combined = raw.segments
+      .map((segment) => String(segment?.text || segment?.transcript || ""))
+      .filter(Boolean)
+      .join(" ");
+    if (combined) return sanitizeShortText(combined, 8000);
+  }
+  return "";
+}
+
+async function transcribeInboundVoiceNote(bytes, { model = "", originalName = "", mimeType = "audio/ogg", source = "inbound" } = {}) {
+  if (!WHATSAPP_VOICE_TRANSCRIBE_URL) {
+    return { ok: false, reason: "transcription-not-configured", source: sanitizeShortText(source, 120) };
+  }
+  const voiceBuffer = bytes;
+  if (!voiceBuffer?.length) {
+    return { ok: false, reason: "no-audio-bytes", source: sanitizeShortText(source, 120) };
+  }
+  if (voiceBuffer.length > WHATSAPP_VOICE_TRANSCRIBE_MAX_BYTES) {
+    return { ok: false, reason: "audio-too-large", source: sanitizeShortText(source, 120) };
+  }
+  const normalizedModel = model || WHATSAPP_VOICE_TRANSCRIBE_MODEL || "whisper-1";
+  const fileName = safeBaseFilename(originalName || `voice-note-${Date.now()}.ogg`);
+  const headers = WHATSAPP_VOICE_TRANSCRIBE_API_KEY ? { Authorization: `Bearer ${WHATSAPP_VOICE_TRANSCRIBE_API_KEY}` } : {};
+  const body = new FormData();
+  body.append("file", new Blob([voiceBuffer], { type: mimeType || "audio/ogg" }), fileName);
+  body.append("model", normalizedModel);
+  body.append("response_format", "json");
+
+  const timeout = Number.isFinite(WHATSAPP_VOICE_TRANSCRIBE_TIMEOUT_MS) && WHATSAPP_VOICE_TRANSCRIBE_TIMEOUT_MS > 0
+    ? WHATSAPP_VOICE_TRANSCRIBE_TIMEOUT_MS
+    : 30000;
+  const signal = typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
+    ? AbortSignal.timeout(timeout)
+    : null;
+
+  try {
+    const response = await fetch(WHATSAPP_VOICE_TRANSCRIBE_URL, {
+      method: "POST",
+      headers,
+      body,
+      ...(signal ? { signal } : {})
+    });
+    const raw = await response.text();
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = null;
+    }
+    if (!response.ok) {
+      return {
+        ok: false,
+        reason: `transcription-request-failed`,
+        source: sanitizeShortText(source, 120),
+        status: response.status || null,
+        error: sanitizeShortText(parsed?.error?.message || parsed?.detail || raw || "", 200)
+      };
+    }
+
+    const transcript = inferVoiceTranscriptResult(parsed || {}, source);
+    if (transcript) {
+      return {
+        ok: true,
+        transcript,
+        source: "stt",
+        raw
+      };
+    }
+    return {
+      ok: false,
+      reason: "transcription-empty",
+      source: sanitizeShortText(source, 120),
+      error: sanitizeShortText(parsed?.error?.message || raw || "", 200)
+    };
+  } catch (error) {
+    if (error?.name === "TimeoutError") {
+      return { ok: false, reason: "transcription-timeout", source: sanitizeShortText(source, 120), error: error?.message || "transcription request timed out" };
+    }
+    return {
+      ok: false,
+      reason: "transcription-error",
+      source: sanitizeShortText(source, 120),
+      error: sanitizeShortText(error?.message || "", 200)
+    };
+  }
+}
+
 function isInboundVoiceNoteAttachment(attachment = {}) {
   const mime = String(attachment?.mimeType || "").toLowerCase();
   const filename = String(attachment?.filename || "").toLowerCase();
@@ -1310,22 +1467,70 @@ function upsertOperationsDocumentFromWhatsapp(item, { sender = "", senderRole = 
   });
 }
 
-function captureInboundVoiceNoteFromWhatsapp(item, { sender = "", senderRole = "", attachment = {}, messageText = "" } = {}) {
-  const bytes = decodeInboundAttachmentBytes(attachment);
+async function captureInboundVoiceNoteFromWhatsapp(item, { sender = "", senderRole = "", attachment = {}, messageText = "" } = {}) {
   const originalName = safeBaseFilename(attachment.filename || `voice-note${extFromMime(attachment.mimeType) || ".ogg"}`);
-  const transcript = extractInboundVoiceTranscript(attachment, messageText);
-  const summary = summarizeInboundVoiceTranscript(transcript);
-  const sentiment = analyzeWhatsappHumanTakeover({ voiceTranscript: transcript, voiceSummary: summary });
+  let transcript = extractInboundVoiceTranscript(attachment, messageText);
+  let transcriptSource = transcript ? "payload" : "";
+  let bytes = decodeInboundAttachmentBytes(attachment);
+  const resolvedMime = attachment.mimeType || "audio/ogg";
+
+  if (!bytes && attachment.url) {
+    const fetched = await fetchInboundAttachmentBytes(attachment.url);
+    if (fetched?.bytes?.length) {
+      bytes = fetched.bytes;
+    }
+  }
+
   const media = bytes?.length
     ? {
-        ...storeInboundSecureMedia(bytes, { originalName, mimeType: attachment.mimeType || "application/octet-stream" }),
+        ...storeInboundSecureMedia(bytes, { originalName, mimeType: resolvedMime || "application/octet-stream" }),
         durationSeconds: attachment.durationSeconds || null
       }
     : null;
+
+  let transcriptionError = "";
+  if (!transcript && bytes) {
+    const transcribeResult = await transcribeInboundVoiceNote(bytes, {
+      model: WHATSAPP_VOICE_TRANSCRIBE_MODEL,
+      originalName,
+      mimeType: resolvedMime,
+      source: "whatsapp-voice"
+    });
+    if (transcribeResult?.ok) {
+      transcript = transcribeResult.transcript;
+      transcriptSource = "stt";
+    } else {
+      transcriptionError = transcribeResult?.reason || "transcription-failed";
+    }
+  }
+
+  if (!transcript && WHATSAPP_VOICE_TRANSCRIBE_REQUIRED && (transcriptionError || attachment.url || bytes?.length)) {
+    return {
+      kind: "voice-note",
+      caseNoteId: null,
+      documentId: null,
+      documentName: "Voice note",
+      ingestStatus: "failed",
+      originalName,
+      mimeType: resolvedMime || "audio/ogg",
+      size: bytes?.length || null,
+      hasDownload: Boolean(media?.storageName),
+      downloadPath: "",
+      note: attachment.caption || "",
+      transcript: "",
+      summary: "",
+      sentiment: null,
+      externalUrl: attachment.url || "",
+      error: "Voice transcription is required but unavailable."
+    };
+  }
+
+  const summary = summarizeInboundVoiceTranscript(transcript);
+  const sentiment = analyzeWhatsappHumanTakeover({ voiceTranscript: transcript, voiceSummary: summary });
   const transcriptState = transcript ? "transcribed" : media ? "pending-transcript" : "noted";
   const body = transcript
-    ? `Transcript: ${transcript}${summary && summary !== transcript ? `\n\nSummary: ${summary}` : ""}${sentiment ? `\n\nSentiment risk: ${sentiment.severity} (${sentiment.score})${sentiment.reasonLabels?.length ? `\nSignals: ${sentiment.reasonLabels.join(", ")}` : ""}` : ""}`
-    : "Voice note received. Transcript is pending because no local speech-to-text engine is configured in this app yet.";
+    ? `Transcript (${transcriptSource || "transcribed"}): ${transcript}${summary && summary !== transcript ? `\n\nSummary: ${summary}` : ""}${sentiment ? `\n\nSentiment risk: ${sentiment.severity} (${sentiment.score})${sentiment.reasonLabels?.length ? `\nSignals: ${sentiment.reasonLabels.join(", ")}` : ""}` : ""}`
+    : `Voice note received${transcriptionError ? ` but transcription is unavailable (${transcriptionError})` : ""}. Audio saved and a case note created while transcription remains pending.`;
   const caseNote = addOperationsCaseNote({
     caseId: item.id,
     category: "Voice note",
@@ -1353,7 +1558,7 @@ function captureInboundVoiceNoteFromWhatsapp(item, { sender = "", senderRole = "
     documentName: "Voice note",
     ingestStatus: transcriptState,
     originalName,
-    mimeType: attachment.mimeType || "application/octet-stream",
+    mimeType: resolvedMime || "application/octet-stream",
     size: bytes?.length || null,
     hasDownload: Boolean(media?.storageName),
     downloadPath: caseNote?.id ? `/api/whatsapp/inbox/media/${encodeURIComponent(caseNote.id)}/download` : "",
@@ -4545,11 +4750,15 @@ function normalizeAreaKey(value) {
     .trim();
 }
 
-function buildTownProvinceIndex() {
-  const index = new Map();
+function buildTownDirectory() {
+  const provinceByTown = new Map();
+  const townsByKey = new Map();
+  const entries = [];
   try {
     const csvPath = path.join(__dirname, "SouthAfricanCities.csv");
-    if (!fs.existsSync(csvPath)) return index;
+    if (!fs.existsSync(csvPath)) {
+      return { provinceByTown, townsByKey, entries };
+    }
 
     const rows = fs.readFileSync(csvPath, "utf8").split(/\r?\n/).slice(1);
     for (const row of rows) {
@@ -4561,12 +4770,18 @@ function buildTownProvinceIndex() {
 
       const key = normalizeAreaKey(city);
       const province = canonicalProvinceMap[provinceRaw.toLowerCase()] || provinceRaw;
-      if (key && province && !index.has(key)) index.set(key, province);
+      if (!key || !province) continue;
+      if (!provinceByTown.has(key)) provinceByTown.set(key, province);
+      if (!townsByKey.has(key)) {
+        const entry = { key, town: city, province };
+        townsByKey.set(key, entry);
+        entries.push(entry);
+      }
     }
   } catch {
-    return index;
+    return { provinceByTown, townsByKey, entries };
   }
-  return index;
+  return { provinceByTown, townsByKey, entries };
 }
 
 function toTitleCase(text) {
@@ -4575,6 +4790,10 @@ function toTitleCase(text) {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
+}
+
+function escapeRegex(text) {
+  return (text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function parseAmount(value) {
@@ -4840,11 +5059,25 @@ function syncSessionFromMilestone(session, code, updatedAt) {
 
 function getAnswerMap(payload) {
   const map = {};
+  const nameMap = {};
   for (const answer of payload.answers || []) {
     const key = (answer.label || "").toLowerCase().trim();
     map[key] = (answer.value || "").toString().trim();
+    const nameKey = (answer.name || "").toLowerCase().trim();
+    if (nameKey) nameMap[nameKey] = (answer.value || "").toString().trim();
   }
-  return map;
+  return { map, nameMap };
+}
+
+function withAnswerMaps(payload) {
+  const { map, nameMap } = getAnswerMap(payload);
+  return {
+    map,
+    nameMap,
+    get(labelKeys = [], nameKeys = []) {
+      return pickAnswer(map, labelKeys) || pickAnswer(nameMap, nameKeys);
+    }
+  };
 }
 
 function pickAnswer(map, keys) {
@@ -4872,7 +5105,7 @@ function extractIntent(text) {
 function extractPrice(text) {
   const lower = text.toLowerCase();
 
-  const compact = lower.match(/(?:r\s*)?(\d+(?:\.\d+)?)\s*(k|m|million)\b/);
+  const compact = lower.match(/(?:r\s*)?(\d+(?:\.\d+)?)\s*(k|m|mil|million)\b/);
   if (compact) {
     const base = Number(compact[1]);
     const factor = compact[2] === "k" ? 1_000 : 1_000_000;
@@ -4930,11 +5163,15 @@ function extractRooms(text) {
 }
 
 function extractPropertyType(text) {
-  const lower = (text || "").toLowerCase();
+  const lower = (text || "")
+    .toLowerCase()
+    .replace(/4x/g, "x");
   const types = [
     ["land", "Land"],
     ["duplex", "Duplex"],
+    ["simple4x", "Simplex"],
     ["simplex", "Simplex"],
+    ["fla", "Flat"],
     ["flat", "Flat"],
     ["apartment", "Flat"],
     ["house", "House"],
@@ -4944,29 +5181,88 @@ function extractPropertyType(text) {
   return { value: match ? match[1] : null, confidence: match ? 0.85 : 0 };
 }
 
+function detectNonPropertySaleSubject(text) {
+  const lower = (text || "")
+    .toLowerCase()
+    .replace(/4x/g, "x");
+  if (extractIntent(lower).value !== "sell") return null;
+
+  const match = lower.match(/\b(?:sell|selling|list|listing|market)\s+(?:my|our|the|a|an)?\s*([a-z][a-z'-]{1,24})\b/);
+  if (!match) return null;
+
+  const subject = match[1].trim();
+  const allowed = new Set([
+    "property",
+    "home",
+    "house",
+    "flat",
+    "apartment",
+    "unit",
+    "townhouse",
+    "duplex",
+    "simplex",
+    "farm",
+    "land",
+    "plot",
+    "smallholding",
+    "estate",
+    "place"
+  ]);
+  const ignored = new Set(["in", "at", "near", "around"]);
+  if (allowed.has(subject) || ignored.has(subject)) return null;
+  if (extractPropertyType(subject).value) return null;
+  return subject;
+}
+
+function separateFusedLocationPrepositions(text) {
+  return (text || "").replace(/\b(in|at|near|around)([a-z][a-z'-]{3,})\b/gi, (match, prep, possibleTown) => {
+    return resolveKnownTown(possibleTown) ? `${prep} ${possibleTown}` : match;
+  });
+}
+
 function extractArea(text) {
-  const lower = text.toLowerCase();
+  const lower = separateFusedLocationPrepositions(
+    (text || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s'-]/g, " ")
+  );
   const provinceRaw = provinceNames.find((p) => lower.includes(p)) || null;
   const province = provinceRaw ? canonicalProvinceMap[provinceRaw] : null;
 
-  const locationPhrase = lower.match(/\b(?:in|at|around|near)\s+([a-z][a-z\s'-]{2,60})/i);
+  const locationPhrase = lower.match(/\b(?:in|at|around|near)\s+(?:the\s+)?(?:a\s+|an\s+)?([a-z][a-z\s'-]{2,60})/i);
   let area = locationPhrase ? locationPhrase[1].split(/[,.;!?]/)[0].trim() : null;
   if (area) {
+    area = area.replace(/(\b[a-z]\b)\s+([a-z]{3,})/g, "$1$2");
     area = area
-      .replace(/\b(?:up to|upto|under|below|within|immediately|asap|urgent|now|for|with|budget|price|about|approximately)\b.*$/i, "")
+      .replace(/\b(?:maybe|possibly|or|and|around|up to|upto|under|below|within|immediately|asap|urgent|now|for|with|budget|price|about|approximately|flat|apartment|house|home|property|place|bedroom|bedrooms)\b.*$/i, "")
       .replace(/\s+/g, " ")
       .trim();
+    if (provinceRaw) {
+      area = area.replace(new RegExp(`\\b${escapeRegex(provinceRaw)}\\b`, "i"), "").replace(/\s+/g, " ").trim();
+    }
     area = area ? toTitleCase(area) : null;
   }
 
   if (!area && province) return { area: null, province, confidence: 0.6 };
 
-  if (area && !province) {
-    const inferred = townToProvince.get(normalizeAreaKey(area)) || null;
-    return { area, province: inferred, confidence: inferred ? 0.9 : 0.7 };
+  if (area) {
+    const knownTown = resolveKnownTown(area, province);
+    if (knownTown) {
+      return {
+        area: knownTown.town,
+        province: knownTown.province,
+        confidence: knownTown.confidence
+      };
+    }
   }
 
-  if (area) return { area, province, confidence: 0.88 };
+  if (area && !province) {
+    const inferred = townToProvince.get(normalizeAreaKey(area)) || null;
+    if (inferred) return { area, province: inferred, confidence: 0.9 };
+    return { area: null, province: null, confidence: 0 };
+  }
+
+  if (area && province) return { area: null, province, confidence: 0.6 };
 
   return { area: null, province: null, confidence: 0 };
 }
@@ -4978,8 +5274,21 @@ function applyAreaAnswer(slots, text) {
     .trim();
   if (!cleaned) return;
 
+  const knownTown = resolveKnownTown(cleaned, slots.province || null);
+  if (knownTown) {
+    slots.area = knownTown.town;
+    slots.province = knownTown.province || slots.province || null;
+    return;
+  }
+
   const extracted = extractArea(cleaned);
-  const area = extracted.area || toTitleCase(cleaned);
+  const area = extracted.area;
+  if (!area) {
+    slots.validationMessage = slots.province
+      ? `I could not match that town in ${slots.province}. Which town or suburb should I use?`
+      : "I could not match that town or suburb. Which area should I use?";
+    return;
+  }
   slots.area = area;
   slots.province = extracted.province || townToProvince.get(normalizeAreaKey(area)) || slots.province || null;
 }
@@ -5015,6 +5324,261 @@ function extractLeadSignals(message) {
   };
 }
 
+async function getLmStudioModelId() {
+  if (!LM_STUDIO_ENABLED) {
+    lmStudioLastStatus = { enabled: false, connected: false, model: null, checkedAt: new Date().toISOString() };
+    return null;
+  }
+  if (LM_STUDIO_MODEL) {
+    lmStudioLastStatus = { ...lmStudioLastStatus, enabled: true, model: LM_STUDIO_MODEL, checkedAt: new Date().toISOString() };
+    return LM_STUDIO_MODEL;
+  }
+  if (lmStudioModelCache) return lmStudioModelCache;
+
+  try {
+    const response = await fetch(`${LM_STUDIO_BASE_URL}/models`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...(LM_STUDIO_API_KEY ? { Authorization: `Bearer ${LM_STUDIO_API_KEY}` } : {})
+      },
+      signal: AbortSignal.timeout(LM_STUDIO_TIMEOUT_MS)
+    });
+    if (!response.ok) {
+      lmStudioLastStatus = { enabled: true, connected: false, model: null, checkedAt: new Date().toISOString() };
+      return null;
+    }
+    const data = await response.json();
+    const firstModel = Array.isArray(data?.data) ? data.data.find((item) => item?.id)?.id : null;
+    lmStudioModelCache = firstModel || null;
+    lmStudioLastStatus = {
+      enabled: true,
+      connected: Boolean(lmStudioModelCache),
+      model: lmStudioModelCache,
+      checkedAt: new Date().toISOString()
+    };
+    return lmStudioModelCache;
+  } catch {
+    lmStudioLastStatus = { enabled: true, connected: false, model: null, checkedAt: new Date().toISOString() };
+    return null;
+  }
+}
+
+function parseJsonObjectLoose(text) {
+  const raw = (text || "").trim();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) return null;
+    try {
+      return JSON.parse(raw.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+}
+
+function normalizeLmStudioLeadSignals(result) {
+  if (!result || typeof result !== "object") return null;
+
+  const intent = ["buy", "sell"].includes(String(result.intent || "").toLowerCase())
+    ? String(result.intent).toLowerCase()
+    : "unknown";
+  const provinceRaw = String(result.province || "").trim().toLowerCase();
+  let province = canonicalProvinceMap[provinceRaw] || null;
+  const areaRaw = String(result.area || "").trim();
+  const knownTown = areaRaw ? resolveKnownTown(areaRaw, province) : null;
+  const area = knownTown?.town || null;
+  province = knownTown?.province || province || (area ? townToProvince.get(normalizeAreaKey(area)) || null : null);
+
+  const priceText = String(result.budgetOrPrice || result.price || "").trim();
+  const price = extractPrice(priceText);
+  if (!price.display && priceText && /\d/.test(priceText)) {
+    price.display = priceText;
+    price.confidence = 0.55;
+  }
+
+  const timelineText = String(result.timeline || "").trim();
+  const timeline = extractTimeline(timelineText);
+  if (!timeline.display && timelineText) {
+    timeline.display = timelineText;
+    timeline.urgency = "Unknown";
+    timeline.confidence = 0.55;
+  }
+
+  const contactPhone = cleanPhoneNumber(String(result.phone || "").trim());
+  const fullName = parseLeadNameAnswer(String(result.fullName || "").trim());
+  const propertyType = extractPropertyType(String(result.propertyType || "").trim());
+
+  return {
+    intent,
+    area,
+    province,
+    price,
+    rooms: {
+      bedrooms: Number.isFinite(Number(result.bedrooms)) && Number(result.bedrooms) > 0 ? Number(result.bedrooms) : null,
+      bathrooms: Number.isFinite(Number(result.bathrooms)) && Number(result.bathrooms) > 0 ? Number(result.bathrooms) : null,
+      confidence: result.bedrooms || result.bathrooms ? 0.75 : 0
+    },
+    propertyType,
+    contact: {
+      fullName,
+      phone: contactPhone,
+      email: cleanEmailAddress(String(result.email || "").trim())
+    },
+    timeline,
+    confidence: Number.isFinite(Number(result.confidence)) ? Math.max(0, Math.min(100, Number(result.confidence))) : 0,
+    missingFields: []
+  };
+}
+
+function mergeLeadSignalResults(ruleSignals, lmSignals) {
+  if (!lmSignals) return ruleSignals;
+  const merged = { ...ruleSignals };
+
+  if ((!merged.intent || merged.intent === "unknown") && lmSignals.intent && lmSignals.intent !== "unknown") merged.intent = lmSignals.intent;
+  if (!merged.area && lmSignals.area) merged.area = lmSignals.area;
+  if (!merged.province && lmSignals.province) merged.province = lmSignals.province;
+  if (!merged.price?.display && lmSignals.price?.display) merged.price = lmSignals.price;
+  if (!merged.propertyType?.value && lmSignals.propertyType?.value) merged.propertyType = lmSignals.propertyType;
+  if (!merged.rooms?.bedrooms && lmSignals.rooms?.bedrooms) merged.rooms.bedrooms = lmSignals.rooms.bedrooms;
+  if (!merged.rooms?.bathrooms && lmSignals.rooms?.bathrooms) merged.rooms.bathrooms = lmSignals.rooms.bathrooms;
+  if (!merged.contact?.fullName && lmSignals.contact?.fullName) merged.contact.fullName = lmSignals.contact.fullName;
+  if (!merged.contact?.phone && lmSignals.contact?.phone) merged.contact.phone = lmSignals.contact.phone;
+  if (!merged.contact?.email && lmSignals.contact?.email) merged.contact.email = lmSignals.contact.email;
+  if (!merged.timeline?.display && lmSignals.timeline?.display) merged.timeline = lmSignals.timeline;
+  merged.confidence = Math.max(merged.confidence || 0, lmSignals.confidence || 0);
+  merged.missingFields = [];
+  if (!merged.intent || merged.intent === "unknown") merged.missingFields.push("intent");
+  if (!merged.area) merged.missingFields.push("area");
+  if (!merged.price?.display) merged.missingFields.push("price");
+  if (!merged.timeline?.display) merged.missingFields.push("timeline");
+  return merged;
+}
+
+async function extractLeadSignalsWithLmStudio(message, slots) {
+  const ruleSignals = extractLeadSignals(message);
+  const model = await getLmStudioModelId();
+  if (!model) return ruleSignals;
+
+  const currentSlots = {
+    intent: slots?.intent || null,
+    area: slots?.area || null,
+    province: slots?.province || null,
+    price: slots?.priceDisplay || null,
+    propertyType: slots?.propertyType || null,
+    timeline: slots?.timeline || null,
+    fullName: slots?.fullName || null,
+    phone: slots?.phone || null
+  };
+
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      intent: { type: "string", enum: ["buy", "sell", "unknown"] },
+      area: { type: "string" },
+      province: { type: "string" },
+      propertyType: { type: "string" },
+      budgetOrPrice: { type: "string" },
+      timeline: { type: "string" },
+      fullName: { type: "string" },
+      phone: { type: "string" },
+      email: { type: "string" },
+      bedrooms: { type: "number" },
+      bathrooms: { type: "number" },
+      confidence: { type: "number" }
+    },
+    required: [
+      "intent",
+      "area",
+      "province",
+      "propertyType",
+      "budgetOrPrice",
+      "timeline",
+      "fullName",
+      "phone",
+      "email",
+      "bedrooms",
+      "bathrooms",
+      "confidence"
+    ]
+  };
+
+  const messages = [
+    {
+      role: "system",
+      content:
+        "Extract South African property lead details from short, messy customer text. Correct obvious typos only when confident. Return only JSON with these keys: intent, area, province, propertyType, budgetOrPrice, timeline, fullName, phone, email, bedrooms, bathrooms, confidence. Use empty strings and 0 for unknown fields. Do not invent phone numbers, prices, names, towns, or timelines."
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        message,
+        currentSlots,
+        allowedIntents: ["buy", "sell", "unknown"],
+        knownProvinces: Object.values(canonicalProvinceMap)
+      })
+    }
+  ];
+
+  const baseBody = {
+    model,
+    stream: false,
+    temperature: 0.1,
+    max_tokens: 320,
+    messages
+  };
+  const requestBodies = [
+    {
+      ...baseBody,
+      response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "axiom_property_lead",
+            strict: true,
+            schema
+          }
+        }
+    },
+    baseBody
+  ];
+
+  for (const body of requestBodies) {
+    try {
+      const response = await fetch(`${LM_STUDIO_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(LM_STUDIO_API_KEY ? { Authorization: `Bearer ${LM_STUDIO_API_KEY}` } : {})
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(LM_STUDIO_TIMEOUT_MS)
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content || "";
+      const parsed = parseJsonObjectLoose(content);
+      if (parsed) {
+        lmStudioLastStatus = {
+          enabled: true,
+          connected: true,
+          model,
+          checkedAt: new Date().toISOString()
+        };
+        return mergeLeadSignalResults(ruleSignals, normalizeLmStudioLeadSignals(parsed));
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return ruleSignals;
+}
+
 function extractTimeline(message) {
   const lower = (message || "").toLowerCase();
   if (/\b(immediately|urgent|asap|now|today|this week)\b/.test(lower)) {
@@ -5025,6 +5589,9 @@ function extractTimeline(message) {
   }
   if (/\b(3 months|three months|quarter|within 3)\b/.test(lower)) {
     return { display: "Within 3 months", urgency: "Medium", confidence: 0.85 };
+  }
+  if (/\b(next few months|few months|couple of months)\b/.test(lower)) {
+    return { display: "Within 3 months", urgency: "Medium", confidence: 0.78 };
   }
   if (/\b(6 months|six months|within 6)\b/.test(lower)) {
     return { display: "Within 6 months", urgency: "Low", confidence: 0.82 };
@@ -5100,22 +5667,28 @@ function createEmptySlots() {
 }
 
 function createSlotsFromLeadPayload(payload) {
-  const map = getAnswerMap(payload);
+  const answers = withAnswerMaps(payload);
   return {
     intent: payload.intent || null,
-    area: map["preferred area"] || map["property location"] || null,
-    province: map["province"] || null,
-    priceDisplay: map["budget range (zar)"] || map["expected selling price (zar)"] || null,
-    priceMin: parseAmount(map["budget range (zar)"] || map["expected selling price (zar)"]) || null,
-    priceMax: parseAmount(map["budget range (zar)"] || map["expected selling price (zar)"]) || null,
-    propertyType: map["property type"] || null,
-    bedrooms: map["number of bedrooms"] || null,
-    bathrooms: map["number of bathrooms"] || null,
-    timeline: map["timeline to buy"] || map["timeline to sell"] || null,
+    area: answers.get(["preferred area", "property location"], ["area", "location"]),
+    province: answers.get(["province"], ["province"]),
+    priceDisplay: answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"]),
+    priceMin:
+      parseAmount(
+        answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"])
+      ) || null,
+    priceMax:
+      parseAmount(
+        answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"])
+      ) || null,
+    propertyType: answers.get(["property type"], ["propertytype"]),
+    bedrooms: answers.get(["number of bedrooms"], ["bedrooms", "bed"]),
+    bathrooms: answers.get(["number of bathrooms"], ["bathrooms", "bath"]),
+    timeline: answers.get(["timeline to buy", "timeline to sell"], ["timeline"]),
     urgency: null,
-    fullName: map["full name"] || null,
-    phone: pickAnswer(map, ["contact / whatsapp number", "contact number", "whatsapp number"]) || null,
-    email: map["email address"] || null
+    fullName: answers.get(["full name"], ["fullname", "name"]),
+    phone: answers.get(["contact / whatsapp number", "contact number", "whatsapp number"], ["contact", "phone"]),
+    email: answers.get(["email address"], ["email"])
   };
 }
 
@@ -5144,6 +5717,199 @@ function mergeSlots(existing, extracted) {
   return merged;
 }
 
+function levenshteinDistance(a, b) {
+  const left = a || "";
+  const right = b || "";
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+
+  const prev = Array.from({ length: right.length + 1 }, (_item, index) => index);
+  const next = new Array(right.length + 1).fill(0);
+
+  for (let i = 0; i < left.length; i += 1) {
+    next[0] = i + 1;
+    for (let j = 0; j < right.length; j += 1) {
+      const cost = left[i] === right[j] ? 0 : 1;
+      next[j + 1] = Math.min(
+        next[j] + 1,
+        prev[j + 1] + 1,
+        prev[j] + cost
+      );
+    }
+    for (let j = 0; j < prev.length; j += 1) prev[j] = next[j];
+  }
+
+  return prev[right.length];
+}
+
+function jaroWinklerSimilarity(a, b) {
+  const left = a || "";
+  const right = b || "";
+  if (left === right) return 1;
+  if (!left.length || !right.length) return 0;
+
+  const matchDistance = Math.max(Math.floor(Math.max(left.length, right.length) / 2) - 1, 0);
+  const leftMatches = new Array(left.length).fill(false);
+  const rightMatches = new Array(right.length).fill(false);
+  let matches = 0;
+
+  for (let i = 0; i < left.length; i += 1) {
+    const start = Math.max(0, i - matchDistance);
+    const end = Math.min(i + matchDistance + 1, right.length);
+    for (let j = start; j < end; j += 1) {
+      if (rightMatches[j] || left[i] !== right[j]) continue;
+      leftMatches[i] = true;
+      rightMatches[j] = true;
+      matches += 1;
+      break;
+    }
+  }
+
+  if (!matches) return 0;
+
+  const leftMatched = [];
+  const rightMatched = [];
+  for (let i = 0; i < left.length; i += 1) {
+    if (leftMatches[i]) leftMatched.push(left[i]);
+  }
+  for (let i = 0; i < right.length; i += 1) {
+    if (rightMatches[i]) rightMatched.push(right[i]);
+  }
+
+  let transpositions = 0;
+  for (let i = 0; i < leftMatched.length; i += 1) {
+    if (leftMatched[i] !== rightMatched[i]) transpositions += 1;
+  }
+  transpositions /= 2;
+
+  const jaro = (
+    matches / left.length +
+    matches / right.length +
+    (matches - transpositions) / matches
+  ) / 3;
+
+  let prefix = 0;
+  for (let i = 0; i < Math.min(4, left.length, right.length); i += 1) {
+    if (left[i] !== right[i]) break;
+    prefix += 1;
+  }
+
+  return jaro + prefix * 0.1 * (1 - jaro);
+}
+
+function resolveKnownTown(area, provinceHint = null) {
+  const key = normalizeAreaKey(
+    (area || "")
+      .replace(/^(?:the|a|an)\s+/i, "")
+      .trim()
+  );
+  if (!key) return null;
+
+  const exact = knownTownByKey.get(key);
+  if (exact && (!provinceHint || exact.province === provinceHint)) {
+    return { ...exact, confidence: 0.99, exact: true };
+  }
+
+  const pool = provinceHint
+    ? knownTownEntries.filter((entry) => entry.province === provinceHint)
+    : knownTownEntries;
+  let best = null;
+  let secondBest = null;
+
+  for (const entry of pool) {
+    if (Math.abs(entry.key.length - key.length) > 3) continue;
+    if (entry.key[0] !== key[0]) continue;
+
+    const distance = levenshteinDistance(key, entry.key);
+    const maxDistance = key.length <= 5 ? 1 : key.length <= 8 ? 3 : 3;
+    const winkler = jaroWinklerSimilarity(key, entry.key);
+    if (distance > maxDistance && winkler < 0.88) continue;
+
+    let score = Math.max(1 - distance / Math.max(key.length, entry.key.length), winkler);
+    if (entry.key.startsWith(key) || key.startsWith(entry.key)) score += 0.08;
+    if (entry.key[0] === key[0]) score += 0.03;
+    if (provinceHint && entry.province === provinceHint) score += 0.04;
+
+    const candidate = { entry, score };
+    if (!best || score > best.score) {
+      secondBest = best;
+      best = candidate;
+    } else if (!secondBest || score > secondBest.score) {
+      secondBest = candidate;
+    }
+  }
+
+  if (!best) return null;
+  if (best.score < 0.86) return null;
+  if (secondBest && best.score - secondBest.score < 0.08) return null;
+
+  return {
+    ...best.entry,
+    confidence: Math.min(best.score, 0.95),
+    exact: false
+  };
+}
+
+function parseLeadNameAnswer(message) {
+  const trimmed = (message || "").trim();
+  if (!trimmed) return null;
+
+  const explicit = extractContactSignals(trimmed).fullName;
+  if (explicit) return explicit;
+
+  if (extractPrice(trimmed).display) return null;
+  if (extractTimeline(trimmed).display) return null;
+  if (extractIntent(trimmed).value !== "unknown") return null;
+  if (extractArea(trimmed).area) return null;
+
+  const candidate = toTitleCase(
+    trimmed
+      .replace(/^(my name is|i am|i'm|this is)\s+/i, "")
+      .replace(/[^a-z\s'-]/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+  if (!candidate) return null;
+
+  const words = candidate.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 4) return null;
+
+  const blockedWords = new Set([
+    "buy",
+    "buyer",
+    "sell",
+    "seller",
+    "property",
+    "budget",
+    "price",
+    "range",
+    "timeline",
+    "urgent",
+    "immediately",
+    "today",
+    "tomorrow",
+    "week",
+    "month",
+    "browsing",
+    "researching",
+    "looking",
+    "searching",
+    "interested"
+  ]);
+  if (words.some((word) => blockedWords.has(word.toLowerCase()))) return null;
+  if (!words.every((word) => /^[A-Za-z][A-Za-z'-]*$/.test(word))) return null;
+
+  return candidate;
+}
+
+function normalizeConciergeText(text = "") {
+  return String(text || "")
+    .replace(/\blet\s*;\s*is\b/gi, "let's")
+    .replace(/\blet\s+is\b/gi, "let's")
+    .replace(/\bll\s+llm\b/gi, "LLM");
+}
+
 function applyPendingFieldAnswer(slots, message) {
   const pending = slots?.lastAskedField;
   if (!pending) return slots;
@@ -5165,23 +5931,48 @@ function applyPendingFieldAnswer(slots, message) {
       slots.priceDisplay = p.display;
       slots.priceMin = p.min;
       slots.priceMax = p.max;
+    } else {
+      slots.validationMessage =
+        slots.intent === "sell"
+          ? "Please send the expected selling price range you want us to use, for example R1.8m to R2.2m."
+          : "Please send the budget range you want us to use, for example R1.5m to R2m.";
     }
   }
   if (pending === "intent") {
     const i = extractIntent(trimmed);
     if (i.value !== "unknown") slots.intent = i.value;
+    else slots.validationMessage = "Are you looking to buy or sell?";
+  }
+  if (pending === "propertyType") {
+    const propertyType = extractPropertyType(trimmed);
+    if (propertyType.value) {
+      slots.propertyType = propertyType.value;
+    } else {
+      slots.validationMessage = "What type of property is it, for example house, flat, apartment, land, or farm?";
+    }
   }
   if (pending === "area") {
     applyAreaAnswer(slots, trimmed);
   }
   if (pending === "timeline") {
     const t = extractTimeline(trimmed);
-    slots.timeline = t.display || trimmed;
-    slots.urgency = t.urgency || "Unknown";
+    if (t.display) {
+      slots.timeline = t.display;
+      slots.urgency = t.urgency || "Unknown";
+    } else {
+      slots.validationMessage =
+        slots.intent === "sell"
+          ? "How soon would you like to start the selling process?"
+          : "How soon would you like to start the buying process?";
+    }
   }
   if (pending === "fullName") {
-    const contact = extractContactSignals(trimmed);
-    slots.fullName = contact.fullName || toTitleCase(trimmed.replace(/[^a-z\s'-]/gi, "").trim());
+    const name = parseLeadNameAnswer(trimmed);
+    if (name) {
+      slots.fullName = name;
+    } else {
+      slots.validationMessage = "I did not catch your name. What should we call you?";
+    }
   }
   if (pending === "phone") {
     const contact = extractContactSignals(trimmed);
@@ -5189,8 +5980,11 @@ function applyPendingFieldAnswer(slots, message) {
     if (phone) {
       slots.phone = phone;
     } else {
+      const digitCount = (trimmed.match(/\d/g) || []).length;
       slots.validationMessage =
-        "That WhatsApp number looks incomplete. Please send the full number, for example 083 123 4567 or +27 83 123 4567.";
+        digitCount === 0
+          ? "I did not catch a number there. What number should we reach out to you on?"
+          : "That number looks a bit short. Please send the full number, for example 083 123 4567 or +27 83 123 4567.";
     }
   }
   if (pending === "email") {
@@ -5236,64 +6030,91 @@ function formatMissingChecklist(missingFields) {
 }
 
 function buildClarifyingQuestion(missingKey, slots) {
-  if (missingKey === "intent") return "Are you looking to buy or sell?";
+  if (missingKey === "intent") return "Are you looking to buy, or to sell?";
   if (missingKey === "area") {
-    if (slots.province) return `Which town/suburb in ${slots.province} should I use?`;
-    return "Which town or suburb should I use?";
+    if (slots.province) return `Which town or suburb in ${slots.province} should I use?`;
+    return "Which town or suburb should I use for your request?";
   }
   if (missingKey === "price") {
     return slots.intent === "sell"
       ? "What expected selling price range should I use?"
-      : "What budget range should I use?";
+      : "What budget range should we use?";
   }
   if (missingKey === "bedrooms") {
     return slots.intent === "sell"
       ? "How many bedrooms does your property offer?"
-      : "How many bedrooms would be ideal?";
+      : "How many bedrooms would you like?";
   }
   if (missingKey === "bathrooms") {
     return slots.intent === "sell"
       ? "How many bathrooms does your property offer?"
-      : "How many bathrooms would be ideal?";
+      : "How many bathrooms would you like?";
   }
   if (missingKey === "timeline") {
     return slots.intent === "sell"
-      ? "How soon would you like to start the selling process?"
-      : "How soon would you like to start the buying process?";
+      ? "How soon would you like to start selling?"
+      : "How soon would you like to start your search?";
   }
-  if (missingKey === "fullName") return "What name should the property concierge use when they follow up?";
-  if (missingKey === "phone") return "What WhatsApp number should the concierge use for fast follow-up?";
-  if (missingKey === "email") return "What email address should we use for your property request?";
-  return "Could you share a bit more detail?";
+  if (missingKey === "propertyType") return "What property type should I use, for example house, flat, apartment, land, or farm?";
+  if (missingKey === "fullName") return "What should we call you when we follow up?";
+  if (missingKey === "phone") return "What WhatsApp number can we use to reach you?";
+  if (missingKey === "email") return "What email address should we use for this request?";
+  return "Could you share a little more detail?";
+}
+
+function buildInitialIntentLine(slots, extracted) {
+  if (!slots.intent || !extracted?.area) return "";
+  const verb = slots.intent === "sell" ? "sell" : "buy";
+  const propertyType = slots.propertyType ? slots.propertyType.toLowerCase() : "";
+  const propertyDescriptor = propertyType
+    ? `${getIndefiniteArticle(propertyType)} ${propertyType} in`
+    : "";
+  return `Excellent — I can help you ${verb} ${propertyDescriptor} ${extracted.area}.`;
+}
+
+function getIndefiniteArticle(value) {
+  const word = String(value || "").trim().toLowerCase();
+  if (!word) return "a";
+  const firstChar = word[0];
+  const startsWithVowel = ["a", "e", "i", "o", "u"].includes(firstChar);
+  return startsWithVowel ? "an" : "a";
 }
 
 function buildAnswerAcknowledgement(slots) {
   const pending = slots?.lastAskedField;
   if (pending === "area") {
-    return slots.province ? `Perfect, ${slots.area} in ${slots.province}.` : `Perfect, ${slots.area}.`;
+    return slots.province ? `Great, noted: ${slots.area} in ${slots.province}.` : `Great, noted: ${slots.area}.`;
   }
-  if (pending === "price") return `Thanks, I will use ${slots.priceDisplay}.`;
+  if (pending === "price") return `Great, I will use ${slots.priceDisplay}.`;
   if (pending === "bedrooms") {
-    return slots.intent === "sell" ? `Noted, ${slots.bedrooms} bedrooms.` : `Great, ${slots.bedrooms} bedrooms.`;
+    return `Great, ${slots.bedrooms} bedrooms noted.`;
   }
-  if (pending === "bathrooms") return `Noted, ${slots.bathrooms} bathrooms.`;
-  if (pending === "timeline") return `Thanks, ${slots.timeline} timeline noted.`;
-  if (pending === "fullName") return `Thanks, ${slots.fullName}.`;
+  if (pending === "bathrooms") return `Great, ${slots.bathrooms} bathrooms noted.`;
+  if (pending === "timeline") return `Great, timeline noted as ${slots.timeline}.`;
+  if (pending === "propertyType" && slots.propertyType) return `Great, noted: ${slots.propertyType.toLowerCase()}.`;
+  if (pending === "fullName" && slots.fullName) return `Great, thank you, ${slots.fullName}.`;
   if (pending === "phone" && slots.phone) return "Great, I have the WhatsApp number.";
-  if (pending === "email" && slots.email) return "Thanks, I have the email address.";
+  if (pending === "email" && slots.email) return "Great, I have the email address.";
   return "";
 }
 
 function buildConciergeReply(slots, missingFields, extracted, urgent, hasPriorAssistantReply) {
   const lines = [];
   if (!hasPriorAssistantReply) {
-    if (slots.intent === "buy") lines.push("Great, I can help you buy.");
-    else if (slots.intent === "sell") lines.push("Great, I can help you sell.");
-    else lines.push("I can help with buying or selling.");
-    if (extracted.area) lines.push(`Area noted: ${extracted.area}.`);
+    const opening = buildInitialIntentLine(slots, extracted);
+    if (opening) {
+      lines.push(opening);
+    } else if (slots.intent === "buy") {
+      lines.push("Excellent — I can help you buy.");
+    } else if (slots.intent === "sell") {
+      lines.push("Excellent — I can help you sell.");
+    } else {
+      lines.push("I can help with buying or selling.");
+    }
+    if (extracted.area) lines.push(`Area captured: ${extracted.area}.`);
     if (slots.province) lines.push(`Province: ${slots.province}.`);
-    if (slots.priceDisplay) lines.push(`Price signal: ${slots.priceDisplay}.`);
-    if (urgent) lines.push("Urgency noted: immediate timeline.");
+    if (slots.priceDisplay) lines.push(`Budget signal: ${slots.priceDisplay}.`);
+    if (urgent) lines.push("Urgency captured: immediate timeline.");
   } else {
     const acknowledgement = buildAnswerAcknowledgement(slots);
     if (acknowledgement) lines.push(acknowledgement);
@@ -5305,18 +6126,20 @@ function buildConciergeReply(slots, missingFields, extracted, urgent, hasPriorAs
   }
 
   if (missingFields.length > 0) {
-    lines.push(`To finish the quick request, I still need: ${formatMissingChecklist(missingFields)}.`);
-    lines.push(buildClarifyingQuestion(missingFields[0], slots));
-    slots.lastAskedField = missingFields[0];
+    const nextField = missingFields[0];
+    lines.push(buildClarifyingQuestion(nextField, slots));
+    slots.lastAskedField = nextField;
   } else if (!slots.finalPromptAsked) {
     slots.lastAskedField = "additionalConsiderations";
     slots.finalPromptAsked = true;
     lines.push(
-      "Anything else you would like the concierge to know before we prepare your brief?"
+      "Any other preferences you'd like the concierge to include before I pass this to a specialist?"
     );
   } else {
     slots.lastAskedField = null;
-    lines.push("Thank you, we have all the details we need. Your property brief is ready.");
+    lines.push(
+      "Excellent — your request is complete. I’ve built your concierge brief and routed it to the right specialist."
+    );
   }
 
   return lines.join(" ");
@@ -5449,6 +6272,14 @@ function ensureLeadAutomationState(session) {
   session.automationState.wowTouches =
     session.automationState.wowTouches && typeof session.automationState.wowTouches === "object"
       ? session.automationState.wowTouches
+      : {};
+  session.automationState.proactiveTouches =
+    session.automationState.proactiveTouches && typeof session.automationState.proactiveTouches === "object"
+      ? session.automationState.proactiveTouches
+      : { steps: {} };
+  session.automationState.proactiveTouches.steps =
+    session.automationState.proactiveTouches.steps && typeof session.automationState.proactiveTouches.steps === "object"
+      ? session.automationState.proactiveTouches.steps
       : {};
   return session.automationState;
 }
@@ -5664,12 +6495,12 @@ function buildUserClosingPromise(slots) {
 }
 
 function scoreLead(payload) {
-  const map = getAnswerMap(payload);
+  const answers = withAnswerMaps(payload);
   const reasons = [];
   let score = 0;
 
-  const timeline = (map["timeline to buy"] || map["timeline to sell"] || "").toLowerCase();
-  const phone = pickAnswer(map, ["contact / whatsapp number", "contact number", "whatsapp number"]);
+  const timeline = (answers.get(["timeline to buy", "timeline to sell"], ["timeline"]) || "").toLowerCase();
+  const phone = answers.get(["contact / whatsapp number", "contact number", "whatsapp number"], ["contact", "phone"]);
   if (timeline.includes("immediately")) {
     score += 35;
     reasons.push("Immediate timeline");
@@ -5684,7 +6515,9 @@ function scoreLead(payload) {
     reasons.push("Longer timeline (6 months)");
   }
 
-  const budget = parseAmount(map["budget range (zar)"] || map["expected selling price (zar)"]);
+  const budget = parseAmount(
+    answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"])
+  );
   if (budget > 0) {
     score += 10;
     reasons.push("Budget/price provided");
@@ -5694,7 +6527,7 @@ function scoreLead(payload) {
     }
   }
 
-  const deposit = (map["estimated cash deposit available"] || "").toLowerCase();
+  const deposit = (answers.get(["estimated cash deposit available"], ["deposit", "cashdeposit"]) || "").toLowerCase();
   if (deposit.includes("above r700k")) {
     score += 20;
     reasons.push("Strong deposit readiness");
@@ -5709,7 +6542,7 @@ function scoreLead(payload) {
     reasons.push("Early deposit readiness");
   }
 
-  if ((map["email address"] || "").includes("@")) {
+  if ((answers.get(["email address"], ["email"]) || "").includes("@")) {
     score += 5;
     reasons.push("Valid email captured");
   }
@@ -5723,21 +6556,22 @@ function scoreLead(payload) {
     reasons.push("Additional context provided");
   }
 
-  if (map["property type"]) {
+  if (answers.get(["property type"], ["propertytype"])) {
     score += 5;
     reasons.push("Property type specified");
   }
-  if (payload.intent === "buy" && map["preferred area"]) {
+  if (payload.intent === "buy" && answers.get(["preferred area", "property location"], ["area", "location"])) {
     score += 5;
     reasons.push("Preferred area specified");
   }
 
   const unknowns = [];
   if (phone.length < 8) unknowns.push("phone");
-  if (!map["province"]) unknowns.push("province");
-  if (!map["preferred area"] && !map["property location"]) unknowns.push("area");
-  if (!map["budget range (zar)"] && !map["expected selling price (zar)"]) unknowns.push("price");
-  if (!map["timeline to buy"] && !map["timeline to sell"]) unknowns.push("timeline");
+  if (!answers.get(["province"], ["province"])) unknowns.push("province");
+  if (!answers.get(["preferred area", "property location"], ["area", "location"])) unknowns.push("area");
+  if (!answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"]))
+    unknowns.push("price");
+  if (!answers.get(["timeline to buy", "timeline to sell"], ["timeline"])) unknowns.push("timeline");
 
   score = Math.min(score, 100);
   const band = score >= 70 ? "Hot" : score >= 40 ? "Warm" : "Cold";
@@ -5768,26 +6602,32 @@ function getLeadIntakeFieldSignals(payloadOrSession = {}) {
         answers: payloadOrSession.answers || [],
         additionalInfo: payloadOrSession.additionalInfo || ""
       };
-  const map = getAnswerMap(payload);
+  const answers = withAnswerMaps(payload);
   const slots = payloadOrSession.slots ? getSessionSlots(payloadOrSession) : createSlotsFromLeadPayload(payload);
-  const phone = cleanPhoneNumber(slots.phone || pickAnswer(map, ["contact / whatsapp number", "contact number", "whatsapp number"]));
-  const email = cleanEmailAddress(slots.email || map["email address"]);
-  const price = slots.priceDisplay || map["budget range (zar)"] || map["expected selling price (zar)"];
-  const timeline = slots.timeline || map["timeline to buy"] || map["timeline to sell"];
+  const phone = cleanPhoneNumber(
+    slots.phone || answers.get(["contact / whatsapp number", "contact number", "whatsapp number"], ["contact", "phone"])
+  );
+  const email = cleanEmailAddress(slots.email || answers.get(["email address"], ["email"]));
+  const price =
+    slots.priceDisplay ||
+    answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"]) ||
+    "";
+  const timeline = slots.timeline || answers.get(["timeline to buy", "timeline to sell"], ["timeline"]);
 
   return {
     intent: slots.intent || payload.intent || "",
-    fullName: slots.fullName || map["full name"] || "",
+    fullName: slots.fullName || answers.get(["full name"], ["fullname", "name"]) || "",
     phone,
     email,
-    province: slots.province || map["province"] || "",
-    area: slots.area || map["preferred area"] || map["property location"] || "",
+    province: slots.province || answers.get(["province"], ["province"]) || "",
+    area:
+      slots.area || answers.get(["preferred area", "property location"], ["area", "location"]) || "",
     price,
     timeline,
-    propertyType: slots.propertyType || map["property type"] || "",
-    bedrooms: slots.bedrooms || map["number of bedrooms"] || "",
-    bathrooms: slots.bathrooms || map["number of bathrooms"] || "",
-    deposit: map["estimated cash deposit available"] || "",
+    propertyType: slots.propertyType || answers.get(["property type"], ["propertytype"]) || "",
+    bedrooms: slots.bedrooms || answers.get(["number of bedrooms"], ["bedrooms", "bed"]) || "",
+    bathrooms: slots.bathrooms || answers.get(["number of bathrooms"], ["bathrooms", "bath"]) || "",
+    deposit: answers.get(["estimated cash deposit available"], ["deposit", "cashdeposit"]) || "",
     additionalInfo: payload.additionalInfo || payloadOrSession.additionalInfo || ""
   };
 }
@@ -5883,15 +6723,18 @@ function buildLeadIntakeIntelligence(payloadOrSession = {}, scoringOverride = nu
 }
 
 function buildAgentCopilotSummary(payload, scoring) {
-  const map = getAnswerMap(payload);
+  const answers = withAnswerMaps(payload);
   const intentLabel = payload.intent === "buy" ? "Buyer" : "Seller";
-  const province = map["province"] || "Unknown province";
-  const place = map["preferred area"] || map["property location"] || "Unknown area";
-  const value = map["budget range (zar)"] || map["expected selling price (zar)"] || "Value not provided";
-  const timeline = map["timeline to buy"] || map["timeline to sell"] || "Timeline not provided";
-  const deposit = map["estimated cash deposit available"] || "";
-  const propertyType = map["property type"] || "";
-  const phone = pickAnswer(map, ["contact / whatsapp number", "contact number", "whatsapp number"]);
+  const province = answers.get(["province"], ["province"]) || "Unknown province";
+  const place =
+    answers.get(["preferred area", "property location"], ["area", "location"]) || "Unknown area";
+  const value =
+    answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"])
+    || "Value not provided";
+  const timeline = answers.get(["timeline to buy", "timeline to sell"], ["timeline"]) || "Timeline not provided";
+  const deposit = answers.get(["estimated cash deposit available"], ["deposit", "cashdeposit"]) || "";
+  const propertyType = answers.get(["property type"], ["propertytype"]) || "";
+  const phone = answers.get(["contact / whatsapp number", "contact number", "whatsapp number"], ["contact", "phone"]);
 
   const snapshotParts = [
     `${intentLabel} lead`,
@@ -5915,10 +6758,10 @@ function buildAgentCopilotSummary(payload, scoring) {
 
   const unknowns = [];
   if (!phone) unknowns.push("WhatsApp/contact number");
-  if (!map["province"]) unknowns.push("Province");
-  if (!map["preferred area"] && !map["property location"]) unknowns.push("Exact area");
-  if (!map["budget range (zar)"] && !map["expected selling price (zar)"]) unknowns.push("Budget/price");
-  if (!map["timeline to buy"] && !map["timeline to sell"]) unknowns.push("Timeline");
+  if (!answers.get(["province"], ["province"])) unknowns.push("Province");
+  if (!answers.get(["preferred area", "property location"], ["area", "location"])) unknowns.push("Exact area");
+  if (!answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"])) unknowns.push("Budget/price");
+  if (!answers.get(["timeline to buy", "timeline to sell"], ["timeline"])) unknowns.push("Timeline");
   if (!unknowns.length) unknowns.push("None");
 
   return {
@@ -5930,11 +6773,14 @@ function buildAgentCopilotSummary(payload, scoring) {
 }
 
 function buildFollowUpPlaybook(payload, scoring) {
-  const map = getAnswerMap(payload);
-  const name = map["full name"] || "there";
-  const timeline = (map["timeline to buy"] || map["timeline to sell"] || "your timeline").toLowerCase();
-  const area = map["preferred area"] || map["property location"] || "your preferred area";
-  const value = map["budget range (zar)"] || map["expected selling price (zar)"] || "your price range";
+  const answers = withAnswerMaps(payload);
+  const name = answers.get(["full name"], ["fullname", "name"]) || "there";
+  const timeline = (answers.get(["timeline to buy", "timeline to sell"], ["timeline"]) || "your timeline").toLowerCase();
+  const area =
+    answers.get(["preferred area", "property location"], ["area", "location"]) || "your preferred area";
+  const value =
+    answers.get(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"])
+    || "your price range";
 
   const intro =
     payload.intent === "buy"
@@ -7146,6 +7992,262 @@ function addMinutesIso(value, minutes) {
   return new Date(base + minutes * 60000).toISOString();
 }
 
+function normaliseClockHour(value, fallback = 8) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const clamped = Math.max(0, Math.min(23, Math.floor(parsed)));
+  return Number.isFinite(clamped) ? clamped : fallback;
+}
+
+function canSendProactiveNow(now = new Date()) {
+  const startHour = normaliseClockHour(LEAD_PROACTIVE_QUIET_START_HOUR, 8);
+  const endHour = normaliseClockHour(LEAD_PROACTIVE_QUIET_END_HOUR, 19);
+  if (startHour >= endHour) return true;
+  const hour = now.getHours();
+  return hour >= startHour && hour < endHour;
+}
+
+function getNextAllowedProactiveWindow(now = new Date()) {
+  const startHour = normaliseClockHour(LEAD_PROACTIVE_QUIET_START_HOUR, 8);
+  const endHour = normaliseClockHour(LEAD_PROACTIVE_QUIET_END_HOUR, 19);
+  const window = new Date(now.getTime());
+  if (startHour >= endHour) return window;
+
+  if (window.getHours() < startHour) {
+    window.setHours(startHour, 0, 0, 0);
+    return window;
+  }
+
+  window.setHours(endHour, 0, 0, 0);
+  if (window <= now) {
+    window.setDate(window.getDate() + 1);
+    window.setHours(startHour, 0, 0, 0);
+  }
+  return window;
+}
+
+function getLeadProactiveFollowupState(session) {
+  const state = ensureLeadAutomationState(session);
+  const proactive = state.proactiveTouches && typeof state.proactiveTouches === "object" ? state.proactiveTouches : {};
+  if (!proactive.steps || typeof proactive.steps !== "object") proactive.steps = {};
+  return proactive;
+}
+
+function getProactiveQuietWindowSchedule(at = new Date()) {
+  const due = at instanceof Date ? at : new Date(at);
+  const base = Number.isFinite(due.getTime()) ? new Date(due.getTime()) : new Date();
+  if (canSendProactiveNow(base)) return base.toISOString();
+  return getNextAllowedProactiveWindow(base).toISOString();
+}
+
+function getLeadProactiveLastTouchAt(proactiveState) {
+  const values = [
+    proactiveState.lastSentAt,
+    proactiveState.lastAttemptAt,
+    proactiveState.lastTouchAt
+  ];
+  for (const value of values) {
+    const ms = new Date(value).getTime();
+    if (Number.isFinite(ms)) return ms;
+  }
+  return 0;
+}
+
+function isLeadProactiveInCooldown(proactiveState, now = new Date()) {
+  const cooldownMs = Math.max(0, LEAD_PROACTIVE_COOLDOWN_HOURS) * 60 * 60 * 1000;
+  if (!cooldownMs) return false;
+  const lastTouchMs = getLeadProactiveLastTouchAt(proactiveState);
+  if (!Number.isFinite(lastTouchMs)) return false;
+  return now.getTime() - lastTouchMs < cooldownMs;
+}
+
+function getLeadProactiveCooldownReleaseIso(proactiveState) {
+  const cooldownMs = Math.max(0, LEAD_PROACTIVE_COOLDOWN_HOURS) * 60 * 60 * 1000;
+  if (!cooldownMs) return null;
+  const lastTouchMs = getLeadProactiveLastTouchAt(proactiveState);
+  if (!Number.isFinite(lastTouchMs)) return null;
+  return new Date(lastTouchMs + cooldownMs).toISOString();
+}
+
+function buildLeadProactiveFollowUpTask(session, step, stepState = {}) {
+  const dueAt = stepState.nextSendAt || step.dueAt;
+  return {
+    id: `${session.id}:proactive-${(step.code || "step").replace(/[^a-z0-9-]/gi, "-")}`,
+    leadId: session.id,
+    leadLabel: session.label || "Property Lead",
+    leadName: getSessionSlots(session).fullName || "Name not captured",
+    intent: getSessionSlots(session).intent || session.intent || "unknown",
+    area: [getSessionSlots(session).area, getSessionSlots(session).province].filter(Boolean).join(", ") || "Area not captured",
+    title: step.label || "Proactive follow-up",
+    priority: step.priority || "Low",
+    reason: step.reason || "",
+    detail: step.detail || "",
+    owner: step.owner || "Concierge",
+    lane: step.lane || "qualification",
+    actionType: step.code || "lead-proactive",
+    dueAt,
+    cadence: step.cadence || "Proactive follow-up",
+    status: getTaskStatus(dueAt),
+    createdAt: session.createdAt || null,
+    proactive: true,
+    proactiveState: stepState || {}
+  };
+}
+
+function getLeadProactiveFollowUpTasks(session) {
+  const slots = getSessionSlots(session);
+  if (!session?.id) return [];
+  const state = getLeadProactiveFollowupState(session);
+  const plan = getLeadProactiveFollowUpPlan(session);
+  return plan
+    .map((step) => {
+      const stepState = state.steps[step.code] || {};
+      if (stepState.sentAt) return null;
+      return buildLeadProactiveFollowUpTask(session, step, stepState);
+    })
+    .filter(Boolean);
+}
+
+function isLeadHot(session) {
+  const scoring = session?.scoring || {};
+  const score = Number(scoring.score);
+  const urgency = (scoring.urgency || "").toString().toLowerCase();
+  return scoring.band === "Hot" || urgency === "high" || (Number.isFinite(score) && score >= 78);
+}
+
+function getLeadProactiveFollowUpRecipients(session) {
+  const slots = getSessionSlots(session);
+  const recipients = [];
+  const role = getLeadPrimaryClientRole(session);
+  const cleanedPhone = cleanPhoneNumber(slots.phone || "");
+  if (cleanedPhone) {
+    recipients.push({
+      role,
+      name: sanitizeShortText(slots.fullName || stakeholderRoleLabels[role] || "Client", 120),
+      phone: cleanedPhone
+    });
+  }
+  return recipients;
+}
+
+function buildLeadProactiveFollowUpMessage(session, step) {
+  const slots = getSessionSlots(session);
+  const firstName = slots.fullName ? slots.fullName.split(/\s+/)[0] : "there";
+  const intent = slots.intent === "sell" ? "selling" : slots.intent === "buy" ? "buying" : "property";
+  const area = [slots.area, slots.province].filter(Boolean).join(", ");
+  const site = area ? ` in ${area}` : "";
+  const missingDocs = getMissingLeadDocumentLabels(session);
+
+  if (step.code === "lead-proactive-ack") {
+    return [
+      `Hi ${firstName}, thanks for contacting Axiom Realty AI.`,
+      `We have received your ${intent} request${site} and it is now logged as a live lead.`,
+      "Your request is active and we are preparing the right specialist brief.",
+      "Reply anytime and we can move this to your dedicated concierge."
+    ].join(" ");
+  }
+
+  if (step.code === "lead-proactive-missing-docs") {
+    return [
+      `Hi ${firstName}, a quick follow-up on your ${intent} request${site}.`,
+      missingDocs.length
+        ? `To keep momentum, please share these now: ${missingDocs.slice(0, 4).join(", ")}${missingDocs.length > 4 ? " and a few other supporting docs if available" : ""}.`
+        : "Please reply if you have any supporting documents from earlier you want us to review.",
+      "If you need help, reply with a quick note and our concierge will guide you."
+    ].join(" ");
+  }
+
+  if (step.code === "lead-proactive-status-check") {
+    return [
+      `Hi ${firstName}, quick update request on your ${intent} journey${site}.`,
+      "Are you still actively looking for this property? We can pause here or continue to source the next best options for you.",
+      "Reply with a timeframe and your preferred channel so we can keep your lead fresh."
+    ].join(" ");
+  }
+
+  if (step.code === "lead-proactive-reactivation") {
+    return [
+      `Hi ${firstName}, we have not seen new movement on your ${intent} request${site} in a little while.`,
+      "If this remains a priority, reply `KEEP ME ACTIVE` and we will reopen the lead with a fresh specialist pass.",
+      "If not, just reply `NOT YET` and we can hold it and re-check later."
+    ].join(" ");
+  }
+
+  return [
+    `Hi ${firstName}, Axiom Realty AI follow-up for your ${intent} request${site}.`,
+    "Please reply with your preference or any question and we will assist."
+  ].join(" ");
+}
+
+function getLeadProactiveFollowUpPlan(session, now = new Date()) {
+  if (isSessionClosed(session)) return [];
+  const steps = [];
+  const createdAt = session.createdAt || now.toISOString();
+  const missingDocs = getMissingLeadDocumentLabels(session);
+
+  steps.push({
+    code: "lead-proactive-ack",
+    label: "T+0 acknowledgement",
+    actionType: "acknowledgement",
+    owner: "Concierge",
+    lane: "rapid-response",
+    priority: "High",
+    reason: "Initial acknowledgement keeps the lead warm and prevents drop-off.",
+    detail: "Client confirmation and reassurance message.",
+    dueAt: addMinutesIso(createdAt, Math.max(0, LEAD_PROACTIVE_ACK_DAYS) * 24 * 60),
+    cadence: "T+0",
+    shouldSend: true
+  });
+
+  if (missingDocs.length) {
+    steps.push({
+      code: "lead-proactive-missing-docs",
+      label: "T+1 missing-docs nudge",
+      actionType: "missing-docs",
+      owner: "Concierge",
+      lane: "qualification",
+      priority: "Medium",
+      reason: "Lead appears active but required information is still pending.",
+      detail: `Missing: ${missingDocs.join(", ")}`,
+      dueAt: addMinutesIso(createdAt, Math.max(0, LEAD_PROACTIVE_MISSING_DOCS_DAYS) * 24 * 60),
+      cadence: "T+1",
+      shouldSend: true
+    });
+  }
+
+  steps.push({
+    code: "lead-proactive-status-check",
+    label: "T+3 status check",
+    actionType: "status-check",
+    owner: "Concierge",
+    lane: "qualification",
+    priority: "Low",
+    reason: "Quick check keeps intent clear and prevents abandoned enquiries.",
+    detail: "Ask for a short update and preferred next step.",
+    dueAt: addMinutesIso(createdAt, Math.max(0, LEAD_PROACTIVE_STATUS_CHECK_DAYS) * 24 * 60),
+    cadence: "T+3",
+    shouldSend: true
+  });
+
+  if (isLeadHot(session)) {
+    steps.push({
+      code: "lead-proactive-reactivation",
+      label: "T+7 hot lead reactivation",
+      actionType: "reactivation",
+      owner: "Concierge",
+      lane: "qualification",
+      priority: "Medium",
+      reason: "High-intent leads need one extra reactivation touch at the first milestone checkpoint.",
+      detail: "Capture whether lead intent is still active and continue routing with urgency.",
+      dueAt: addMinutesIso(createdAt, Math.max(0, LEAD_PROACTIVE_REACTIVATION_DAYS) * 24 * 60),
+      cadence: "T+7",
+      shouldSend: true
+    });
+  }
+
+  return steps.sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
+}
+
 function getTaskTiming(session, label) {
   const assignedAt = session.assignedAgent?.assignedAt || session.agentAccess?.createdAt || session.updatedAt || session.createdAt;
   if (label === "Call now") return { dueAt: new Date().toISOString(), cadence: "Immediate" };
@@ -7764,6 +8866,7 @@ function buildFollowUpTasksForSession(session) {
   const workflow = getLeadOutcomeWorkflow(session);
   const slots = getSessionSlots(session);
   const deadlineTasks = buildLeadDeadlineTasks(session);
+  const proactiveTasks = getLeadProactiveFollowUpTasks(session);
   const baseTasks = (intelligence.suggestions || []).map((suggestion, index) => {
     const timing = getTaskTiming(session, suggestion.label);
     return {
@@ -7805,7 +8908,7 @@ function buildFollowUpTasksForSession(session) {
       status: flag.status || getTaskStatus(flag.dueAt),
       createdAt: session.createdAt || null
   }));
-  return [...deadlineTasks, ...escalationTasks, ...baseTasks];
+  return [...deadlineTasks, ...escalationTasks, ...baseTasks, ...proactiveTasks];
 }
 
 function getAutomatedFollowUpTasks() {
@@ -8724,6 +9827,178 @@ function buildConciergeDailyDigestMessage(report) {
   ].join("\n");
 }
 
+async function runLeadProactiveFollowUpAutomation() {
+  if (!AUTO_LEAD_AUTOMATION_ENABLED) {
+    return {
+      inspected: 0,
+      queued: 0,
+      sent: 0,
+      delivered: 0,
+      failed: 0,
+      skippedNoRecipient: 0,
+      cooldownBlocks: 0,
+      quietDeferrals: 0,
+      changed: false
+    };
+  }
+
+  let inspected = 0;
+  let queued = 0;
+  let sent = 0;
+  let delivered = 0;
+  let failed = 0;
+  let skippedNoRecipient = 0;
+  let cooldownBlocks = 0;
+  let quietDeferrals = 0;
+  let changed = false;
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  for (const session of Array.from(leadSessions.values()).filter(isLiveLeadSession)) {
+    inspected += 1;
+    const lifecycle = getLeadLifecycle(session);
+    if (["sale-concluded", "closed"].includes(lifecycle.code) || isSessionClosed(session)) continue;
+
+    const recipients = getLeadProactiveFollowUpRecipients(session);
+    const plan = getLeadProactiveFollowUpPlan(session, now);
+    const proactive = getLeadProactiveFollowupState(session);
+    const stepStateMap = proactive.steps || {};
+    const availablePlanCodes = new Set(plan.map((step) => step.code));
+    let sessionChanged = false;
+
+    if (!plan.length) {
+      if (Object.keys(stepStateMap).length) {
+        proactive.steps = {};
+        sessionChanged = true;
+        leadSessions.set(session.id, session);
+        changed = true;
+      }
+      continue;
+    }
+
+    for (const existingCode of Object.keys(stepStateMap)) {
+      if (!availablePlanCodes.has(existingCode)) {
+        delete stepStateMap[existingCode];
+        sessionChanged = true;
+      }
+    }
+
+    for (const step of plan) {
+      const code = String(step.code || "");
+      if (!code) continue;
+      const prior = stepStateMap[code] || {};
+      if (prior.sentAt) continue;
+
+      const plannedDueAt = new Date(step.dueAt);
+      if (!Number.isFinite(plannedDueAt.getTime())) continue;
+
+      const nextSendAt = getProactiveQuietWindowSchedule(plannedDueAt);
+      const nextSendMs = new Date(nextSendAt).getTime();
+      prior.plannedDueAt = step.dueAt;
+      prior.actionType = step.code;
+      prior.priority = step.priority || "Low";
+      prior.cadence = step.cadence || "Proactive follow-up";
+      prior.label = step.label || "Proactive follow-up";
+
+      if (nextSendMs > now.getTime()) {
+        prior.nextSendAt = nextSendAt;
+        prior.deferredReason = "quiet-window";
+        quietDeferrals += 1;
+        stepStateMap[code] = prior;
+        sessionChanged = true;
+        continue;
+      }
+
+      if (!recipients.length) {
+        prior.nextSendAt = nextSendAt;
+        prior.deferredReason = "missing-recipient";
+        skippedNoRecipient += 1;
+        stepStateMap[code] = prior;
+        sessionChanged = true;
+        continue;
+      }
+
+      const inCooldown = isLeadProactiveInCooldown(proactive, now);
+      const releaseAt = inCooldown ? getLeadProactiveCooldownReleaseIso(proactive) : null;
+      if (inCooldown) {
+        prior.nextSendAt = releaseAt || nowIso;
+        prior.deferredReason = "cooldown";
+        cooldownBlocks += 1;
+        stepStateMap[code] = prior;
+        sessionChanged = true;
+        continue;
+      }
+
+      const message = buildLeadProactiveFollowUpMessage(session, step);
+      const delivery = await sendLeadRecipientMessage(recipients, message);
+      prior.attemptedAt = nowIso;
+      prior.sentAt = nowIso;
+      prior.nextSendAt = null;
+      prior.deferredReason = null;
+      prior.delivered = delivery.delivered;
+      prior.failed = delivery.failed;
+      prior.message = message;
+      prior.attempts = (Number(prior.attempts) || 0) + 1;
+      stepStateMap[code] = prior;
+      proactive.lastAttemptAt = nowIso;
+      proactive.lastSentAt = nowIso;
+      proactive.lastTouchAt = nowIso;
+      const attemptCount = Number(delivery.attempted || 0);
+      const deliveredCount = Number(delivery.delivered || 0);
+      const failedCount = Number(delivery.failed || 0);
+      queued += 1;
+      sent += 1;
+      delivered += deliveredCount;
+      failed += failedCount;
+      if (attemptCount) {
+        sessionChanged = true;
+      }
+      appendLeadAuditEvent(session, {
+        type: "proactive-followup",
+        actor: "System",
+        source: "automation",
+        summary: step.label || "Proactive follow-up touch",
+        details: `${deliveredCount}/${attemptCount} delivered to ${recipients.length} recipient(s)`
+      });
+      session.updatedAt = nowIso;
+    }
+
+    proactive.steps = stepStateMap;
+    if (sessionChanged) {
+      leadSessions.set(session.id, session);
+      changed = true;
+    }
+  }
+
+  if (changed) persistSessions();
+  operationsStore.automation = {
+    ...(operationsStore.automation || {}),
+    lastLeadProactiveAutomationRunAt: nowIso,
+    lastLeadProactiveAutomationSummary: {
+      inspected,
+      queued,
+      sent,
+      delivered,
+      failed,
+      skippedNoRecipient,
+      cooldownBlocks,
+      quietDeferrals
+    }
+  };
+  persistOperations();
+  return {
+    inspected,
+    queued,
+    sent,
+    delivered,
+    failed,
+    skippedNoRecipient,
+    cooldownBlocks,
+    quietDeferrals,
+    changed
+  };
+}
+
 function runLeadEscalationAutomationSweep() {
   if (!AUTO_LEAD_AUTOMATION_ENABLED) return { inspected: 0, opened: 0, cleared: 0, active: 0, changed: false };
   let inspected = 0;
@@ -9097,12 +10372,13 @@ async function runConciergeDailyDigestAutomation() {
 }
 
 async function runLeadAutomationCycle() {
+  const proactive = await runLeadProactiveFollowUpAutomation();
   const sweep = runLeadEscalationAutomationSweep();
   const documents = await runLeadMissingDocumentAutomation();
   const deadlines = await runLeadDeadlineAutomation();
   const wow = await runLeadWowAutomation();
   const digest = await runConciergeDailyDigestAutomation();
-  return { sweep, documents, deadlines, wow, digest };
+  return { proactive, sweep, documents, deadlines, wow, digest };
 }
 
 function getLeadSlaState(session) {
@@ -9311,18 +10587,24 @@ function validateLeadPayload(payload) {
   }
 
   if (payload.additionalInfo && typeof payload.additionalInfo !== "string") return "Invalid additional info";
-  const map = getAnswerMap(payload);
-  const phone = cleanPhoneNumber(pickAnswer(map, ["contact / whatsapp number", "contact number", "whatsapp number"]));
-  const province = map["province"];
-  const area = map["preferred area"] || map["property location"];
-  const price = map["budget range (zar)"] || map["expected selling price (zar)"];
-  const timeline = map["timeline to buy"] || map["timeline to sell"];
+  const { map, nameMap } = getAnswerMap(payload);
+  const pickValue = (labelKeys, nameKeys = []) => {
+    const labeled = pickAnswer(map, labelKeys);
+    if (labeled) return labeled;
+    return pickAnswer(nameMap, nameKeys);
+  };
+
+  const phone = cleanPhoneNumber(pickValue(["contact / whatsapp number", "contact number", "whatsapp number"], ["contact", "phone"]));
+  const province = pickValue(["province"], ["province"]);
+  const area = pickValue(["preferred area", "property location"], ["area", "location"]);
+  const price = pickValue(["budget range (zar)", "expected selling price (zar)"], ["budget", "expectedprice", "expected price", "price"]);
+  const timeline = pickValue(["timeline to buy", "timeline to sell"], ["timeline"]);
 
   if (!province) return "Province is required";
   if (!area) return "Area is required";
   if (!price || !parseAmount(price)) return "Budget or price is required";
   if (!timeline) return "Timeline is required";
-  if (!map["full name"]) return "Full name is required";
+  if (!pickValue(["full name"], ["full name", "fullname", "name"])) return "Full name is required";
   if (!phone) return "Valid WhatsApp/contact number is required";
   return null;
 }
@@ -9403,6 +10685,9 @@ function validateAgentApplication(payload) {
   }
   if (!cleanPhoneNumber(payload.mobile)) return "Valid mobile number is required";
   if (!cleanEmailAddress(payload.email)) return "Valid email address is required";
+  if (!["Yes", "No"].includes(payload.complianceStatus)) {
+    return "Compliance status must be Yes or No";
+  }
   if (!["Yes", "No", "Open to discuss"].includes(payload.referralPartnership)) {
     return "Referral partnership selection is invalid";
   }
@@ -9887,7 +11172,7 @@ function getLaunchReadiness() {
     },
     {
       id: "admin-password",
-      ready: Boolean(adminPassword && !["axiom-admin", "change-this-before-launch"].includes(adminPassword.toLowerCase())),
+      ready: Boolean(adminPassword && !["axiom-admin", "change-this-before-launch", "axiomadmin2026!"].includes(adminPassword.toLowerCase())),
       label: "Admin password has been changed from the starter value"
     },
     {
@@ -9915,15 +11200,84 @@ function getWhatsAppConfigStatus() {
   const to = (process.env.WHATSAPP_TO_NUMBER || "").trim();
   const cloudConfigured = Boolean(token && phoneNumberId && to);
   const webStatus = getWhatsAppWebStatus();
+  const transcribeConfigured = Boolean(WHATSAPP_VOICE_TRANSCRIBE_URL);
   return {
     configured: cloudConfigured || webStatus.enabled,
     cloudConfigured,
     hasAccessToken: Boolean(token),
     hasPhoneNumberId: Boolean(phoneNumberId),
     hasRecipient: Boolean(to),
+    transcribeConfigured,
+    transcribeModel: WHATSAPP_VOICE_TRANSCRIBE_MODEL || null,
+    transcribeRequired: Boolean(WHATSAPP_VOICE_TRANSCRIBE_REQUIRED),
     recipient: to || null,
     autoSendEnabled: isWhatsAppAutoSendEnabled(),
     webTest: webStatus
+  };
+}
+
+function getStorageSummary() {
+  return {
+    leadCount: leadSessions.size,
+    operationsCaseCount: Array.isArray(operationsStore.cases) ? operationsStore.cases.length : 0,
+    operationsDocumentCount: Array.isArray(operationsStore.documents) ? operationsStore.documents.length : 0,
+    whatsappThreadCount: Array.isArray(operationsStore.whatsappInbox) ? operationsStore.whatsappInbox.length : 0,
+    agentApplicationCount: agentApplications.length,
+    auditEventCount: Array.isArray(operationsStore.auditLog) ? operationsStore.auditLog.length : 0
+  };
+}
+
+function refreshStartupDiagnostics() {
+  startupDiagnostics = buildStartupDiagnostics({
+    env: process.env,
+    config: {
+      port,
+      host,
+      version: APP_VERSION,
+      build: APP_BUILD_LABEL
+    },
+    paths: {
+      dataDir,
+      sessionsFile,
+      operationsFile,
+      agentApplicationsFile,
+      indexHtml: path.join(__dirname, "index.html"),
+      scriptJs: path.join(__dirname, "script.js"),
+      packageJson: path.join(__dirname, "package.json"),
+      publicUiModule: path.join(__dirname, "modules", "public-ui.js"),
+      adminControlModule: path.join(__dirname, "modules", "admin-control.js"),
+      apiClientModule: path.join(__dirname, "modules", "api-client.js"),
+      communicationsModule: path.join(__dirname, "modules", "communications.js"),
+      dataWorkflowsModule: path.join(__dirname, "modules", "data-workflows.js")
+    },
+    storage: getStorageSummary(),
+    whatsapp: getWhatsAppConfigStatus(),
+    launch: getLaunchReadiness(),
+    lmStudio: {
+      enabled: LM_STUDIO_ENABLED,
+      baseUrl: LM_STUDIO_ENABLED ? LM_STUDIO_BASE_URL : null,
+      model: LM_STUDIO_MODEL || lmStudioModelCache || null,
+      connected: Boolean(lmStudioLastStatus.connected)
+    }
+  });
+  return startupDiagnostics;
+}
+
+function getSystemExportBundle() {
+  return {
+    exportedAt: new Date().toISOString(),
+    app: {
+      service: "axiom-realty-ai",
+      version: APP_VERSION,
+      build: APP_BUILD_LABEL,
+      environment: process.env.RENDER ? "render" : "local"
+    },
+    diagnostics: refreshStartupDiagnostics(),
+    launch: getLaunchReadiness(),
+    leadSessions: Array.from(leadSessions.values()),
+    agentApplications,
+    operationsStore,
+    auditLog: operationsStore.auditLog || []
   };
 }
 
@@ -10296,6 +11650,17 @@ app.get("/api/lead-automation/status", requireAdmin, (_req, res) => {
       lastLeadDeadlineAutomationSummary: automation.lastLeadDeadlineAutomationSummary || null,
       lastLeadWowAutomationRunAt: automation.lastLeadWowAutomationRunAt || null,
       lastLeadWowAutomationSummary: automation.lastLeadWowAutomationSummary || null,
+      lastLeadProactiveAutomationRunAt: automation.lastLeadProactiveAutomationRunAt || null,
+      lastLeadProactiveAutomationSummary: automation.lastLeadProactiveAutomationSummary || null,
+      proactiveCadence: {
+        ackDays: LEAD_PROACTIVE_ACK_DAYS,
+        missingDocsDays: LEAD_PROACTIVE_MISSING_DOCS_DAYS,
+        statusCheckDays: LEAD_PROACTIVE_STATUS_CHECK_DAYS,
+        reactivationDays: LEAD_PROACTIVE_REACTIVATION_DAYS,
+        cooldownHours: LEAD_PROACTIVE_COOLDOWN_HOURS,
+        quietStartHour: LEAD_PROACTIVE_QUIET_START_HOUR,
+        quietEndHour: LEAD_PROACTIVE_QUIET_END_HOUR
+      },
       lastConciergeDigestDay: automation.lastConciergeDigestDay || null,
       lastConciergeDigestAt: automation.lastConciergeDigestAt || null,
       lastConciergeDigestStatus: automation.lastConciergeDigestStatus || null,
@@ -10337,6 +11702,40 @@ function getLeadCreatedRange(period) {
 
 function isSessionReferred(session) {
   return Boolean(session.assignedAgent?.name || session.agentAccess?.createdAt || session.agentAccess?.acknowledgedAt);
+}
+
+function hasReferralAcceptanceRecorded(session) {
+  const proof = session?.dealProof || null;
+  return Boolean(
+    session?.agentAccess?.acknowledgedAt ||
+      proof?.referralAcceptance?.acceptedAt
+  );
+}
+
+function requireReferralAcceptanceForAgentWork(req, res, next) {
+  const id = req.params.id;
+  const session = id ? leadSessions.get(id) : null;
+  if (!session) {
+    return res.status(404).json({ ok: false, error: "Lead not found" });
+  }
+  if (!isSessionReferred(session)) return next();
+  if (hasReferralAcceptanceRecorded(session)) return next();
+
+  const agentAccess = session.agentAccess || {};
+  const hasActiveLink = isAgentAccessActive(agentAccess);
+  const agentAckUrl = hasActiveLink && agentAccess.token
+    ? buildAgentUpdateUrl(req, agentAccess.token)
+    : null;
+
+  return res.status(409).json({
+    ok: false,
+    error: "Referral acceptance is required before this lead can be worked.",
+    code: "referral-acceptance-required",
+    leadId: id,
+    requiresAgentAck: true,
+    agentAckUrl,
+    hasActiveAgentLink: hasActiveLink
+  });
 }
 
 function isSessionClosed(session) {
@@ -10805,7 +12204,7 @@ app.get("/api/leads/recent", requireAdmin, (req, res) => {
   });
 });
 
-app.post("/api/leads/:id/contacted", requireAdmin, (req, res) => {
+app.post("/api/leads/:id/contacted", requireAdmin, requireReferralAcceptanceForAgentWork, (req, res) => {
   const id = req.params.id;
   if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
   const medium = (req.body?.medium || "Not specified").toString().trim();
@@ -10909,7 +12308,7 @@ app.post("/api/leads/:id/assign-agent", requireAdmin, async (req, res) => {
   });
 });
 
-app.post("/api/leads/:id/deal-protection", requireAdmin, (req, res) => {
+app.post("/api/leads/:id/deal-protection", requireAdmin, requireReferralAcceptanceForAgentWork, (req, res) => {
   const id = req.params.id;
   if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
 
@@ -10950,7 +12349,7 @@ app.post("/api/leads/:id/deal-protection", requireAdmin, (req, res) => {
   return res.json({ ok: true, id, dealProtection: session.dealProtection, caseFile: getLeadCaseFileSummary(session) });
 });
 
-app.post("/api/leads/:id/outcome", requireAdmin, (req, res) => {
+app.post("/api/leads/:id/outcome", requireAdmin, requireReferralAcceptanceForAgentWork, (req, res) => {
   const id = req.params.id;
   if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
 
@@ -11055,7 +12454,7 @@ app.post("/api/leads/:id/deal-proof/acceptance", requireAdmin, async (req, res) 
   });
 });
 
-app.post("/api/leads/:id/deal-proof/milestone", requireAdmin, async (req, res) => {
+app.post("/api/leads/:id/deal-proof/milestone", requireAdmin, requireReferralAcceptanceForAgentWork, async (req, res) => {
   const id = req.params.id;
   if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
   const code = sanitizeShortText(req.body?.code || "", 40);
@@ -11112,7 +12511,7 @@ app.post("/api/leads/:id/deal-proof/milestone", requireAdmin, async (req, res) =
   });
 });
 
-app.post("/api/leads/:id/deal-proof/commission", requireAdmin, (req, res) => {
+app.post("/api/leads/:id/deal-proof/commission", requireAdmin, requireReferralAcceptanceForAgentWork, (req, res) => {
   const id = req.params.id;
   if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
   const saleValue = asNumber(req.body?.saleValue, 0);
@@ -11294,7 +12693,7 @@ app.post("/api/leads/:id/acknowledge", requireAdmin, (req, res) => {
   });
 });
 
-app.post("/api/leads/:id/lifecycle", requireAdmin, (req, res) => {
+app.post("/api/leads/:id/lifecycle", requireAdmin, requireReferralAcceptanceForAgentWork, (req, res) => {
   const id = req.params.id;
   if (!leadSessions.has(id)) return res.status(404).json({ ok: false, error: "Lead not found" });
   const code = (req.body?.stage || req.body?.code || "").toString().trim();
@@ -12075,11 +13474,10 @@ app.get("/api/sessions/:id", requireAdmin, (req, res) => {
 });
 
 app.post("/api/concierge", rateLimit({ windowMs: 60000, max: 40 }), async (req, res) => {
-  const message = (req.body?.message || "").toString().trim();
+  const message = normalizeConciergeText((req.body?.message || "").toString().trim());
   let sessionId = (req.body?.sessionId || "").toString().trim();
   if (!message) return res.status(400).json({ ok: false, error: "Message is required" });
 
-  const extracted = extractLeadSignals(message);
   const urgent = /\bimmediate|asap|urgent|now\b/.test(message.toLowerCase());
 
   if (!sessionId || !leadSessions.has(sessionId)) {
@@ -12110,14 +13508,23 @@ app.post("/api/concierge", rateLimit({ windowMs: 60000, max: 40 }), async (req, 
     slots = existing.slots || createEmptySlots();
   }
 
+  const hadPendingField = Boolean(slots.lastAskedField);
+
   if (slots.finalPromptAsked && !slots.closed) {
     slots.additionalConsiderations = isNegativeResponse(message) ? "None" : message;
     slots.closed = true;
   }
 
   slots = applyPendingFieldAnswer(slots, message);
-  if (!slots.closed) {
+  const extracted = hadPendingField ? extractLeadSignals(message) : await extractLeadSignalsWithLmStudio(message, slots);
+  if (!slots.closed && !hadPendingField) {
     slots = mergeSlots(slots, extracted);
+  }
+  const nonPropertySubject = !hadPendingField ? detectNonPropertySaleSubject(message) : null;
+  if (nonPropertySubject && slots.intent === "sell") {
+    slots.validationMessage =
+      "What type of property are you selling, for example house, flat, apartment, land, or farm?";
+    slots.lastAskedField = "propertyType";
   }
   const hasPriorAssistantReply =
     leadSessions.has(sessionId) &&
@@ -12192,6 +13599,12 @@ app.post("/api/concierge", rateLimit({ windowMs: 60000, max: 40 }), async (req, 
     closed: Boolean(slots.closed),
     handoff,
     caseFile: leadSessions.has(sessionId) ? getLeadCaseFileSummary(leadSessions.get(sessionId)) : null,
+    localAi: {
+      enabled: lmStudioLastStatus.enabled,
+      connected: lmStudioLastStatus.connected,
+      model: lmStudioLastStatus.model,
+      checkedAt: lmStudioLastStatus.checkedAt
+    },
     handoffRecommendation:
       missingFields.length > 0
         ? `Collect missing fields: ${missingFields.join(", ")}.`
@@ -13943,16 +15356,20 @@ async function processInboundWhatsappPayload(payload = {}, { source = "whatsapp-
   let handledLifeCoverReply = false;
   let handledElectricalReply = false;
   let handledGasReply = false;
-  const ingestedAttachments = attachments.flatMap((attachment) =>
-    isInboundVoiceNoteAttachment(attachment)
-      ? [captureInboundVoiceNoteFromWhatsapp(item, { sender, senderRole: role, attachment, messageText: message })]
-      : upsertOperationsDocumentFromWhatsapp(item, {
-          sender,
-          senderRole: role,
-          attachment,
-          messageText: message
-        })
+  const attachmentEntries = await Promise.all(
+    attachments.map(async (attachment) => {
+      if (isInboundVoiceNoteAttachment(attachment)) {
+        return captureInboundVoiceNoteFromWhatsapp(item, { sender, senderRole: role, attachment, messageText: message });
+      }
+      return upsertOperationsDocumentFromWhatsapp(item, {
+        sender,
+        senderRole: role,
+        attachment,
+        messageText: message
+      });
+    })
   );
+  const ingestedAttachments = attachmentEntries.flatMap((entry) => (Array.isArray(entry) ? entry : [entry])).filter(Boolean);
   const linkedDocumentIds = ingestedAttachments.map((entry) => entry.documentId).filter(Boolean);
   const voiceNotesCaptured = ingestedAttachments.filter((entry) => entry.kind === "voice-note");
   const uploadedDocumentEntries = ingestedAttachments.filter((entry) => entry.documentId && ["uploaded", "linked"].includes(entry.ingestStatus));
@@ -14235,39 +15652,80 @@ app.post("/api/leads", rateLimit({ windowMs: 60000, max: 20 }), async (req, res)
 });
 
 app.get("/healthz", (_req, res) => {
+  const diagnostics = refreshStartupDiagnostics();
   res.json({
     ok: true,
     service: "axiom-realty-ai",
     status: "up",
     version: APP_VERSION,
     build: APP_BUILD_LABEL,
+    diagnostics: {
+      ok: diagnostics.ok,
+      warnings: diagnostics.warnings.length,
+      failures: diagnostics.failures.length
+    },
     checkedAt: new Date().toISOString()
   });
 });
 
 app.get("/api/app-status", (_req, res) => {
+  const diagnostics = publicStatusFromDiagnostics(refreshStartupDiagnostics());
   res.json({
     ok: true,
     service: "axiom-realty-ai",
     version: APP_VERSION,
     build: APP_BUILD_LABEL,
     environment: process.env.RENDER ? "render" : "local",
+    diagnostics,
     checkedAt: new Date().toISOString()
   });
+});
+
+app.get("/api/system-status", requireAdmin, (_req, res) => {
+  res.json({
+    ok: true,
+    diagnostics: refreshStartupDiagnostics(),
+    launch: getLaunchReadiness(),
+    whatsapp: getWhatsAppConfigStatus(),
+    storage: getStorageSummary()
+  });
+});
+
+app.get("/api/admin/audit-log", requireAdmin, (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit || 100), 1), 500);
+  res.json({
+    ok: true,
+    auditLog: (operationsStore.auditLog || []).slice(0, limit)
+  });
+});
+
+app.get("/api/admin/export", requireAdmin, (_req, res) => {
+  const bundle = getSystemExportBundle();
+  const filename = `axiom-export-${new Date().toISOString().slice(0, 10)}.json`;
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(JSON.stringify(bundle, null, 2));
 });
 
 app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(port, host, () => {
-  const publicBase = (process.env.PUBLIC_BASE_URL || "").trim();
-  console.log(`Server running on ${publicBase || `http://127.0.0.1:${port}`}`);
-});
-
 loadPersistedSessions();
 loadAgentApplications();
 loadPersistedOperations();
+
+const startupReport = refreshStartupDiagnostics();
+assertProductionSafety(startupReport, { enforce: ENFORCE_PRODUCTION_ENV });
+logStartupDiagnostics(startupReport);
+
+app.listen(port, host, () => {
+  const publicBase = (process.env.PUBLIC_BASE_URL || "").trim();
+  const displayHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+  const listenUrl = `http://${displayHost}:${port}`;
+  console.log(`Server listening on ${listenUrl}`);
+  if (publicBase && publicBase !== listenUrl) console.log(`Public base URL: ${publicBase}`);
+});
 
 const operationsSweepTimer = setInterval(() => {
   try {

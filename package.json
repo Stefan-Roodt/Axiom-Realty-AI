@@ -7,6 +7,9 @@
     "start": "node server.js",
     "start:prod": "node server.js",
     "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check script.js && node --check modules/public-ui.js && node --check modules/admin-control.js && node --check modules/api-client.js && node --check modules/communications.js && node --check modules/data-workflows.js && node --check server/diagnostics.js && node --check server/json-store.js",
+    "smoke": "node scripts/smoke-test.mjs",
+    "deploy:live": "powershell -NoProfile -ExecutionPolicy Bypass -File ./deploy-live.ps1",
     "health": "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/healthz').then(r=>{if(!r.ok)process.exit(1);return r.text()}).then(t=>console.log(t)).catch(()=>process.exit(1))\""
   },
   "dependencies": {
