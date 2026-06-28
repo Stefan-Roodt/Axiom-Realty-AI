@@ -23,7 +23,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Rebuild compressed patch from issue comments
+      - name: Rebuild clean patch from issue comments
         uses: actions/github-script@v7
         with:
           script: |
@@ -32,7 +32,10 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue_number = context.payload.issue?.number || 1;
-            core.info(`Reading deployment chunks from issue #${issue_number}.`);
+            const marker = 'AXIOM_DEPLOY_PATCH_V2_CHUNK';
+            const expectedBase64Length = 74244;
+            const expectedPatchBytes = 238169;
+            core.info(`Reading clean deployment chunks from issue #${issue_number}.`);
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -40,67 +43,39 @@ jobs:
               per_page: 100
             });
             const chunks = [];
-            const commentIds = [];
-            const partGroups = new Map();
+            const ids = [];
             let expectedTotal = null;
             for (const comment of comments) {
-              const full = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
-              if (full) {
-                const index = Number(full[1]);
-                const total = Number(full[2]);
-                expectedTotal = expectedTotal || total;
-                if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
-                chunks[index - 1] = full[3].replace(/\s+/g, '');
-                commentIds[index - 1] = comment.id;
-                continue;
-              }
-              const part = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_SUBCHUNK\s+(\d+)\/(\d+)\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
-              if (!part) continue;
-              const chunkIndex = Number(part[1]);
-              const total = Number(part[2]);
-              const partIndex = Number(part[3]);
-              const partTotal = Number(part[4]);
+              const match = comment.body.match(new RegExp(`${marker}\\s+(\\d+)\\/(\\d+)\\s*\\n\`\`\`base64\\n([\\s\\S]*?)\\n\`\`\``));
+              if (!match) continue;
+              const index = Number(match[1]);
+              const total = Number(match[2]);
               expectedTotal = expectedTotal || total;
-              if (total !== expectedTotal) throw new Error(`Subchunk total mismatch: ${total} !== ${expectedTotal}`);
-              const key = String(chunkIndex);
-              if (!partGroups.has(key)) partGroups.set(key, { total: partTotal, parts: [], ids: [] });
-              const group = partGroups.get(key);
-              if (group.total !== partTotal) throw new Error(`Subchunk part total mismatch for chunk ${chunkIndex}`);
-              group.parts[partIndex - 1] = part[5].replace(/\s+/g, '');
-              group.ids[partIndex - 1] = comment.id;
+              if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
+              chunks[index - 1] = match[3].replace(/\s+/g, '');
+              ids[index - 1] = comment.id;
             }
-            for (const [key, group] of partGroups) {
-              const missingParts = [];
-              for (let i = 0; i < group.total; i += 1) {
-                if (!group.parts[i]) missingParts.push(i + 1);
-              }
-              if (missingParts.length) throw new Error(`Missing subchunk part(s) for chunk ${key}: ${missingParts.join(', ')}`);
-              const index = Number(key);
-              chunks[index - 1] = group.parts.join('');
-              commentIds[index - 1] = `subchunks ${group.ids.join(',')}`;
-              core.info(`Overrode chunk ${index} from ${group.total} subchunks.`);
-            }
-            if (!expectedTotal) throw new Error('No compressed patch chunks found.');
+            if (!expectedTotal) throw new Error(`No ${marker} chunks found.`);
             const missing = [];
             for (let i = 0; i < expectedTotal; i += 1) {
               if (!chunks[i]) missing.push(i + 1);
             }
-            if (missing.length) throw new Error(`Missing patch chunk(s): ${missing.join(', ')}`);
-            const expectedLengths = Array.from({ length: expectedTotal }, (_, i) => i === expectedTotal - 1 ? 1280 : 6000);
-            const lengthReport = chunks.map((chunk, i) => `${i + 1}=${chunk.length} (${commentIds[i]})`).join(', ');
-            core.info(`Chunk lengths: ${lengthReport}`);
-            const wrongLengths = chunks
-              .map((chunk, i) => ({ index: i + 1, actual: chunk.length, expected: expectedLengths[i], source: commentIds[i] }))
-              .filter(item => item.actual !== item.expected);
-            if (wrongLengths.length) {
-              throw new Error(`Bad chunk length(s): ${wrongLengths.map(item => `${item.index} expected ${item.expected} got ${item.actual} source ${item.source}`).join('; ')}`);
-            }
+            if (missing.length) throw new Error(`Missing clean patch chunk(s): ${missing.join(', ')}`);
+            const bad = chunks
+              .map((chunk, i) => ({ index: i + 1, length: chunk.length, id: ids[i] }))
+              .filter(item => item.index < expectedTotal && item.length !== 6000);
+            if (bad.length) throw new Error(`Bad chunk length(s): ${bad.map(item => `${item.index}=${item.length} comment ${item.id}`).join('; ')}`);
             const compressedText = chunks.join('');
-            core.info(`Rebuilt ${expectedTotal} chunks (${compressedText.length} base64 chars).`);
-            const compressed = Buffer.from(compressedText, 'base64');
-            const patch = zlib.gunzipSync(compressed);
+            core.info(`Chunk lengths: ${chunks.map((chunk, i) => `${i + 1}=${chunk.length}`).join(', ')}`);
+            if (compressedText.length !== expectedBase64Length) {
+              throw new Error(`Clean payload length mismatch: expected ${expectedBase64Length}, got ${compressedText.length}`);
+            }
+            const patch = zlib.gunzipSync(Buffer.from(compressedText, 'base64'));
+            if (patch.length !== expectedPatchBytes) {
+              throw new Error(`Patch byte length mismatch: expected ${expectedPatchBytes}, got ${patch.length}`);
+            }
             fs.writeFileSync('deploy-live.patch', patch);
-            core.info(`Wrote deploy-live.patch (${patch.length} bytes).`);
+            core.info(`Wrote clean deploy-live.patch (${patch.length} bytes).`);
 
       - name: Apply patch
         run: |
