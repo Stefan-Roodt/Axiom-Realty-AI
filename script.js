@@ -112,6 +112,8 @@ const operationsTabs = [...document.querySelectorAll("[data-operations-tab]")];
 const operationsTabPanels = [...document.querySelectorAll("[data-operations-panel]")];
 const operationsRoleSelect = document.getElementById("operationsRole");
 const operationsRoleHint = document.getElementById("operationsRoleHint");
+const operationsMoreToggle = document.getElementById("operationsMoreToggle");
+const operationsMoreMenu = document.getElementById("operationsMoreMenu");
 const adminGate = document.getElementById("adminGate");
 const adminPassword = document.getElementById("adminPassword");
 const adminMessage = document.getElementById("adminMessage");
@@ -775,6 +777,28 @@ function getDefaultOperationsTab(role = operationsRole) {
   return getOperationsRoleProfile(role).defaultTab || "inbox";
 }
 
+function syncMoreMenuVisibility(allowedTabs) {
+  if (!operationsMoreToggle || !operationsMoreMenu) return;
+  const advancedButtons = [...operationsMoreMenu.querySelectorAll("[data-operations-tab]")];
+  let anyAdvancedVisible = false;
+
+  for (const button of advancedButtons) {
+    const tab = button.getAttribute("data-operations-tab");
+    const allowed = allowedTabs.has(tab);
+    const shouldHide = !allowed;
+    button.hidden = shouldHide;
+    button.setAttribute("aria-hidden", String(shouldHide));
+    button.setAttribute("tabindex", shouldHide ? "-1" : "0");
+    if (!shouldHide) anyAdvancedVisible = true;
+  }
+
+  operationsMoreToggle.hidden = !anyAdvancedVisible;
+  if (!anyAdvancedVisible) {
+    operationsMoreMenu.hidden = true;
+    operationsMoreToggle.setAttribute("aria-expanded", "false");
+  }
+}
+
 function syncOperationsRoleFromUrl(roleFromUrl = null) {
   if (!roleFromUrl) return operationsRole;
   const normalized = normalizeOperationsRole(roleFromUrl);
@@ -804,6 +828,7 @@ function applyOperationsRoleSettings() {
     button.setAttribute("aria-hidden", String(!allowed));
     button.setAttribute("tabindex", allowed ? "0" : "-1");
   });
+  syncMoreMenuVisibility(allowedTabs);
 
   operationsTabPanels.forEach((panel) => {
     const panelId = panel.getAttribute("data-operations-panel");
@@ -941,6 +966,30 @@ if (operationsRoleSelect) {
   operationsRoleSelect.addEventListener("change", refreshOperationsRole);
 }
 
+if (operationsMoreToggle && operationsMoreMenu) {
+  operationsMoreToggle.addEventListener("click", () => {
+    const expanded = operationsMoreMenu.hidden;
+    operationsMoreMenu.hidden = !expanded;
+    operationsMoreToggle.setAttribute("aria-expanded", String(!expanded));
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (
+      !operationsMoreToggle ||
+      !operationsMoreMenu ||
+      target.closest("#operationsMoreToggle") ||
+      target.closest("#operationsMoreMenu")
+    ) {
+      return;
+    }
+    if (!operationsMoreMenu.hidden) {
+      operationsMoreMenu.hidden = true;
+      operationsMoreToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
 function setOperationsTab(name = "inbox") {
   const selectedTab = coerceRoleRestrictedTab(name);
   operationsTabs.forEach((button) => {
@@ -963,6 +1012,9 @@ function setOperationsTab(name = "inbox") {
   if (selectedTab === "progress" && isAdminUnlocked()) {
     refreshOperationsSuite({ progress: true });
   }
+
+  if (operationsMoreMenu) operationsMoreMenu.hidden = true;
+  if (operationsMoreToggle) operationsMoreToggle.setAttribute("aria-expanded", "false");
 }
 
 operationsTabs.forEach((button) => {

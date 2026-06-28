@@ -1193,15 +1193,62 @@ textarea {
 .mini-progress .p-100 { width: 100%; }
 
 .operations-tabs {
-  justify-content: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
   padding: 0.28rem;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 14px;
   background: rgba(5, 12, 26, 0.48);
   overflow-x: auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
+}
+
+.operations-tab-core {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+}
+
+.operations-tab-core::-webkit-scrollbar { display: none; }
+
+.operations-more-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.operations-more-btn {
+  padding: 0.58rem 0.88rem;
+}
+
+.operations-more-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  min-width: 190px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  background: rgba(4, 11, 24, 0.98);
+  padding: 0.32rem;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+}
+
+.operations-more-menu[hidden] {
+  display: none;
+}
+
+.operations-more-menu .operations-tab {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .operations-tab {
@@ -4948,11 +4995,25 @@ textarea {
   .operations-tabs {
     margin-inline: -0.25rem;
     border-radius: 12px;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+
+  .operations-tab-core {
+    overflow-x: auto;
+    flex-wrap: nowrap;
     scroll-snap-type: x proximity;
   }
+
   .operations-tab {
     scroll-snap-align: start;
     min-width: max-content;
+  }
+
+  .operations-more-menu {
+    right: -0.25rem;
+    left: auto;
+    width: min(280px, calc(100vw - 1.5rem));
   }
   .risk-topline,
   .daily-control-bar,

@@ -293,14 +293,22 @@
             </article>
           </div>
           <div class="operations-tabs" role="tablist" aria-label="Operations workspace tabs">
-            <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox">Lead Radar</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="progress">Progress Tracker</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Action Queue</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">Escalations</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">Momentum</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Scoreboard</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Protection Desk</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">Concierge Comms</button>
+            <div class="operations-tab-core">
+              <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox">Radar</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Action Queue</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="progress">My Cases</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">Escalations</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Reports</button>
+            </div>
+            <div class="operations-more-wrap">
+              <button class="operations-more-btn location-btn" id="operationsMoreToggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="operationsMoreMenu">More</button>
+              <div class="operations-more-menu" id="operationsMoreMenu" hidden role="menu">
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">Momentum</button>
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Protection Desk</button>
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">Concierge Comms</button>
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Scoreboard</button>
+              </div>
+            </div>
           </div>
           <section class="operations-tab-panel active" data-operations-panel="inbox">
             <div class="card risk-panel inbox-panel">
