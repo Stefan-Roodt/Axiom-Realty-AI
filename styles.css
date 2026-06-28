@@ -79,6 +79,13 @@ img { max-width: 100%; height: auto; }
   padding: 1.1rem 0;
 }
 
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
 .brand img { width: 250px; max-width: 100%; height: auto; display: block; }
 
 .admin-nav-link {
@@ -444,6 +451,255 @@ h1 { font-size: clamp(2.1rem, 5vw, 4rem); max-width: 14ch; color: var(--ink); }
   font-weight: 900;
 }
 
+.concierge-page-hero {
+  padding-bottom: 2.9rem;
+}
+
+.concierge-hero-grid {
+  align-items: stretch;
+}
+
+.concierge-hero-copy h1 {
+  max-width: 12ch;
+}
+
+.concierge-proof-grid {
+  max-width: 620px;
+}
+
+.concierge-visual img {
+  min-height: 100%;
+  object-fit: cover;
+}
+
+.concierge-signal-panel {
+  gap: 0.3rem;
+}
+
+.concierge-trust-panel {
+  margin-top: -1.2rem;
+}
+
+.concierge-stat-grid,
+.product-pain-grid,
+.concierge-feature-grid,
+.concierge-role-grid,
+.concierge-flow-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.concierge-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.concierge-stat-card,
+.product-pain-card,
+.concierge-feature-card,
+.concierge-role-card,
+.concierge-flow-card {
+  min-width: 0;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(10, 18, 34, 0.96), rgba(15, 24, 44, 0.82)),
+    radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.12), transparent 34%);
+  box-shadow: var(--shadow);
+}
+
+.concierge-stat-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.concierge-stat-card span,
+.concierge-feature-card span,
+.concierge-flow-card span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  background: rgba(34, 211, 238, 0.12);
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.concierge-stat-card strong,
+.product-pain-card strong,
+.concierge-feature-card strong,
+.concierge-role-card h3,
+.concierge-flow-card strong {
+  color: var(--ink);
+}
+
+.concierge-stat-card p,
+.product-heading p,
+.product-pain-card p,
+.concierge-feature-card p,
+.concierge-role-card p,
+.concierge-flow-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.product-heading {
+  max-width: 760px;
+}
+
+.product-heading h2 {
+  margin-bottom: 0.55rem;
+}
+
+.product-pain-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.product-pain-card {
+  padding: 1rem 1.05rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.concierge-feature-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.concierge-feature-card,
+.concierge-flow-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+}
+
+.concierge-role-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.concierge-role-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.concierge-role-card .eyebrow {
+  margin-bottom: 0;
+}
+
+.concierge-flow-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.concierge-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.concierge-pricing-card {
+  min-width: 0;
+  padding: 1.05rem;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(10, 18, 34, 0.96), rgba(15, 24, 44, 0.82)),
+    radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.12), transparent 34%);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.concierge-pricing-card.featured {
+  border-color: rgba(34, 211, 238, 0.34);
+  background:
+    linear-gradient(180deg, rgba(8, 24, 38, 0.98), rgba(15, 24, 44, 0.84)),
+    radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.18), transparent 36%);
+}
+
+.pricing-kicker {
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.concierge-pricing-card strong {
+  color: var(--ink);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  line-height: 1;
+}
+
+.concierge-pricing-card strong span {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.concierge-pricing-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.concierge-pricing-card ul {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.42rem;
+  color: var(--ink);
+}
+
+.concierge-pricing-card li {
+  position: relative;
+  padding-left: 1rem;
+  line-height: 1.35;
+}
+
+.concierge-pricing-card li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.56em;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.concierge-cta-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.25rem;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(7, 16, 32, 0.94), rgba(14, 24, 45, 0.88)),
+    radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.16), transparent 34%),
+    radial-gradient(circle at 100% 100%, rgba(167, 139, 250, 0.14), transparent 36%);
+  box-shadow: var(--shadow);
+}
+
+.concierge-cta-panel p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.concierge-cta-actions {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: end;
+}
+
 .agent-benefit-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.9fr) auto;
@@ -604,6 +860,194 @@ h1 { font-size: clamp(2.1rem, 5vw, 4rem); max-width: 14ch; color: var(--ink); }
   box-shadow: var(--shadow);
   padding: 2rem 1rem;
   border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.role-access-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.role-access-card {
+  display: grid;
+  gap: 0.95rem;
+  padding: 1.45rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+.role-access-card h3,
+.role-access-card p,
+.role-access-card small {
+  margin: 0;
+}
+
+.role-access-card h3 {
+  font-size: 1.35rem;
+}
+
+.role-access-kicker {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.role-access-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.client-access-flow {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.client-access-flow label,
+.client-access-flow input,
+.client-access-flow select {
+  width: 100%;
+}
+
+.client-access-status {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text);
+}
+
+.client-access-status.error {
+  background: rgba(185, 28, 28, 0.1);
+  color: #991b1b;
+}
+
+.client-access-status.success {
+  background: rgba(5, 150, 105, 0.12);
+  color: #065f46;
+}
+
+.client-access-result {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.client-access-leads {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.client-access-lead {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+}
+
+.client-access-lead.active {
+  border-color: rgba(3, 105, 161, 0.35);
+  background: rgba(14, 116, 144, 0.08);
+}
+
+.client-access-lead strong,
+.client-access-lead span,
+.client-access-lead small {
+  margin: 0;
+}
+
+.client-access-lead span,
+.client-access-lead small {
+  color: rgba(15, 23, 42, 0.72);
+}
+
+.client-access-detail {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.client-access-detail-hero {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.client-access-detail-hero h4,
+.client-access-detail-hero p,
+.client-access-section h5,
+.client-access-section p {
+  margin: 0;
+}
+
+.client-access-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.client-access-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.07);
+  color: rgba(15, 23, 42, 0.82);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.client-access-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.client-access-metric {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.client-access-metric span,
+.client-access-section small {
+  color: rgba(15, 23, 42, 0.68);
+}
+
+.client-access-section {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.client-access-bullet-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.client-access-bullet-list div {
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.client-access-lead span,
+.client-access-lead small {
+  color: rgba(15, 23, 42, 0.72);
 }
 
 .contact-visual-steps {
@@ -1193,62 +1637,15 @@ textarea {
 .mini-progress .p-100 { width: 100%; }
 
 .operations-tabs {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
+  justify-content: flex-start;
   padding: 0.28rem;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 14px;
   background: rgba(5, 12, 26, 0.48);
   overflow-x: auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
-}
-
-.operations-tab-core {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  scrollbar-width: none;
-}
-
-.operations-tab-core::-webkit-scrollbar { display: none; }
-
-.operations-more-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.operations-more-btn {
-  padding: 0.58rem 0.88rem;
-}
-
-.operations-more-menu {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 0.35rem);
-  right: 0;
-  min-width: 190px;
-  border-radius: 12px;
-  border: 1px solid rgba(34, 211, 238, 0.28);
-  background: rgba(4, 11, 24, 0.98);
-  padding: 0.32rem;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
-}
-
-.operations-more-menu[hidden] {
-  display: none;
-}
-
-.operations-more-menu .operations-tab {
-  width: 100%;
-  justify-content: flex-start;
 }
 
 .operations-tab {
@@ -4805,6 +5202,20 @@ textarea {
   .trust-reassurance-panel {
     margin-top: 0;
   }
+  .concierge-stat-grid,
+  .concierge-role-grid,
+  .concierge-feature-grid,
+  .concierge-flow-grid,
+  .concierge-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .concierge-cta-panel {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .concierge-cta-actions {
+    justify-items: start;
+  }
   .agent-benefit-panel {
     grid-template-columns: 1fr;
     align-items: start;
@@ -4813,6 +5224,7 @@ textarea {
     justify-self: start;
   }
   .split { grid-template-columns: 1fr; }
+  .client-access-metrics { grid-template-columns: 1fr; }
   .orb-wrap { text-align: center; }
   .sprint-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -4862,6 +5274,14 @@ textarea {
   .customer-reassurance p {
     min-height: 0;
   }
+  .product-pain-grid,
+  .concierge-stat-grid,
+  .concierge-feature-grid,
+  .concierge-role-grid,
+  .concierge-flow-grid,
+  .concierge-pricing-grid {
+    grid-template-columns: 1fr;
+  }
   .assist-line,
   .followup-action,
   .task-item,
@@ -4904,6 +5324,7 @@ textarea {
   .portal-hero-band,
   .portal-checklist-grid,
   .portal-updates-grid,
+  .role-access-grid,
   .expert-form-grid,
   .inbox-command-bar,
   .daily-control-grid { grid-template-columns: 1fr; }
@@ -4944,6 +5365,9 @@ textarea {
   .btn {
     width: 100%;
     justify-content: center;
+  }
+  .nav-links {
+    width: 100%;
   }
   .admin-nav-link {
     min-height: 42px;
@@ -4995,25 +5419,11 @@ textarea {
   .operations-tabs {
     margin-inline: -0.25rem;
     border-radius: 12px;
-    flex-wrap: wrap;
-    row-gap: 0.4rem;
-  }
-
-  .operations-tab-core {
-    overflow-x: auto;
-    flex-wrap: nowrap;
     scroll-snap-type: x proximity;
   }
-
   .operations-tab {
     scroll-snap-align: start;
     min-width: max-content;
-  }
-
-  .operations-more-menu {
-    right: -0.25rem;
-    left: auto;
-    width: min(280px, calc(100vw - 1.5rem));
   }
   .risk-topline,
   .daily-control-bar,

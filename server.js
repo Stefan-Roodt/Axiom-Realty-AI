@@ -75,10 +75,15 @@ const leadVaultDir = path.join(secureDocumentsDir, "lead-vault");
 const whatsappWebAuthDir = path.join(dataDir, "whatsapp-web-auth");
 const requestBuckets = new Map();
 const operationsSessions = new Map();
+const clientPortalSessions = new Map();
+const clientWhatsappOtpChallenges = [];
 const OPERATIONS_SESSION_HOURS = 8;
 const OPERATIONS_ACCESS_LINK_HOURS = Number(process.env.OPERATIONS_ACCESS_LINK_HOURS || 168);
 const OPERATIONS_OTP_MINUTES = Number(process.env.OPERATIONS_OTP_MINUTES || 10);
 const OPERATIONS_OTP_MAX_ATTEMPTS = Number(process.env.OPERATIONS_OTP_MAX_ATTEMPTS || 5);
+const CLIENT_PORTAL_SESSION_HOURS = Number(process.env.CLIENT_PORTAL_SESSION_HOURS || 8);
+const CLIENT_WHATSAPP_OTP_MINUTES = Number(process.env.CLIENT_WHATSAPP_OTP_MINUTES || 10);
+const CLIENT_WHATSAPP_OTP_MAX_ATTEMPTS = Number(process.env.CLIENT_WHATSAPP_OTP_MAX_ATTEMPTS || 5);
 const OPERATIONS_ESCALATION_SLA_MINUTES = Number(process.env.OPERATIONS_ESCALATION_SLA_MINUTES || 120);
 const OPERATIONS_SWEEP_INTERVAL_MS = Number(process.env.OPERATIONS_SWEEP_INTERVAL_MS || 5 * 60 * 1000);
 const OPERATIONS_DELIVERY_INTERVAL_MS = Number(process.env.OPERATIONS_DELIVERY_INTERVAL_MS || 60 * 1000);
@@ -293,6 +298,7 @@ app.use((req, res, next) => {
     requestedPath === "/script.js" ||
     requestedPath === "/styles.css" ||
     requestedPath === "/index.html" ||
+    requestedPath === "/concierge.html" ||
     requestedPath === "/operations.js" ||
     requestedPath === "/operations.css" ||
     requestedPath === "/operations.html"
@@ -1953,6 +1959,55 @@ function getOperationsOtpChallenge(challengeId) {
   return (operationsStore.otpChallenges || []).find((item) => item.id === id) || null;
 }
 
+function pruneClientWhatsappOtpChallenges() {
+  const now = Date.now();
+  for (let index = clientWhatsappOtpChallenges.length - 1; index >= 0; index -= 1) {
+    const item = clientWhatsappOtpChallenges[index];
+    if (!item) {
+      clientWhatsappOtpChallenges.splice(index, 1);
+      continue;
+    }
+    if (item.usedAt && new Date(item.usedAt).getTime() <= now - 24 * 60 * 60 * 1000) {
+      clientWhatsappOtpChallenges.splice(index, 1);
+      continue;
+    }
+    const expiresAt = new Date(item.expiresAt || 0).getTime();
+    if (!item.usedAt && (!Number.isFinite(expiresAt) || expiresAt <= now - 60 * 60 * 1000)) {
+      clientWhatsappOtpChallenges.splice(index, 1);
+    }
+  }
+}
+
+function createClientWhatsappOtpChallenge({ cellphone, leadSummaries = [], leadId = "" }) {
+  pruneClientWhatsappOtpChallenges();
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + Math.max(1, CLIENT_WHATSAPP_OTP_MINUTES) * 60 * 1000).toISOString();
+  const selectedLeadId = String(leadId || leadSummaries[0]?.id || "").trim();
+  const challenge = {
+    id: `CLIENT-OTP-${randomUUID()}`,
+    createdAt: now.toISOString(),
+    expiresAt,
+    attempts: 0,
+    maxAttempts: Math.max(1, CLIENT_WHATSAPP_OTP_MAX_ATTEMPTS),
+    usedAt: null,
+    codeHash: createPinHash(code),
+    cellphone,
+    leadId: selectedLeadId,
+    leadIds: leadSummaries.map((item) => item.id).filter(Boolean),
+    role: leadSummaries.find((item) => item.id === selectedLeadId)?.role || leadSummaries[0]?.role || "buyer"
+  };
+  clientWhatsappOtpChallenges.unshift(challenge);
+  clientWhatsappOtpChallenges.splice(1000);
+  return { challenge, code };
+}
+
+function getClientWhatsappOtpChallenge(challengeId) {
+  const cleanId = String(challengeId || "").trim();
+  if (!cleanId) return null;
+  return clientWhatsappOtpChallenges.find((item) => item.id === cleanId) || null;
+}
+
 function getPublicOperationsUser(user) {
   return { id: user.id, name: user.name, cellphone: user.cellphone, role: user.role, roleLabel: getOperationsRoleLabel(user.role) };
 }
@@ -1966,6 +2021,32 @@ function getOperationsSession(req) {
     return null;
   }
   return session;
+}
+
+function pruneClientPortalSessions() {
+  const now = Date.now();
+  for (const [token, session] of clientPortalSessions.entries()) {
+    if (!session || now > Number(session.expiresAt || 0)) clientPortalSessions.delete(token);
+  }
+}
+
+function getClientPortalSession(req) {
+  pruneClientPortalSessions();
+  const token = (req.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  const session = clientPortalSessions.get(token);
+  if (!session) return null;
+  if (Date.now() > session.expiresAt) {
+    clientPortalSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+function requireClientPortalSession(req, res, next) {
+  const session = getClientPortalSession(req);
+  if (!session) return res.status(401).json({ ok: false, error: "Please verify your WhatsApp sign-in code to continue" });
+  req.clientPortalSession = session;
+  return next();
 }
 
 function requireOperationsSession(req, res, next) {
@@ -8094,6 +8175,50 @@ function buildLeadProactiveFollowUpTask(session, step, stepState = {}) {
   };
 }
 
+function getLeadSessionsForClientCellphone(cellphone = "") {
+  const clean = cleanPhoneNumber(cellphone);
+  if (!clean) return [];
+  return Array.from(leadSessions.values())
+    .filter(isLiveLeadSession)
+    .filter((session) => {
+      const slots = getSessionSlots(session);
+      if (cleanPhoneNumber(slots.phone || "") === clean) return true;
+      const accessMap = ensureStakeholderAccess(session);
+      for (const role of ["buyer", "seller"]) {
+        if (cleanPhoneNumber(accessMap[role]?.phone || "") === clean) return true;
+      }
+      return false;
+    })
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
+}
+
+function summarizeLeadSessionForClient(session, cellphone = "") {
+  const slots = getSessionSlots(session);
+  const clean = cleanPhoneNumber(cellphone);
+  const accessMap = ensureStakeholderAccess(session);
+  let matchedRole = getLeadPrimaryClientRole(session);
+  if (clean) {
+    for (const role of ["buyer", "seller"]) {
+      if (cleanPhoneNumber(accessMap[role]?.phone || "") === clean) {
+        matchedRole = role;
+        break;
+      }
+    }
+  }
+  return {
+    id: session.id,
+    role: matchedRole,
+    roleLabel: stakeholderRoleLabels[matchedRole] || "Client",
+    intent: slots.intent || session.intent || "buy",
+    label: session.label || "Property request",
+    snapshot: getSessionCopilot(session).snapshot || buildSessionSnapshot(session),
+    area: slots.area || "",
+    province: slots.province || "",
+    createdAt: session.createdAt || new Date().toISOString(),
+    updatedAt: session.updatedAt || session.createdAt || new Date().toISOString()
+  };
+}
+
 function getLeadProactiveFollowUpTasks(session) {
   const slots = getSessionSlots(session);
   if (!session?.id) return [];
@@ -13949,6 +14074,134 @@ app.post("/api/os/logout", requireOperationsSession, (req, res) => {
   return res.json({ ok: true });
 });
 
+app.post("/api/client-auth/request-whatsapp-otp", rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
+  const cellphone = cleanPhoneNumber(req.body?.cellphone);
+  const leadId = sanitizeShortText(req.body?.leadId, 80);
+  if (!cellphone) return res.status(400).json({ ok: false, error: "A valid cellphone number is required" });
+
+  const matches = getLeadSessionsForClientCellphone(cellphone).map((session) => summarizeLeadSessionForClient(session, cellphone));
+  if (!matches.length) {
+    return res.status(404).json({ ok: false, error: "No live Axiom property request was found for this cellphone number" });
+  }
+
+  const selectedMatches = leadId ? matches.filter((item) => item.id === leadId) : matches;
+  if (leadId && !selectedMatches.length) {
+    return res.status(404).json({ ok: false, error: "The selected property request does not match this cellphone number" });
+  }
+  if (!leadId && matches.length > 1) {
+    return res.status(409).json({
+      ok: false,
+      error: "More than one live property request matches this number. Choose one request first.",
+      leads: matches
+    });
+  }
+
+  const { challenge, code } = createClientWhatsappOtpChallenge({
+    cellphone,
+    leadSummaries: selectedMatches,
+    leadId: leadId || selectedMatches[0]?.id || ""
+  });
+  const selectedLead = selectedMatches[0];
+  const message = [
+    "Axiom Realty AI sign-in code",
+    `${code} is your WhatsApp verification code.`,
+    `It expires in ${Math.max(1, CLIENT_WHATSAPP_OTP_MINUTES)} minutes.`,
+    selectedLead ? `Request: ${selectedLead.label}${selectedLead.area ? ` | ${selectedLead.area}` : ""}` : ""
+  ].filter(Boolean).join("\n");
+  const delivery = await sendWhatsAppText(message, { force: true, to: cellphone });
+
+  return res.json({
+    ok: true,
+    challengeId: challenge.id,
+    expiresAt: challenge.expiresAt,
+    delivery,
+    lead: selectedLead || null,
+    ...(process.env.NODE_ENV === "production" ? {} : { debugCode: code })
+  });
+});
+
+app.post("/api/client-auth/verify-whatsapp-otp", rateLimit({ windowMs: 60000, max: 30 }), (req, res) => {
+  const challengeId = sanitizeShortText(req.body?.challengeId, 120);
+  const code = sanitizeShortText(req.body?.code, 20).replace(/[^\d]/g, "");
+  if (!challengeId || !code) return res.status(400).json({ ok: false, error: "Challenge ID and code are required" });
+
+  pruneClientWhatsappOtpChallenges();
+  const challenge = getClientWhatsappOtpChallenge(challengeId);
+  if (!challenge) return res.status(404).json({ ok: false, error: "Verification code challenge not found or expired" });
+  if (challenge.usedAt) return res.status(410).json({ ok: false, error: "This verification code has already been used" });
+  if (new Date(challenge.expiresAt).getTime() <= Date.now()) {
+    return res.status(410).json({ ok: false, error: "This verification code has expired. Please request a new one." });
+  }
+  if (Number(challenge.attempts || 0) >= Number(challenge.maxAttempts || Math.max(1, CLIENT_WHATSAPP_OTP_MAX_ATTEMPTS))) {
+    return res.status(429).json({ ok: false, error: "Too many incorrect attempts. Please request a new code." });
+  }
+
+  challenge.attempts = Number(challenge.attempts || 0) + 1;
+  if (!verifyPin(code, challenge.codeHash)) {
+    return res.status(401).json({ ok: false, error: "The verification code is incorrect" });
+  }
+
+  challenge.usedAt = new Date().toISOString();
+  const leads = challenge.leadIds
+    .map((id) => leadSessions.get(id))
+    .filter(Boolean)
+    .filter(isLiveLeadSession)
+    .map((session) => summarizeLeadSessionForClient(session, challenge.cellphone));
+  const token = randomBytes(32).toString("hex");
+  const session = {
+    token,
+    cellphone: challenge.cellphone,
+    leadIds: leads.map((item) => item.id),
+    role: challenge.role || leads[0]?.role || "buyer",
+    createdAt: Date.now(),
+    expiresAt: Date.now() + Math.max(1, CLIENT_PORTAL_SESSION_HOURS) * 60 * 60 * 1000
+  };
+  clientPortalSessions.set(token, session);
+  return res.json({
+    ok: true,
+    token,
+    role: session.role,
+    roleLabel: stakeholderRoleLabels[session.role] || "Client",
+    leads
+  });
+});
+
+app.get("/api/client-auth/session", requireClientPortalSession, (req, res) => {
+  const leads = (req.clientPortalSession.leadIds || [])
+    .map((id) => leadSessions.get(id))
+    .filter(Boolean)
+    .filter(isLiveLeadSession)
+    .map((session) => summarizeLeadSessionForClient(session, req.clientPortalSession.cellphone));
+  return res.json({
+    ok: true,
+    role: req.clientPortalSession.role,
+    roleLabel: stakeholderRoleLabels[req.clientPortalSession.role] || "Client",
+    cellphone: req.clientPortalSession.cellphone,
+    leads
+  });
+});
+
+app.get("/api/client-auth/lead/:id", requireClientPortalSession, (req, res) => {
+  const leadId = sanitizeShortText(req.params.id, 120);
+  if (!leadId || !(req.clientPortalSession.leadIds || []).includes(leadId)) {
+    return res.status(404).json({ ok: false, error: "This property request is not linked to your verified session" });
+  }
+  const session = leadSessions.get(leadId);
+  if (!session || !isLiveLeadSession(session)) {
+    return res.status(404).json({ ok: false, error: "This property request is no longer available" });
+  }
+  const role = summarizeLeadSessionForClient(session, req.clientPortalSession.cellphone).role;
+  return res.json({
+    ok: true,
+    lead: buildStakeholderLeadSummary(session, role)
+  });
+});
+
+app.post("/api/client-auth/logout", requireClientPortalSession, (req, res) => {
+  clientPortalSessions.delete(req.clientPortalSession.token);
+  return res.json({ ok: true });
+});
+
 app.get("/api/os/state", requireOperationsSession, (req, res) => {
   return sendVisibleOperationsStore(res, req.operationsSession);
 });
@@ -15676,6 +15929,13 @@ app.get("/api/app-status", (_req, res) => {
     version: APP_VERSION,
     build: APP_BUILD_LABEL,
     environment: process.env.RENDER ? "render" : "local",
+    auth: {
+      clientWhatsappOtp: {
+        enabled: true,
+        expiresMinutes: Math.max(1, CLIENT_WHATSAPP_OTP_MINUTES),
+        sessionHours: Math.max(1, CLIENT_PORTAL_SESSION_HOURS)
+      }
+    },
     diagnostics,
     checkedAt: new Date().toISOString()
   });

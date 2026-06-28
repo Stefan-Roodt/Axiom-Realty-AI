@@ -17,7 +17,12 @@
     whatsappInboxAppointments: (caseId) => `/api/whatsapp/inbox/${encodeURIComponent(caseId)}/appointments`,
     whatsappAppointmentAction: (appointmentId) => `/api/whatsapp/inbox/appointments/${encodeURIComponent(appointmentId)}/action`,
     whatsappHumanTakeover: (caseId) => `/api/whatsapp/inbox/${encodeURIComponent(caseId)}/human-takeover`,
-    whatsappDocumentDownload: (documentId) => `/api/whatsapp/inbox/documents/${encodeURIComponent(documentId)}/download`
+    whatsappDocumentDownload: (documentId) => `/api/whatsapp/inbox/documents/${encodeURIComponent(documentId)}/download`,
+    clientWhatsappOtpRequest: () => "/api/client-auth/request-whatsapp-otp",
+    clientWhatsappOtpVerify: () => "/api/client-auth/verify-whatsapp-otp",
+    clientSession: () => "/api/client-auth/session",
+    clientLeadDetail: (leadId) => `/api/client-auth/lead/${encodeURIComponent(leadId)}`,
+    clientLogout: () => "/api/client-auth/logout"
   };
 
   window.AxiomCommunications = Object.freeze({ routes });

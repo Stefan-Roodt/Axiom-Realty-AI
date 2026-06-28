@@ -112,8 +112,6 @@ const operationsTabs = [...document.querySelectorAll("[data-operations-tab]")];
 const operationsTabPanels = [...document.querySelectorAll("[data-operations-panel]")];
 const operationsRoleSelect = document.getElementById("operationsRole");
 const operationsRoleHint = document.getElementById("operationsRoleHint");
-const operationsMoreToggle = document.getElementById("operationsMoreToggle");
-const operationsMoreMenu = document.getElementById("operationsMoreMenu");
 const adminGate = document.getElementById("adminGate");
 const adminPassword = document.getElementById("adminPassword");
 const adminMessage = document.getElementById("adminMessage");
@@ -153,6 +151,21 @@ const commissionRegisterBody = document.getElementById("commissionRegisterBody")
 const transferRegisterBody = document.getElementById("transferRegisterBody");
 const expertApplicationForm = document.getElementById("expertApplicationForm");
 const expertApplicationMessage = document.getElementById("expertApplicationMessage");
+const clientAccessRequestForm = document.getElementById("clientAccessRequestForm");
+const clientAccessCellphone = document.getElementById("clientAccessCellphone");
+const clientAccessLeadLabel = document.getElementById("clientAccessLeadLabel");
+const clientAccessLeadSelect = document.getElementById("clientAccessLeadSelect");
+const clientAccessRequestButton = document.getElementById("clientAccessRequestButton");
+const clientAccessVerifyForm = document.getElementById("clientAccessVerifyForm");
+const clientAccessCode = document.getElementById("clientAccessCode");
+const clientAccessVerifyButton = document.getElementById("clientAccessVerifyButton");
+const clientAccessResetButton = document.getElementById("clientAccessResetButton");
+const clientAccessStatus = document.getElementById("clientAccessStatus");
+const clientAccessResult = document.getElementById("clientAccessResult");
+const clientAccessResultTitle = document.getElementById("clientAccessResultTitle");
+const clientAccessLeads = document.getElementById("clientAccessLeads");
+const clientAccessDetail = document.getElementById("clientAccessDetail");
+const clientAccessLogoutButton = document.getElementById("clientAccessLogoutButton");
 
 let activeIntent = "buy";
 let activeSessionId = "";
@@ -165,6 +178,13 @@ let activeRegisterFilter = "all";
 let leadAssistRequestId = 0;
 let latestLeadQueueSnapshot = [];
 let whatsappInboxState = { cases: [], selectedCaseId: "" };
+let clientPortalToken = sessionStorage.getItem("axiomClientPortalToken") || "";
+let clientPortalChallengeId = "";
+let clientPortalLeadOptions = [];
+let clientPortalSessionLeads = [];
+let clientPortalRoleLabel = "Client";
+let clientPortalActiveLeadId = "";
+const clientPortalLeadCache = new Map();
 const urlParams = new URLSearchParams(window.location.search);
 const staticMode = window.location.protocol === "file:" || urlParams.get("static") === "1";
 if (staticMode && !adminToken) {
@@ -727,6 +747,204 @@ async function refreshAppStatus() {
   }
 }
 
+function setClientAccessStatus(message = "", tone = "") {
+  if (!clientAccessStatus) return;
+  clientAccessStatus.textContent = message;
+  clientAccessStatus.classList.toggle("hidden", !message);
+  clientAccessStatus.classList.toggle("error", tone === "error");
+  clientAccessStatus.classList.toggle("success", tone === "success");
+}
+
+function resetClientAccessFlow({ preserveCellphone = true } = {}) {
+  clientPortalChallengeId = "";
+  clientPortalLeadOptions = [];
+  clientPortalSessionLeads = [];
+  clientPortalRoleLabel = "Client";
+  clientPortalActiveLeadId = "";
+  clientPortalLeadCache.clear();
+  if (!preserveCellphone && clientAccessCellphone) clientAccessCellphone.value = "";
+  if (clientAccessLeadLabel) clientAccessLeadLabel.classList.add("hidden");
+  if (clientAccessLeadSelect) clientAccessLeadSelect.innerHTML = "";
+  if (clientAccessVerifyForm) clientAccessVerifyForm.classList.add("hidden");
+  if (clientAccessCode) clientAccessCode.value = "";
+  if (clientAccessResult) clientAccessResult.classList.add("hidden");
+  if (clientAccessLeads) clientAccessLeads.innerHTML = "";
+  if (clientAccessDetail) {
+    clientAccessDetail.innerHTML = "";
+    clientAccessDetail.classList.add("hidden");
+  }
+  setClientAccessStatus("");
+}
+
+function formatClientPortalDate(value, fallback = "Not updated yet") {
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed.toLocaleString();
+}
+
+function renderClientPortalLeads(leads = [], roleLabel = "Client", activeLeadId = "") {
+  if (!clientAccessResult || !clientAccessLeads || !clientAccessResultTitle) return;
+  clientAccessResultTitle.textContent = `${roleLabel} access ready`;
+  clientAccessLeads.innerHTML = leads.length
+    ? leads
+        .map(
+          (lead) => `
+            <button class="client-access-lead ${lead.id === activeLeadId ? "active" : ""}" type="button" data-client-lead="${esc(lead.id)}">
+              <strong>${esc(lead.label || "Property request")}</strong>
+              <span>${esc([lead.roleLabel, lead.area, lead.province].filter(Boolean).join(" | "))}</span>
+              <small>${esc(lead.snapshot || "Your request is now linked to this verified session.")}</small>
+            </button>
+          `
+        )
+        .join("")
+    : `<article class="client-access-lead"><strong>No live requests found</strong><small>We could verify the number, but there are no current Axiom requests linked to it.</small></article>`;
+  clientAccessResult.classList.remove("hidden");
+}
+
+function renderClientPortalLeadDetail(detail) {
+  if (!clientAccessDetail) return;
+  const lead = detail?.lead || {};
+  const brief = lead.portalBrief || {};
+  const lifecycle = lead.lifecycle || {};
+  const timeline = lead.transactionTimeline || {};
+  const caseFile = lead.caseFile || {};
+  const missingDocs = Array.isArray(lead.missingLeadDocuments) ? lead.missingLeadDocuments : [];
+  const uploadedDocs = Array.isArray(lead.leadDocuments) ? lead.leadDocuments : [];
+  const updates = Array.isArray(lead.stageUpdateNotifications) ? lead.stageUpdateNotifications.slice(0, 4) : [];
+  const nextMilestone = timeline.nextMilestone || null;
+  const currentMilestone = timeline.currentMilestone || null;
+  const assignedContact = lead.assignedAgent || lead.agentContact || {};
+  const specialistText =
+    [assignedContact.phone || assignedContact.agentPhone, assignedContact.agency || assignedContact.agentAgency]
+      .filter(Boolean)
+      .join(" | ") || "A specialist will be confirmed as the file advances.";
+
+  clientAccessDetail.innerHTML = `
+    <div class="client-access-detail-hero">
+      <h4>${esc(lead.label || "Your property request")}</h4>
+      <p>${esc(brief.nextAction || "Your concierge is keeping this matter moving.")}</p>
+      <div class="client-access-detail-meta">
+        <span class="client-access-pill">${esc(brief.status || "Active")}</span>
+        <span class="client-access-pill">${esc(lifecycle.label || caseFile.stageLabel || "In progress")}</span>
+        <span class="client-access-pill">${esc(lead.lead?.area || "Area pending")}${lead.lead?.province ? ` | ${esc(lead.lead.province)}` : ""}</span>
+      </div>
+    </div>
+    <div class="client-access-metrics">
+      <article class="client-access-metric">
+        <span>Progress</span>
+        <strong>${esc(`${timeline.progress || 0}%`)}</strong>
+        <small>${esc(`${timeline.completedCount || 0} of ${timeline.totalCount || 0} milestones complete`)}</small>
+      </article>
+      <article class="client-access-metric">
+        <span>Current step</span>
+        <strong>${esc(currentMilestone?.label || caseFile.stageLabel || "Brief received")}</strong>
+        <small>${esc(currentMilestone?.owner || caseFile.owner || "Axiom Concierge")}</small>
+      </article>
+      <article class="client-access-metric">
+        <span>Next step</span>
+        <strong>${esc(nextMilestone?.label || caseFile.nextMilestone || "Concierge follow-up")}</strong>
+        <small>${esc(nextMilestone?.owner || "Axiom team")}</small>
+      </article>
+    </div>
+    <section class="client-access-section">
+      <h5>What happens next</h5>
+      <p>${esc(brief.focus || "We keep your file current and route the next action to the right person.")}</p>
+      <small>Last update: ${esc(formatClientPortalDate(caseFile.updatedAt || lifecycle.updatedAt || lead.updatedAt))}</small>
+    </section>
+    <section class="client-access-section">
+      <h5>Documents</h5>
+      <div class="client-access-bullet-list">
+        <div>
+          <strong>${missingDocs.length ? "Still needed" : "Document pack on track"}</strong>
+          <small>${esc(missingDocs.length ? missingDocs.join(", ") : "No currently required documents are missing.")}</small>
+        </div>
+        <div>
+          <strong>Already received</strong>
+          <small>${esc(uploadedDocs.length ? uploadedDocs.map((item) => item.originalName || item.category || "Document").join(", ") : "Nothing has been uploaded yet.")}</small>
+        </div>
+      </div>
+    </section>
+    <section class="client-access-section">
+      <h5>Your specialist</h5>
+      <div class="client-access-bullet-list">
+        <div>
+          <strong>${esc(assignedContact.name || assignedContact.agentName || "Axiom Concierge")}</strong>
+          <small>${esc(specialistText)}</small>
+        </div>
+      </div>
+    </section>
+    <section class="client-access-section">
+      <h5>Recent updates</h5>
+      <div class="client-access-bullet-list">
+        ${
+          updates.length
+            ? updates
+                .map(
+                  (item) => `
+                    <div>
+                      <strong>${esc(item.label || "Progress update")}</strong>
+                      <small>${esc(item.note || item.source || "Your file was updated.")}${item.sentAt ? ` | ${esc(formatClientPortalDate(item.sentAt, ""))}` : ""}</small>
+                    </div>
+                  `
+                )
+                .join("")
+            : `<div><strong>No recent broadcast yet</strong><small>Your concierge will add updates here as the case moves.</small></div>`
+        }
+      </div>
+    </section>
+  `;
+  clientAccessDetail.classList.remove("hidden");
+}
+
+async function loadClientPortalLeadDetail(leadId, { quiet = false } = {}) {
+  if (!leadId || !clientPortalToken) return false;
+  if (clientPortalLeadCache.has(leadId)) {
+    clientPortalActiveLeadId = leadId;
+    renderClientPortalLeadDetail(clientPortalLeadCache.get(leadId));
+    return true;
+  }
+  try {
+    const data = await apiClient.getJson(whatsappRoutes.clientLeadDetail(leadId), {
+      headers: { Authorization: `Bearer ${clientPortalToken}` }
+    });
+    clientPortalLeadCache.set(leadId, data);
+    clientPortalActiveLeadId = leadId;
+    renderClientPortalLeadDetail(data);
+    return true;
+  } catch (error) {
+    if (!quiet) setClientAccessStatus(error?.message || "We could not load this property request right now.", "error");
+    return false;
+  }
+}
+
+async function refreshClientPortalSession() {
+  if (!clientPortalToken) return false;
+  try {
+    const data = await apiClient.getJson(whatsappRoutes.clientSession(), {
+      headers: { Authorization: `Bearer ${clientPortalToken}` }
+    });
+    clientPortalRoleLabel = data?.roleLabel || "Client";
+    clientPortalSessionLeads = Array.isArray(data?.leads) ? data.leads : [];
+    const selectedLeadId =
+      clientPortalActiveLeadId && clientPortalSessionLeads.some((lead) => lead.id === clientPortalActiveLeadId)
+        ? clientPortalActiveLeadId
+        : clientPortalSessionLeads[0]?.id || "";
+    renderClientPortalLeads(clientPortalSessionLeads, clientPortalRoleLabel, selectedLeadId);
+    if (selectedLeadId) await loadClientPortalLeadDetail(selectedLeadId, { quiet: true });
+    else if (clientAccessDetail) {
+      clientAccessDetail.innerHTML = "";
+      clientAccessDetail.classList.add("hidden");
+    }
+    if (clientAccessVerifyForm) clientAccessVerifyForm.classList.add("hidden");
+    setClientAccessStatus("Your WhatsApp sign-in is active on this browser.", "success");
+    return true;
+  } catch {
+    clientPortalToken = "";
+    sessionStorage.removeItem("axiomClientPortalToken");
+    return false;
+  }
+}
+
 async function refreshSystemStatus() {
   if (!adminToken || !systemHealthStrip) return;
   try {
@@ -777,28 +995,6 @@ function getDefaultOperationsTab(role = operationsRole) {
   return getOperationsRoleProfile(role).defaultTab || "inbox";
 }
 
-function syncMoreMenuVisibility(allowedTabs) {
-  if (!operationsMoreToggle || !operationsMoreMenu) return;
-  const advancedButtons = [...operationsMoreMenu.querySelectorAll("[data-operations-tab]")];
-  let anyAdvancedVisible = false;
-
-  for (const button of advancedButtons) {
-    const tab = button.getAttribute("data-operations-tab");
-    const allowed = allowedTabs.has(tab);
-    const shouldHide = !allowed;
-    button.hidden = shouldHide;
-    button.setAttribute("aria-hidden", String(shouldHide));
-    button.setAttribute("tabindex", shouldHide ? "-1" : "0");
-    if (!shouldHide) anyAdvancedVisible = true;
-  }
-
-  operationsMoreToggle.hidden = !anyAdvancedVisible;
-  if (!anyAdvancedVisible) {
-    operationsMoreMenu.hidden = true;
-    operationsMoreToggle.setAttribute("aria-expanded", "false");
-  }
-}
-
 function syncOperationsRoleFromUrl(roleFromUrl = null) {
   if (!roleFromUrl) return operationsRole;
   const normalized = normalizeOperationsRole(roleFromUrl);
@@ -828,7 +1024,6 @@ function applyOperationsRoleSettings() {
     button.setAttribute("aria-hidden", String(!allowed));
     button.setAttribute("tabindex", allowed ? "0" : "-1");
   });
-  syncMoreMenuVisibility(allowedTabs);
 
   operationsTabPanels.forEach((panel) => {
     const panelId = panel.getAttribute("data-operations-panel");
@@ -966,30 +1161,6 @@ if (operationsRoleSelect) {
   operationsRoleSelect.addEventListener("change", refreshOperationsRole);
 }
 
-if (operationsMoreToggle && operationsMoreMenu) {
-  operationsMoreToggle.addEventListener("click", () => {
-    const expanded = operationsMoreMenu.hidden;
-    operationsMoreMenu.hidden = !expanded;
-    operationsMoreToggle.setAttribute("aria-expanded", String(!expanded));
-  });
-
-  document.addEventListener("click", (event) => {
-    const target = event.target;
-    if (
-      !operationsMoreToggle ||
-      !operationsMoreMenu ||
-      target.closest("#operationsMoreToggle") ||
-      target.closest("#operationsMoreMenu")
-    ) {
-      return;
-    }
-    if (!operationsMoreMenu.hidden) {
-      operationsMoreMenu.hidden = true;
-      operationsMoreToggle.setAttribute("aria-expanded", "false");
-    }
-  });
-}
-
 function setOperationsTab(name = "inbox") {
   const selectedTab = coerceRoleRestrictedTab(name);
   operationsTabs.forEach((button) => {
@@ -1012,9 +1183,6 @@ function setOperationsTab(name = "inbox") {
   if (selectedTab === "progress" && isAdminUnlocked()) {
     refreshOperationsSuite({ progress: true });
   }
-
-  if (operationsMoreMenu) operationsMoreMenu.hidden = true;
-  if (operationsMoreToggle) operationsMoreToggle.setAttribute("aria-expanded", "false");
 }
 
 operationsTabs.forEach((button) => {
@@ -6466,6 +6634,133 @@ if (conciergeForm) {
   });
 }
 
+if (clientAccessRequestForm) {
+  clientAccessRequestForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const cellphone = (clientAccessCellphone?.value || "").trim();
+    const leadId = clientAccessLeadLabel?.classList.contains("hidden") ? "" : clientAccessLeadSelect?.value || "";
+    if (!cellphone) {
+      setClientAccessStatus("Enter the WhatsApp number linked to your property request.", "error");
+      return;
+    }
+    if (clientAccessRequestButton) {
+      clientAccessRequestButton.disabled = true;
+      clientAccessRequestButton.textContent = "Sending...";
+    }
+    try {
+      const data = await apiClient.postJson(whatsappRoutes.clientWhatsappOtpRequest(), {
+        cellphone,
+        leadId
+      });
+      clientPortalChallengeId = data.challengeId || "";
+      if (clientAccessVerifyForm) clientAccessVerifyForm.classList.remove("hidden");
+      if (clientAccessLeadLabel) clientAccessLeadLabel.classList.add("hidden");
+      if (clientAccessCode) clientAccessCode.focus();
+      setClientAccessStatus("Your WhatsApp verification code is on its way. Enter it below to continue.", "success");
+    } catch (error) {
+      if (error?.status === 409 && Array.isArray(error?.data?.leads) && clientAccessLeadSelect && clientAccessLeadLabel) {
+        clientPortalLeadOptions = error.data.leads;
+        clientAccessLeadSelect.innerHTML = error.data.leads
+          .map(
+            (lead) =>
+              `<option value="${esc(lead.id)}">${esc([lead.label, lead.area, lead.province].filter(Boolean).join(" | "))}</option>`
+          )
+          .join("");
+        clientAccessLeadLabel.classList.remove("hidden");
+        setClientAccessStatus("We found more than one live request for this number. Choose the right one, then send the code again.", "error");
+      } else {
+        setClientAccessStatus(error?.message || "We could not send a WhatsApp code right now.", "error");
+      }
+    } finally {
+      if (clientAccessRequestButton) {
+        clientAccessRequestButton.disabled = false;
+        clientAccessRequestButton.textContent = "Send WhatsApp code";
+      }
+    }
+  });
+}
+
+if (clientAccessVerifyForm) {
+  clientAccessVerifyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const code = (clientAccessCode?.value || "").trim();
+    if (!clientPortalChallengeId) {
+      setClientAccessStatus("Request a WhatsApp code first.", "error");
+      return;
+    }
+    if (!code) {
+      setClientAccessStatus("Enter the 6-digit code from WhatsApp.", "error");
+      return;
+    }
+    if (clientAccessVerifyButton) {
+      clientAccessVerifyButton.disabled = true;
+      clientAccessVerifyButton.textContent = "Verifying...";
+    }
+    try {
+      const data = await apiClient.postJson(whatsappRoutes.clientWhatsappOtpVerify(), {
+        challengeId: clientPortalChallengeId,
+        code
+      });
+      clientPortalToken = data.token || "";
+      sessionStorage.setItem("axiomClientPortalToken", clientPortalToken);
+      clientPortalRoleLabel = data?.roleLabel || "Client";
+      clientPortalSessionLeads = Array.isArray(data?.leads) ? data.leads : [];
+      clientPortalLeadCache.clear();
+      clientPortalActiveLeadId = clientPortalSessionLeads[0]?.id || "";
+      renderClientPortalLeads(clientPortalSessionLeads, clientPortalRoleLabel, clientPortalActiveLeadId);
+      if (clientPortalActiveLeadId) await loadClientPortalLeadDetail(clientPortalActiveLeadId, { quiet: true });
+      setClientAccessStatus("Verified. Your request dashboard is ready below.", "success");
+      if (clientAccessVerifyForm) clientAccessVerifyForm.classList.add("hidden");
+    } catch (error) {
+      setClientAccessStatus(error?.message || "The verification code could not be confirmed.", "error");
+    } finally {
+      if (clientAccessVerifyButton) {
+        clientAccessVerifyButton.disabled = false;
+        clientAccessVerifyButton.textContent = "Verify code";
+      }
+    }
+  });
+}
+
+if (clientAccessResetButton) {
+  clientAccessResetButton.addEventListener("click", () => {
+    resetClientAccessFlow({ preserveCellphone: true });
+  });
+}
+
+if (clientAccessLeads) {
+  clientAccessLeads.addEventListener("click", async (event) => {
+    const trigger = event.target.closest("[data-client-lead]");
+    if (!trigger) return;
+    const leadId = trigger.getAttribute("data-client-lead") || "";
+    if (!leadId) return;
+    clientPortalActiveLeadId = leadId;
+    renderClientPortalLeads(clientPortalSessionLeads, clientPortalRoleLabel, leadId);
+    await loadClientPortalLeadDetail(leadId);
+  });
+}
+
+if (clientAccessLogoutButton) {
+  clientAccessLogoutButton.addEventListener("click", async () => {
+    const token = clientPortalToken;
+    clientPortalToken = "";
+    sessionStorage.removeItem("axiomClientPortalToken");
+    resetClientAccessFlow({ preserveCellphone: true });
+    try {
+      if (token) {
+        await apiClient.postJson(
+          whatsappRoutes.clientLogout(),
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+    } catch {
+      // best-effort logout only
+    }
+    setClientAccessStatus("You have signed out of the client access flow on this browser.", "success");
+  });
+}
+
 const year = document.getElementById("year");
 if (year) {
   year.textContent = new Date().getFullYear();
@@ -6473,6 +6768,7 @@ if (year) {
 
 checkLocalServerHealth();
 refreshAppStatus();
+refreshClientPortalSession();
 setInterval(checkLocalServerHealth, 10000);
 
 if (adminToken) {

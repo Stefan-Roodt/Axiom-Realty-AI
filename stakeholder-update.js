@@ -756,7 +756,7 @@ function renderLead(data) {
 
 async function loadLead() {
   if (!token) {
-    setStatus("This shared link is missing its secure token. Request a new link from concierge.", true);
+    setStatus("This page needs the secure case link sent by Axiom. Ask the concierge to resend it if needed.", true);
     return;
   }
   try {

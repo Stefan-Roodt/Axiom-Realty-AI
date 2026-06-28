@@ -119,7 +119,7 @@ function renderLead(lead, options, acknowledgementText) {
 
 async function loadLead() {
   if (!token) {
-    setStatus("This agent update link is missing its secure token. Please ask the concierge for a fresh link.", true);
+    setStatus("This page needs the secure lead link sent by Axiom. Ask the concierge to resend it if needed.", true);
     return;
   }
 
