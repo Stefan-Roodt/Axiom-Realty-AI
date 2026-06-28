@@ -41,16 +41,44 @@ jobs:
             });
             const chunks = [];
             const commentIds = [];
+            const partGroups = new Map();
             let expectedTotal = null;
             for (const comment of comments) {
-              const match = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
-              if (!match) continue;
-              const index = Number(match[1]);
-              const total = Number(match[2]);
+              const full = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
+              if (full) {
+                const index = Number(full[1]);
+                const total = Number(full[2]);
+                expectedTotal = expectedTotal || total;
+                if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
+                chunks[index - 1] = full[3].replace(/\s+/g, '');
+                commentIds[index - 1] = comment.id;
+                continue;
+              }
+              const part = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_SUBCHUNK\s+(\d+)\/(\d+)\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
+              if (!part) continue;
+              const chunkIndex = Number(part[1]);
+              const total = Number(part[2]);
+              const partIndex = Number(part[3]);
+              const partTotal = Number(part[4]);
               expectedTotal = expectedTotal || total;
-              if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
-              chunks[index - 1] = match[3].replace(/\s+/g, '');
-              commentIds[index - 1] = comment.id;
+              if (total !== expectedTotal) throw new Error(`Subchunk total mismatch: ${total} !== ${expectedTotal}`);
+              const key = String(chunkIndex);
+              if (!partGroups.has(key)) partGroups.set(key, { total: partTotal, parts: [], ids: [] });
+              const group = partGroups.get(key);
+              if (group.total !== partTotal) throw new Error(`Subchunk part total mismatch for chunk ${chunkIndex}`);
+              group.parts[partIndex - 1] = part[5].replace(/\s+/g, '');
+              group.ids[partIndex - 1] = comment.id;
+            }
+            for (const [key, group] of partGroups) {
+              const missingParts = [];
+              for (let i = 0; i < group.total; i += 1) {
+                if (!group.parts[i]) missingParts.push(i + 1);
+              }
+              if (missingParts.length) throw new Error(`Missing subchunk part(s) for chunk ${key}: ${missingParts.join(', ')}`);
+              const index = Number(key);
+              chunks[index - 1] = group.parts.join('');
+              commentIds[index - 1] = `subchunks ${group.ids.join(',')}`;
+              core.info(`Overrode chunk ${index} from ${group.total} subchunks.`);
             }
             if (!expectedTotal) throw new Error('No compressed patch chunks found.');
             const missing = [];
@@ -59,13 +87,13 @@ jobs:
             }
             if (missing.length) throw new Error(`Missing patch chunk(s): ${missing.join(', ')}`);
             const expectedLengths = Array.from({ length: expectedTotal }, (_, i) => i === expectedTotal - 1 ? 1280 : 6000);
-            const lengthReport = chunks.map((chunk, i) => `${i + 1}=${chunk.length} (comment ${commentIds[i]})`).join(', ');
+            const lengthReport = chunks.map((chunk, i) => `${i + 1}=${chunk.length} (${commentIds[i]})`).join(', ');
             core.info(`Chunk lengths: ${lengthReport}`);
             const wrongLengths = chunks
-              .map((chunk, i) => ({ index: i + 1, actual: chunk.length, expected: expectedLengths[i], commentId: commentIds[i] }))
+              .map((chunk, i) => ({ index: i + 1, actual: chunk.length, expected: expectedLengths[i], source: commentIds[i] }))
               .filter(item => item.actual !== item.expected);
             if (wrongLengths.length) {
-              throw new Error(`Bad chunk length(s): ${wrongLengths.map(item => `${item.index} expected ${item.expected} got ${item.actual} comment ${item.commentId}`).join('; ')}`);
+              throw new Error(`Bad chunk length(s): ${wrongLengths.map(item => `${item.index} expected ${item.expected} got ${item.actual} source ${item.source}`).join('; ')}`);
             }
             const compressedText = chunks.join('');
             core.info(`Rebuilt ${expectedTotal} chunks (${compressedText.length} base64 chars).`);
