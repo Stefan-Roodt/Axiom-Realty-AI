@@ -79,8 +79,8 @@ jobs:
 
       - name: Apply patch
         run: |
-          git apply --check deploy-live.patch
-          git apply deploy-live.patch
+          git apply --3way --check deploy-live.patch
+          git apply --3way deploy-live.patch
           rm deploy-live.patch
 
       - name: Install production dependencies
