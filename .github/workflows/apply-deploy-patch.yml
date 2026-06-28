@@ -40,6 +40,7 @@ jobs:
               per_page: 100
             });
             const chunks = [];
+            const commentIds = [];
             let expectedTotal = null;
             for (const comment of comments) {
               const match = comment.body.match(/AXIOM_DEPLOY_PATCH_GZ_CHUNK\s+(\d+)\/(\d+)\s*\n```base64\n([\s\S]*?)\n```/);
@@ -49,6 +50,7 @@ jobs:
               expectedTotal = expectedTotal || total;
               if (total !== expectedTotal) throw new Error(`Chunk total mismatch: ${total} !== ${expectedTotal}`);
               chunks[index - 1] = match[3].replace(/\s+/g, '');
+              commentIds[index - 1] = comment.id;
             }
             if (!expectedTotal) throw new Error('No compressed patch chunks found.');
             const missing = [];
@@ -56,6 +58,15 @@ jobs:
               if (!chunks[i]) missing.push(i + 1);
             }
             if (missing.length) throw new Error(`Missing patch chunk(s): ${missing.join(', ')}`);
+            const expectedLengths = Array.from({ length: expectedTotal }, (_, i) => i === expectedTotal - 1 ? 1280 : 6000);
+            const lengthReport = chunks.map((chunk, i) => `${i + 1}=${chunk.length} (comment ${commentIds[i]})`).join(', ');
+            core.info(`Chunk lengths: ${lengthReport}`);
+            const wrongLengths = chunks
+              .map((chunk, i) => ({ index: i + 1, actual: chunk.length, expected: expectedLengths[i], commentId: commentIds[i] }))
+              .filter(item => item.actual !== item.expected);
+            if (wrongLengths.length) {
+              throw new Error(`Bad chunk length(s): ${wrongLengths.map(item => `${item.index} expected ${item.expected} got ${item.actual} comment ${item.commentId}`).join('; ')}`);
+            }
             const compressedText = chunks.join('');
             core.info(`Rebuilt ${expectedTotal} chunks (${compressedText.length} base64 chars).`);
             const compressed = Buffer.from(compressedText, 'base64');
