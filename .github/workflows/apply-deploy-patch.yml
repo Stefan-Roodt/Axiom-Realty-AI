@@ -23,7 +23,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Rebuild clean patch from issue comments
+      - name: Rebuild V4 patch from issue comments
         uses: actions/github-script@v7
         with:
           script: |
@@ -32,10 +32,10 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue_number = context.payload.issue?.number || 1;
-            const marker = 'AXIOM_DEPLOY_PATCH_V2_CHUNK';
-            const expectedBase64Length = 74244;
-            const expectedPatchBytes = 238169;
-            core.info(`Reading clean deployment chunks from issue #${issue_number}.`);
+            const marker = 'AXIOM_DEPLOY_PATCH_V4_CHUNK';
+            const expectedBase64Length = 76112;
+            const expectedPatchBytes = 243017;
+            core.info(`Reading V4 deployment chunks from issue #${issue_number}.`);
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -60,7 +60,7 @@ jobs:
             for (let i = 0; i < expectedTotal; i += 1) {
               if (!chunks[i]) missing.push(i + 1);
             }
-            if (missing.length) throw new Error(`Missing clean patch chunk(s): ${missing.join(', ')}`);
+            if (missing.length) throw new Error(`Missing V4 patch chunk(s): ${missing.join(', ')}`);
             const bad = chunks
               .map((chunk, i) => ({ index: i + 1, length: chunk.length, id: ids[i] }))
               .filter(item => item.index < expectedTotal && item.length !== 6000);
@@ -68,19 +68,19 @@ jobs:
             const compressedText = chunks.join('');
             core.info(`Chunk lengths: ${chunks.map((chunk, i) => `${i + 1}=${chunk.length}`).join(', ')}`);
             if (compressedText.length !== expectedBase64Length) {
-              throw new Error(`Clean payload length mismatch: expected ${expectedBase64Length}, got ${compressedText.length}`);
+              throw new Error(`V4 payload length mismatch: expected ${expectedBase64Length}, got ${compressedText.length}`);
             }
             const patch = zlib.gunzipSync(Buffer.from(compressedText, 'base64'));
             if (patch.length !== expectedPatchBytes) {
               throw new Error(`Patch byte length mismatch: expected ${expectedPatchBytes}, got ${patch.length}`);
             }
             fs.writeFileSync('deploy-live.patch', patch);
-            core.info(`Wrote clean deploy-live.patch (${patch.length} bytes).`);
+            core.info(`Wrote V4 deploy-live.patch (${patch.length} bytes).`);
 
       - name: Apply patch
         run: |
-          git apply --3way --check deploy-live.patch
-          git apply --3way deploy-live.patch
+          git apply --check deploy-live.patch
+          git apply deploy-live.patch
           rm deploy-live.patch
 
       - name: Install production dependencies
