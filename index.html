@@ -16,65 +16,69 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="homepage-hero.css" />
+    <link rel="stylesheet" href="route-header.css" />
   </head>
   <body>
     <div class="server-status-banner hidden" id="serverStatusBanner" role="status">
       Local server is offline. Reopen START-DEVELOPING.cmd, then refresh this page.
     </div>
-    <header class="hero" id="top">
-      <div class="mesh" aria-hidden="true"></div>
-      <nav class="nav wrapper">
+    <div class="site-header">
+      <nav class="nav wrapper" aria-label="Primary">
         <a class="brand" href="#top">
           <img src="assets-logo.svg" alt="Axiom Realty AI" />
+          <span class="brand-text">Property Concierge</span>
         </a>
         <div class="nav-links">
-          <a class="admin-nav-link" href="sellers.html">For Sellers</a>
-          <a class="admin-nav-link" href="buyers.html">For Buyers</a>
-          <a class="admin-nav-link" href="agents.html">For Agents</a>
-          <a class="admin-nav-link" href="?admin=1#admin">Mission Control</a>
+          <a class="admin-nav-link primary-route-link" href="sellers.html">Sell</a>
+          <a class="admin-nav-link" href="buyers.html">Buy</a>
+          <a class="admin-nav-link" href="agents.html">Agents</a>
+          <a class="nav-utility-link" href="?admin=1#admin">Team login</a>
         </div>
       </nav>
+    </div>
+    <header class="hero" id="top">
+      <div class="mesh" aria-hidden="true"></div>
 
       <div class="hero-content wrapper">
         <div class="copy">
           <div class="hero-badge-row" aria-label="Axiom homepage focus">
-            <span class="hero-badge hero-badge-primary">Seller-led start</span>
-            <span class="hero-badge">Built for South African property handoffs</span>
+            <span class="hero-badge hero-badge-primary">Property owners start here</span>
+            <span class="hero-badge">Buyers and agents have their own separate routes</span>
           </div>
           <p class="eyebrow">Axiom Realty AI</p>
-          <h1>Sell smarter from the very first brief.</h1>
+          <h1>Sell your property with a cleaner first step.</h1>
           <p class="subtext">
-            Axiom is built to help sellers begin with the right specialist, the right context, and a calmer handoff. Buyers and estate agents still get their own clear routes, but the system starts where most real journeys start: with the seller.
+            This homepage is built for property owners who want to sell. Buyers and estate agents continue on their own pages, so each conversation starts in the right place.
           </p>
           <div class="hero-proof-grid" aria-label="Quick reassurance">
-            <span><strong>Sharper</strong> selling brief</span>
-            <span><strong>Better-fit</strong> specialist match</span>
-            <span><strong>Visible</strong> follow-through</span>
+            <span><strong>Sellers</strong> Start with the right selling brief</span>
+            <span><strong>Buyers</strong> Move into a separate buying route</span>
+            <span><strong>Agents</strong> Work from a dedicated agent page</span>
           </div>
 
           <div class="cta-group">
-            <a class="btn btn-primary" href="sellers.html">I Want to Sell</a>
-            <a class="btn btn-secondary" href="buyers.html">I Want to Buy</a>
-            <a class="btn btn-secondary" href="agents.html">I Am an Agent</a>
+            <a class="btn btn-primary" href="sellers.html">Sell a Property</a>
+            <a class="btn btn-secondary" href="buyers.html">Buy a Property</a>
+            <a class="btn btn-secondary" href="agents.html">Estate Agents</a>
           </div>
 
-          <p class="promise-text">Most owners start here. Buyers and agents have dedicated routes below.</p>
+          <p class="promise-text">No mixed messages. Start in the route that matches your role.</p>
         </div>
 
         <div class="hero-visual">
           <img src="ai-hero.svg" alt="AI real estate skyline visualization" />
           <div class="hero-floating-card" aria-label="Seller brief focus">
-            <span>Seller brief focus</span>
-            <strong>Area fit, timing, price reality, and handoff readiness.</strong>
-            <small>Enough context for a proper first introduction, not another vague lead.</small>
+            <span>Owner route</span>
+            <strong>Your property, your area, your timing, your price reality.</strong>
+            <small>Enough structure for a serious first introduction instead of a vague handoff and a scramble.</small>
           </div>
           <div class="hero-signal-panel" aria-label="Concierge workflow preview">
-            <span>Seller launch sequence</span>
+            <span>How it works</span>
             <div class="hero-flow" aria-hidden="true">
               <b>1</b><i></i><b>2</b><i></i><b>3</b>
             </div>
             <strong>Brief right. Match right. Keep momentum.</strong>
-            <small>The brief, the specialist fit, and the next action stay tied together instead of drifting across calls and chats.</small>
+            <small>The brief, the right specialist, and the next step stay together instead of drifting across calls and chats.</small>
           </div>
         </div>
       </div>
@@ -112,31 +116,31 @@
       <section class="section wrapper" id="routes">
         <div class="section-heading">
           <p class="eyebrow">Choose Your Route</p>
-          <h2>Each part of the property journey has its own front door.</h2>
+          <h2>Not everyone should start on the same page.</h2>
           <p>
-            The homepage should not make you guess. Pick the route that fits you and we take you into the right page, language, and next steps.
+            Sellers, buyers, and estate agents each need a different first conversation. Axiom separates those routes so the brief starts cleaner and the follow-through stays calmer.
           </p>
         </div>
         <div class="customer-paths">
           <article class="customer-path-card seller">
-            <span>For Sellers</span>
-            <h2>Find the right selling specialist.</h2>
+            <span>Sell a Property</span>
+            <h2>You own a property and want to sell it.</h2>
             <p>
-              Start with your property, your area, your timing, and your goals. We help package the brief properly before the handoff.
+              Start with the property, the area, the timing, and the selling goals. We help package the brief properly before the handoff.
             </p>
             <a class="btn btn-primary" href="sellers.html">Open seller page</a>
           </article>
           <article class="customer-path-card buyer">
-            <span>For Buyers</span>
-            <h2>Start with a cleaner buying brief.</h2>
+            <span>Buy a Property</span>
+            <h2>You want to buy and need a cleaner start.</h2>
             <p>
               Share your area, budget, timing, and must-haves once so the next conversation starts with context instead of confusion.
             </p>
             <a class="btn btn-primary" href="buyers.html">Open buyer page</a>
           </article>
           <article class="customer-path-card agent">
-            <span>For Estate Agents</span>
-            <h2>Keep the admin thread under control.</h2>
+            <span>Estate Agents</span>
+            <h2>You are handling the deal and the admin follow-through.</h2>
             <p>
               Axiom helps agents work from cleaner briefs, visible follow-through, and one organised case rhythm across every live matter.
             </p>
@@ -630,7 +634,7 @@
         <button id="conciergeClose" class="concierge-close" aria-label="Close concierge">×</button>
       </div>
       <div class="concierge-messages" id="conciergeMessages">
-        <p class="bot-msg">Hi, I am your AI property concierge. Tell me what you need to buy or sell, and I will help capture the basics quickly.</p>
+        <p class="bot-msg">Hi, I am your AI property concierge. Tell me whether you want to sell, buy, or coordinate a property matter, and I will help capture the basics quickly.</p>
       </div>
       <form id="conciergeForm" class="concierge-form">
         <input
