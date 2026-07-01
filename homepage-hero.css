@@ -1,0 +1,121 @@
+.hero-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.38rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(7, 15, 31, 0.46);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.hero-badge-primary {
+  border-color: rgba(34, 211, 238, 0.38);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(34, 197, 94, 0.12));
+  color: #dffcff;
+}
+
+.hero-floating-card {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: min(260px, calc(100% - 2rem));
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.9rem 0.95rem;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.16);
+  background: rgba(5, 12, 26, 0.8);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 40px rgba(3, 8, 20, 0.38);
+}
+
+.hero-floating-card span,
+.hero-floating-card strong,
+.hero-floating-card small {
+  margin: 0;
+}
+
+.hero-floating-card span {
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-floating-card strong {
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.hero-floating-card small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.customer-paths {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.customer-path-card.buyer {
+  background:
+    linear-gradient(135deg, rgba(8, 18, 36, 0.9), rgba(9, 38, 59, 0.82)),
+    radial-gradient(circle at 100% 0, rgba(34, 211, 238, 0.18), transparent 36%);
+}
+
+.customer-path-card.agent {
+  background:
+    linear-gradient(135deg, rgba(8, 18, 36, 0.9), rgba(32, 30, 54, 0.82)),
+    radial-gradient(circle at 100% 0, rgba(244, 114, 182, 0.16), transparent 36%);
+}
+
+@media (max-width: 860px) {
+  .hero-floating-card {
+    position: static;
+    width: 100%;
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .nav {
+    flex-wrap: nowrap;
+  }
+
+  .nav-links {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .nav .admin-nav-link {
+    width: auto;
+    padding-inline: 1rem;
+  }
+
+  .hero-badge-row {
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-badge {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  .nav .admin-nav-link {
+    font-size: 0.92rem;
+    padding-inline: 0.85rem;
+  }
+}
