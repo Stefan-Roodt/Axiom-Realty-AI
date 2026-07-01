@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Axiom Realty AI | For Sellers</title>
+    <title>Axiom Realty AI | Sell a Property</title>
     <meta
       name="description"
       content="Axiom Realty AI helps sellers package the right property brief, find the right specialist, and keep the selling process organised from the first step."
@@ -15,27 +15,31 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="route-header.css" />
   </head>
   <body>
-    <header class="hero concierge-page-hero" id="top">
-      <div class="mesh" aria-hidden="true"></div>
-      <nav class="nav wrapper">
+    <div class="site-header">
+      <nav class="nav wrapper" aria-label="Primary">
         <a class="brand" href="index.html">
           <img src="assets-logo.svg" alt="Axiom Realty AI" />
+          <span class="brand-text">Property Concierge</span>
         </a>
         <div class="nav-links">
-          <a class="admin-nav-link" href="index.html">Home</a>
-          <a class="admin-nav-link" href="sellers.html">For Sellers</a>
-          <a class="admin-nav-link" href="agents.html">For Agents</a>
+          <a class="admin-nav-link primary-route-link" href="index.html">Home</a>
+          <a class="admin-nav-link" href="buyers.html">Buy</a>
+          <a class="admin-nav-link" href="agents.html">Agents</a>
         </div>
       </nav>
+    </div>
+    <header class="hero concierge-page-hero" id="top">
+      <div class="mesh" aria-hidden="true"></div>
 
       <div class="hero-content wrapper concierge-hero-grid">
         <div class="copy concierge-hero-copy">
-          <p class="eyebrow">For Sellers</p>
-          <h1>Get the right selling specialist, not just the nearest agent with a phone.</h1>
+          <p class="eyebrow">Sell a Property</p>
+          <h1>You own a property and want to sell it properly.</h1>
           <p class="subtext">
-            Axiom helps sellers capture the brief properly: area, property type, timing, pricing expectations, and what matters about the property from the start.
+            This page is for property owners. Axiom helps capture the right context from the beginning: the property, the area, the likely buyer type, your timing, and what matters most about the sale.
           </p>
           <div class="hero-proof-grid concierge-proof-grid" aria-label="Seller proof points">
             <span><strong>Cleaner</strong> seller brief</span>
@@ -43,10 +47,11 @@
             <span><strong>Less</strong> repetition</span>
           </div>
           <div class="cta-group">
-            <a class="btn btn-primary" href="index.html">Start seller brief</a>
+            <a class="btn btn-primary" href="index.html?intent=sell">Open seller brief</a>
             <a class="btn btn-secondary" href="#seller-process">See seller process</a>
           </div>
-          <p class="promise-text">Built to help you start well, not wander around guessing who to call.</p>
+          <p class="small-note">The live intake opens in our shared concierge with the seller route already selected.</p>
+          <p class="promise-text">If you are the owner and you want to sell, you are in the right place.</p>
         </div>
 
         <div class="hero-visual concierge-visual">
@@ -57,7 +62,7 @@
               <b>1</b><i></i><b>2</b><i></i><b>3</b>
             </div>
             <strong>Brief. Match. Progress.</strong>
-            <small>Tell us once, then the right selling expert picks up with context.</small>
+            <small>Tell us once, then the right selling specialist picks up with proper context.</small>
           </div>
         </div>
       </div>
@@ -92,7 +97,7 @@
       <section class="section wrapper" id="seller-process">
         <div class="section-heading product-heading">
           <p class="eyebrow">Why Sellers Use It</p>
-          <h2>Because starting with the wrong fit wastes time and weakens confidence.</h2>
+          <h2>Because the first selling conversation sets the tone for everything after it.</h2>
           <p>
             Sellers usually need more than a name and number. They need a specialist who fits the area, the property, the likely buyer pool, and the expected pace of the sale.
           </p>
@@ -114,6 +119,40 @@
             <strong>Human review</strong>
             <p>A real person still reviews the handoff. This supports good judgement instead of replacing it.</p>
           </article>
+        </div>
+      </section>
+
+      <section class="section accent">
+        <div class="wrapper">
+          <div class="section-heading product-heading">
+            <p class="eyebrow">What Sellers Tell Us Upfront</p>
+            <h2>The details that make the match stronger.</h2>
+            <p>
+              We are not trying to turn the seller into admin staff. We simply capture the basics properly so the next person starts in the right place.
+            </p>
+          </div>
+          <div class="concierge-feature-grid">
+            <article class="concierge-feature-card">
+              <span>01</span>
+              <strong>Property and area</strong>
+              <p>What the property is, where it is, and what makes that location matter.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>02</span>
+              <strong>Timing and urgency</strong>
+              <p>Whether you are testing the waters, preparing, or ready to move quickly.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>03</span>
+              <strong>Price expectations</strong>
+              <p>Not to trap you, but to make the first strategic conversation more grounded.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>04</span>
+              <strong>Special context</strong>
+              <p>Tenant issues, upgrades, estate rules, unique features, or anything that changes the handoff.</p>
+            </article>
+          </div>
         </div>
       </section>
     </main>
