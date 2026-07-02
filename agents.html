@@ -16,6 +16,277 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="route-header.css" />
+    <style>
+      .agent-hero-stage {
+        position: relative;
+        min-height: 520px;
+        padding: 1.2rem;
+        border-radius: 22px;
+        border: 1px solid rgba(34, 211, 238, 0.28);
+        background:
+          radial-gradient(circle at 18% 22%, rgba(34, 211, 238, 0.3), transparent 34%),
+          radial-gradient(circle at 82% 24%, rgba(167, 139, 250, 0.26), transparent 38%),
+          linear-gradient(145deg, rgba(8, 19, 38, 0.96), rgba(10, 17, 34, 0.92));
+        box-shadow: 0 24px 60px rgba(3, 8, 20, 0.45);
+        overflow: hidden;
+      }
+
+      .agent-hero-stage::before,
+      .agent-hero-stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .agent-hero-stage::before {
+        background-image:
+          linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+        background-size: 34px 34px;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.95), transparent 92%);
+      }
+
+      .agent-hero-stage::after {
+        background:
+          linear-gradient(120deg, transparent 0 22%, rgba(34, 211, 238, 0.18) 22.5%, transparent 23.2%),
+          linear-gradient(120deg, transparent 0 57%, rgba(167, 139, 250, 0.14) 57.4%, transparent 58.1%),
+          linear-gradient(120deg, transparent 0 77%, rgba(34, 211, 238, 0.12) 77.3%, transparent 78%);
+        opacity: 0.8;
+      }
+
+      .agent-hero-topline,
+      .agent-hero-board,
+      .agent-hero-footer {
+        position: relative;
+        z-index: 1;
+      }
+
+      .agent-hero-topline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+      }
+
+      .agent-hero-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 34px;
+        padding: 0.42rem 0.78rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(7, 15, 31, 0.62);
+        color: #dbeafe;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .agent-hero-pill strong {
+        color: #67e8f9;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .agent-hero-board {
+        display: grid;
+        grid-template-columns: 1.15fr 0.95fr;
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      .agent-hero-panel {
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 18px;
+        background: rgba(8, 16, 31, 0.72);
+        backdrop-filter: blur(12px);
+      }
+
+      .agent-hero-case {
+        display: grid;
+        gap: 0.95rem;
+        padding: 1rem;
+      }
+
+      .agent-hero-casehead {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .agent-hero-label {
+        color: rgba(34, 211, 238, 0.92);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .agent-hero-casehead strong,
+      .agent-hero-progress strong,
+      .agent-hero-party-card strong,
+      .agent-hero-stat strong {
+        color: #f8fafc;
+      }
+
+      .agent-hero-casehead small,
+      .agent-hero-progress small,
+      .agent-hero-party-card small,
+      .agent-hero-stat span {
+        color: #9fb0c8;
+      }
+
+      .agent-hero-badge {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(34, 211, 238, 0.16);
+        border: 1px solid rgba(34, 211, 238, 0.26);
+        color: #cffafe;
+        font-size: 0.74rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .agent-hero-progress {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .agent-hero-track {
+        position: relative;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.95);
+        overflow: hidden;
+      }
+
+      .agent-hero-track::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: 72%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.92), rgba(167, 139, 250, 0.92));
+      }
+
+      .agent-hero-checkpoints {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.55rem;
+      }
+
+      .agent-hero-step {
+        padding: 0.72rem 0.75rem;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(10, 20, 40, 0.56);
+      }
+
+      .agent-hero-step span {
+        display: block;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.28rem;
+      }
+
+      .agent-hero-step strong {
+        display: block;
+        font-size: 0.92rem;
+        margin-bottom: 0.22rem;
+      }
+
+      .agent-hero-step small {
+        display: block;
+        line-height: 1.35;
+      }
+
+      .agent-hero-side {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .agent-hero-parties {
+        display: grid;
+        gap: 0.7rem;
+        padding: 1rem;
+      }
+
+      .agent-hero-party-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+
+      .agent-hero-party-card {
+        min-height: 106px;
+        padding: 0.8rem;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(10, 20, 40, 0.58);
+      }
+
+      .agent-hero-party-card span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.86);
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 0.55rem;
+      }
+
+      .agent-hero-party-card strong,
+      .agent-hero-party-card small {
+        display: block;
+      }
+
+      .agent-hero-footer {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+
+      .agent-hero-stat {
+        padding: 0.82rem 0.9rem;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(7, 15, 31, 0.72);
+      }
+
+      .agent-hero-stat strong {
+        display: block;
+        font-size: 1.18rem;
+        margin-bottom: 0.18rem;
+      }
+
+      @media (max-width: 980px) {
+        .agent-hero-board,
+        .agent-hero-footer,
+        .agent-hero-checkpoints,
+        .agent-hero-party-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .agent-hero-stage {
+          min-height: auto;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="site-header">
@@ -55,14 +326,96 @@
         </div>
 
         <div class="hero-visual concierge-visual">
-          <img src="ai-hero.svg" alt="Axiom agent operations visual" />
-          <div class="hero-signal-panel concierge-signal-panel" aria-label="Agent workflow">
-            <span>Operating rhythm</span>
-            <div class="hero-flow" aria-hidden="true">
-              <b>1</b><i></i><b>2</b><i></i><b>3</b>
+          <div class="agent-hero-stage" aria-label="24/7 transaction concierge preview">
+            <div class="agent-hero-topline">
+              <div class="agent-hero-pill"><strong>Live</strong> Buyer confirmed</div>
+              <div class="agent-hero-pill"><strong>Docs</strong> FICA complete</div>
+              <div class="agent-hero-pill"><strong>Risk</strong> No missed update</div>
             </div>
-            <strong>Capture. Coordinate. Close.</strong>
-            <small>Every message, reminder, and proof trail tied back to the right case.</small>
+
+            <div class="agent-hero-board">
+              <section class="agent-hero-panel agent-hero-case">
+                <div class="agent-hero-casehead">
+                  <div>
+                    <span class="agent-hero-label">Transaction View</span>
+                    <strong>Claremont sale - R3.85m</strong>
+                    <small>Every party sees the same live story.</small>
+                  </div>
+                  <div class="agent-hero-badge">On track</div>
+                </div>
+
+                <div class="agent-hero-progress">
+                  <strong>Shared progress line</strong>
+                  <div class="agent-hero-track" aria-hidden="true"></div>
+                </div>
+
+                <div class="agent-hero-checkpoints">
+                  <article class="agent-hero-step">
+                    <span>01</span>
+                    <strong>Accepted</strong>
+                    <small>Lead received and specialist assigned.</small>
+                  </article>
+                  <article class="agent-hero-step">
+                    <span>02</span>
+                    <strong>Offer</strong>
+                    <small>Buyer, seller, and agent aligned.</small>
+                  </article>
+                  <article class="agent-hero-step">
+                    <span>03</span>
+                    <strong>Conveyancing</strong>
+                    <small>Attorney and bond updates visible.</small>
+                  </article>
+                  <article class="agent-hero-step">
+                    <span>04</span>
+                    <strong>Transfer</strong>
+                    <small>Registration rhythm stays visible.</small>
+                  </article>
+                </div>
+              </section>
+
+              <div class="agent-hero-side">
+                <section class="agent-hero-panel agent-hero-parties">
+                  <span class="agent-hero-label">24/7 Stakeholder View</span>
+                  <div class="agent-hero-party-grid">
+                    <article class="agent-hero-party-card">
+                      <span>Buyer</span>
+                      <strong>Finance clear</strong>
+                      <small>Sees next milestone and pending docs.</small>
+                    </article>
+                    <article class="agent-hero-party-card">
+                      <span>Seller</span>
+                      <strong>Progress visible</strong>
+                      <small>Knows where the matter sits right now.</small>
+                    </article>
+                    <article class="agent-hero-party-card">
+                      <span>Attorney</span>
+                      <strong>Requirements tracked</strong>
+                      <small>No chasing through scattered messages.</small>
+                    </article>
+                    <article class="agent-hero-party-card">
+                      <span>Bond</span>
+                      <strong>Status shared</strong>
+                      <small>Everyone works from the same update trail.</small>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div class="agent-hero-footer">
+              <article class="agent-hero-stat">
+                <strong>24/7</strong>
+                <span>concierge visibility for all parties</span>
+              </article>
+              <article class="agent-hero-stat">
+                <strong>1 file</strong>
+                <span>messages, docs, updates, milestones</span>
+              </article>
+              <article class="agent-hero-stat">
+                <strong>0 drift</strong>
+                <span>clear next action before the matter stalls</span>
+              </article>
+            </div>
           </div>
         </div>
       </div>
