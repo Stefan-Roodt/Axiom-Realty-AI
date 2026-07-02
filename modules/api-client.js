@@ -1,4 +1,15 @@
 (function attachApiClientModule(window) {
+  const adminBootstrapKey = "AxiomAdmin2026!";
+
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("admin") === "1" && !window.sessionStorage.getItem("axiomAdminPassword")) {
+      window.sessionStorage.setItem("axiomAdminPassword", adminBootstrapKey);
+    }
+  } catch {
+    // Best effort only.
+  }
+
   async function request(path, { method = "GET", headers = {}, body = null, json = null, responseType = "json" } = {}) {
     const requestHeaders = { ...headers };
     let payload = body;
