@@ -117,8 +117,8 @@
   const operationsRoleProfiles = {
     admin: {
       label: "Admin overview",
-      defaultTab: "inbox",
-      allowedTabs: ["inbox", "progress", "followups", "risk", "sprint", "metrics", "registers", "whatsapp"],
+      defaultTab: "overview",
+      allowedTabs: ["overview", "inbox", "progress", "followups", "risk", "sprint", "metrics", "registers", "whatsapp"],
       refreshTargets: { analytics: true, risk: true, followups: true, daily: true, assist: true, registers: true, whatsapp: true, progress: true }
     },
     agent: {
@@ -128,7 +128,13 @@
       refreshTargets: { analytics: true, risk: true, followups: true, daily: true, assist: true }
     },
     buyer: {
-      label: "Client progress portal",
+      label: "Buyer portal",
+      defaultTab: "progress",
+      allowedTabs: ["progress"],
+      refreshTargets: { progress: true }
+    },
+    seller: {
+      label: "Seller portal",
       defaultTab: "progress",
       allowedTabs: ["progress"],
       refreshTargets: { progress: true }
