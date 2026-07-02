@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Axiom Realty AI | Property Concierge</title>
+    <title>Axiom Realty AI | Seller Agent Matching</title>
     <meta
       name="description"
-      content="Axiom Realty AI helps sellers explain the property properly from the start, while buyers and agents use their own separate routes."
+      content="Axiom Realty AI helps property sellers choose a suitable local agent before they commit, with human-reviewed matching and no spam."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,66 +15,53 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="homepage-hero.css" />
-    <link rel="stylesheet" href="route-header.css" />
   </head>
   <body>
     <div class="server-status-banner hidden" id="serverStatusBanner" role="status">
       Local server is offline. Reopen START-DEVELOPING.cmd, then refresh this page.
     </div>
-    <div class="site-header">
-      <nav class="nav wrapper" aria-label="Primary">
-        <a class="brand" href="#top">
-          <img src="assets-logo.svg" alt="Axiom Realty AI" />
-          <span class="brand-text">Property Concierge</span>
-        </a>
-        <div class="nav-links">
-          <a class="admin-nav-link primary-route-link" href="sellers.html">Sell</a>
-          <a class="admin-nav-link" href="buyers.html">Buy</a>
-          <a class="admin-nav-link" href="agents.html">Agents</a>
-          <a class="nav-utility-link" href="?admin=1#admin">Mission Control</a>
-        </div>
-      </nav>
-    </div>
     <header class="hero" id="top">
       <div class="mesh" aria-hidden="true"></div>
+      <nav class="nav wrapper">
+        <a class="brand" href="#top">
+          <img src="assets-logo.svg" alt="Axiom Realty AI" />
+        </a>
+        <div class="nav-links">
+          <a class="admin-nav-link" href="concierge.html">Axiom Concierge</a>
+          <a class="admin-nav-link" href="?admin=1#admin">Mission Control</a>
+        </div>
+      </nav>
 
       <div class="hero-content wrapper">
         <div class="copy">
-          <p class="eyebrow">Axiom Realty AI</p>
-          <h1>Selling your property? Start here.</h1>
+          <p class="eyebrow">Independent Agent Matching</p>
+          <h1>Selling your property? Choose the right agent first.</h1>
           <p class="subtext">
-            Tell us what you are selling, where it is, and when you want to move. We use that to get you to the right agent without wasting the first conversation. Buyers and agents use their own pages.
+            Tell us about your property once. Axiom reviews the brief and introduces you to a suitable local specialist before you commit.
           </p>
           <div class="hero-proof-grid" aria-label="Quick reassurance">
-            <span><strong>Property</strong> What you are selling</span>
-            <span><strong>Area</strong> Where it is</span>
-            <span><strong>Timing</strong> How soon you want to move</span>
+            <span><strong>0</strong> Obligation</span>
+            <span><strong>1x</strong> Seller brief</span>
+            <span><strong>Human</strong> Reviewed</span>
           </div>
 
           <div class="cta-group">
-            <button class="btn btn-primary hero-choice" type="button" data-intent="sell">Sell a Property</button>
-            <button class="btn btn-secondary hero-choice" type="button" data-intent="buy">Buy a Property</button>
-            <a class="btn btn-secondary" href="#expertApplicationForm">Estate Agents</a>
+            <button class="btn btn-primary hero-choice" data-intent="sell">Match me with an agent</button>
+            <button class="btn btn-secondary hero-choice" data-intent="buy">I’m buying</button>
           </div>
 
-          <p class="promise-text">No waffle. Just a proper start.</p>
+          <p class="promise-text">Seller-first. No spam. Human-reviewed.</p>
         </div>
 
         <div class="hero-visual">
           <img src="ai-hero.svg" alt="AI real estate skyline visualization" />
-          <div class="hero-floating-card" aria-label="Seller brief focus">
-            <span>Owner route</span>
-            <strong>Your property, your area, your timing, your price reality.</strong>
-            <small>Enough structure for a proper first call.</small>
-          </div>
           <div class="hero-signal-panel" aria-label="Concierge workflow preview">
-            <span>How it works</span>
+            <span>Next step</span>
             <div class="hero-flow" aria-hidden="true">
               <b>1</b><i></i><b>2</b><i></i><b>3</b>
             </div>
-            <strong>Property. Area. Timing.</strong>
-            <small>The next conversation starts with facts, not a messy backstory.</small>
+            <strong>Brief. Review. Introduce.</strong>
+            <small>A suitable specialist gets the context before calling.</small>
           </div>
         </div>
       </div>
@@ -109,71 +96,86 @@
         <p class="trust-guarantee">Your details are safe. You’ll hear from a qualified specialist — no spam.</p>
       </section>
 
-      <section class="section wrapper" id="routes">
-        <div class="section-heading">
-          <p class="eyebrow">Choose Your Route</p>
-          <h2>Not everyone should start on the same page.</h2>
-          <p>
-            Sellers, buyers, and estate agents need different first conversations. Axiom separates those routes so the start is cleaner and the next step is clearer.
-          </p>
-        </div>
-        <div class="customer-paths">
-          <article class="customer-path-card seller">
-            <span>Sell a Property</span>
-            <h2>You own a property and want to sell it.</h2>
-            <p>
-              Start with the property, the area, the timing, and the selling goals. We package that properly before the first agent call.
-            </p>
-            <a class="btn btn-primary" href="sellers.html">Open seller page</a>
-          </article>
-          <article class="customer-path-card buyer">
-            <span>Buy a Property</span>
-            <h2>You want to buy.</h2>
-            <p>
-              Share your area, budget, timing, and must-haves once so the next conversation starts with context instead of confusion.
-            </p>
-            <a class="btn btn-primary" href="buyers.html">Open buyer page</a>
-          </article>
-          <article class="customer-path-card agent">
-            <span>Estate Agents</span>
-            <h2>You are handling the client, the deal, and the admin.</h2>
-            <p>
-              Axiom helps agents work from cleaner briefs, clearer updates, and one organised case rhythm across every live matter.
-            </p>
-            <a class="btn btn-primary" href="agents.html">Open agent page</a>
-          </article>
+      <section class="section wrapper">
+        <div class="concise-steps-shell">
+          <div class="concise-steps-layout" aria-label="How Axiom works">
+            <article class="concise-step-card">
+              <span>01</span>
+              <div>
+                <strong>One brief. No repetition.</strong>
+                <p>Tell us what you need, where it is, and what timing matters.</p>
+              </div>
+            </article>
+            <article class="concise-step-card">
+              <span>02</span>
+              <div>
+                <strong>We filter before we connect.</strong>
+                <p>Axiom shapes the essentials so the wrong agents do not waste your time.</p>
+              </div>
+            </article>
+            <article class="concise-step-card">
+              <span>03</span>
+              <div>
+                <strong>Better-fit specialist. Faster start.</strong>
+                <p>The agent who follows up already understands the property, area, and brief.</p>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
-      <p class="next-step-message hidden wrapper" id="nextStepMessage"></p>
+      <section class="section accent">
+        <div class="wrapper split">
+          <div>
+            <p class="eyebrow">For Sellers</p>
+            <h2>Before you sign, choose carefully.</h2>
+            <p>
+              We help you find a suitable property professional for your area, property type and timeline.
+              Instead of guessing who to call, start with a human-reviewed match.
+            </p>
+            <button class="btn btn-primary" data-intent="sell">Find the right agent</button>
+          </div>
+          <div class="orb-wrap">
+            <img src="ai-orb.svg" alt="AI neural signal orb" />
+          </div>
+          <div>
+            <p class="eyebrow">For Buyers</p>
+            <h2>Looking to buy?</h2>
+            <p>
+              Tell us what you are looking for once. Axiom prepares your buyer brief and routes it to a
+              property specialist who understands your area, budget, and timing.
+            </p>
+            <button class="btn btn-secondary" data-intent="buy">Share my buyer brief</button>
+          </div>
+        </div>
+      </section>
 
       <section class="section wrapper" id="property-experts">
         <div class="section-heading">
-          <p class="eyebrow">After The First Contact</p>
-          <h2>What happens once the brief is in.</h2>
+          <p class="eyebrow">For Estate Agents</p>
+          <h2>Lead introductions plus a WhatsApp concierge operating system.</h2>
           <p>
-            Once the right person comes in through the right route, Axiom keeps the brief, the documents, and the next action visible.
+            Axiom introduces qualified seller and buyer opportunities, and gives agents a WhatsApp-based estate
+            agency concierge operating system for follow-up, documents, reminders, case notes, and client updates.
           </p>
         </div>
         <div class="agent-benefit-panel">
           <div>
-            <p class="eyebrow">For Agents And Support Teams</p>
-            <h3>Less chasing. Fewer dropped details.</h3>
+            <p class="eyebrow">Axiom Agent Concierge</p>
+            <h3>Cleaner opportunities. Better follow-up. Less admin.</h3>
             <p>
-              The system keeps the buyer or seller brief, WhatsApp follow-up, documents, notes, deadlines, and next actions in one place so the matter does not drift.
+              Use Axiom for protected new introductions, or as a WhatsApp-based concierge system that helps keep
+              your active deals moving while you focus on clients and closings.
             </p>
           </div>
           <ul>
-            <li>Buyer and seller briefs ready before first contact</li>
-            <li>Clear referral proof when it matters</li>
-            <li>Documents and requirements tracked in one place</li>
-            <li>Messages, notes, and updates kept with the case</li>
+            <li>Qualified seller and buyer briefs before first contact</li>
+            <li>WhatsApp-based follow-up, reminders, and client updates</li>
+            <li>Document intake and requirement tracking for each case</li>
+            <li>Voice notes, messages, and notes saved back to the file</li>
+            <li>Concierge operating system for your own active pipeline</li>
           </ul>
-          <div class="cta-group">
-            <a class="btn btn-secondary" href="buyers.html">Open buyer page</a>
-            <a class="btn btn-secondary" href="agents.html">Open agent page</a>
-            <a class="btn btn-secondary" href="#expertApplicationForm">Apply as a property expert</a>
-          </div>
+          <a class="btn btn-secondary" href="concierge.html">Explore Axiom Concierge</a>
         </div>
         <form class="card expert-form" id="expertApplicationForm">
           <div class="expert-form-grid">
@@ -210,11 +212,12 @@
               </select>
             </label>
             <label>
-              Are you open to referral partnerships?
+              Interested in lead introductions or the concierge system?
               <select name="referralPartnership" required>
                 <option value="">Select</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
+                <option value="Lead introductions">Lead introductions</option>
+                <option value="WhatsApp concierge system">WhatsApp concierge system</option>
+                <option value="Both">Both</option>
                 <option value="Open to discuss">Open to discuss</option>
               </select>
             </label>
@@ -223,7 +226,7 @@
             Notes
             <textarea name="notes" rows="4" placeholder="Tell us about your focus areas, responsiveness, and ideal referrals"></textarea>
           </label>
-          <button class="btn btn-primary large" type="submit">Apply to partner with us</button>
+          <button class="btn btn-primary large" type="submit">Enquire as an agent</button>
           <p class="next-step-message hidden" id="expertApplicationMessage"></p>
         </form>
       </section>
@@ -255,6 +258,7 @@
                 <option value="admin">Admin overview</option>
                 <option value="agent">Agent operations</option>
                 <option value="buyer">Buyer portal</option>
+                <option value="seller">Seller portal</option>
               </select>
               <p class="small-note" id="operationsRoleHint">Choose the workspace layout that matches your role.</p>
             </div>
@@ -291,16 +295,86 @@
             </article>
           </div>
           <div class="operations-tabs" role="tablist" aria-label="Operations workspace tabs">
-            <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox">Lead Radar</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="progress">Progress Tracker</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Action Queue</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">Escalations</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">Momentum</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Scoreboard</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Protection Desk</button>
-            <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">Concierge Comms</button>
+            <div class="operations-tab-core">
+              <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="overview">Overview</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="inbox">Radar</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="followups">Action Queue</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="progress">My Cases</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="risk">Escalations</button>
+              <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Reports</button>
+            </div>
+            <div class="operations-more-wrap">
+              <button class="operations-more-btn location-btn" id="operationsMoreToggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="operationsMoreMenu">More</button>
+              <div class="operations-more-menu" id="operationsMoreMenu" hidden role="menu">
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="sprint">Momentum</button>
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="registers">Protection Desk</button>
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="whatsapp">Concierge Comms</button>
+                <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="metrics">Scoreboard</button>
+              </div>
+            </div>
           </div>
-          <section class="operations-tab-panel active" data-operations-panel="inbox">
+          <section class="operations-tab-panel active" data-operations-panel="overview">
+            <div class="card overview-panel">
+              <div class="overview-topline">
+                <div>
+                  <p class="eyebrow">Mission Control overview</p>
+                  <h3>Clear at-a-glance status</h3>
+                  <p class="small-note">
+                    A lighter landing screen for the admin workspace. Use this to see the shape of the day, then jump
+                    into the deeper tabs only when needed.
+                  </p>
+                </div>
+                <div class="overview-actions">
+                  <button class="location-btn ghost-action" type="button" data-open-operations-tab="inbox">Open Radar</button>
+                  <button class="location-btn ghost-action" type="button" data-open-operations-tab="followups">Open Action Queue</button>
+                  <button class="location-btn ghost-action" type="button" data-open-operations-tab="metrics">Open Reports</button>
+                </div>
+              </div>
+              <div class="overview-grid" aria-live="polite">
+                <article class="overview-card">
+                  <span>Live leads</span>
+                  <strong id="overviewTotalLeads">-</strong>
+                  <small>All captured records</small>
+                </article>
+                <article class="overview-card">
+                  <span>Hot leads</span>
+                  <strong id="overviewHotLeads">-</strong>
+                  <small>Ready for fast follow-up</small>
+                </article>
+                <article class="overview-card">
+                  <span>Open follow-ups</span>
+                  <strong id="overviewFollowUps">-</strong>
+                  <small>Needs action today</small>
+                </article>
+                <article class="overview-card">
+                  <span>Open escalations</span>
+                  <strong id="overviewEscalations">-</strong>
+                  <small>Needs attention</small>
+                </article>
+              </div>
+              <div class="overview-split">
+                <div class="overview-focus">
+                  <strong id="overviewFocus">Loading the current focus...</strong>
+                  <p id="overviewStatus" class="small-note">Checking live workspace status...</p>
+                </div>
+                <div class="overview-checklist" aria-label="Current admin priorities">
+                  <article>
+                    <strong>1. Review hot leads</strong>
+                    <p>Open Radar to see the highest-value new items first.</p>
+                  </article>
+                  <article>
+                    <strong>2. Clear follow-ups</strong>
+                    <p>Use the Action Queue for anything time-sensitive.</p>
+                  </article>
+                  <article>
+                    <strong>3. Check performance</strong>
+                    <p>Use Reports when you want the full numbers.</p>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="operations-tab-panel" data-operations-panel="inbox" hidden>
             <div class="card risk-panel inbox-panel">
               <div class="risk-topline">
                 <div>
@@ -371,10 +445,16 @@
             <div class="card risk-panel">
               <div class="risk-topline">
                 <div>
-                  <h3>Progress Tracker</h3>
-                  <p class="small-note">Track each active case from intro to completion in a buyer-ready summary.</p>
+                  <h3 id="buyerProgressTitle">Progress Tracker</h3>
+                  <p class="small-note" id="buyerProgressIntro">Track each active case from intro to completion in a buyer-ready summary.</p>
                 </div>
-                <span class="risk-badge" id="buyerProgressCount">Live cases</span>
+                <div class="deal-room-toolbar" aria-label="Deal Room controls">
+                  <div class="deal-room-view-toggle" id="dealRoomViewToggle" aria-label="Deal Room view">
+                    <button type="button" class="active" data-deal-room-view="simple">Simple</button>
+                    <button type="button" data-deal-room-view="detailed">Detailed</button>
+                  </div>
+                  <span class="risk-badge" id="buyerProgressCount">Live cases</span>
+                </div>
               </div>
               <div id="buyerProgressSummary" class="sprint-grid" aria-live="polite"></div>
               <div class="risk-command-grid" id="buyerProgressBoard"></div>
@@ -536,26 +616,33 @@
               <div class="risk-topline">
                 <div>
                   <h3>Concierge Comms</h3>
-                  <p class="small-note">Pre-launch message bridge for concierge alerts, confirmations, and agent packs.</p>
+                  <p class="small-note">WhatsApp inbox, document intake, appointment updates, and human takeover in one place.</p>
                 </div>
                 <span class="risk-badge" id="whatsappBridgeBadge">Checking</span>
               </div>
               <div class="whatsapp-bridge-grid">
-                <div>
+                <div class="whatsapp-bridge-main">
                   <p class="small-note" id="whatsappBridgeStatus">Status unavailable.</p>
-                  <div class="risk-actions left-actions">
+                  <div class="whatsapp-bridge-actions">
                     <button class="location-btn" type="button" id="startWhatsappBridge">Start / Refresh QR</button>
                     <button class="location-btn" type="button" id="sendWhatsappBridgeTest">Send Test Alert</button>
                     <button class="location-btn" type="button" id="runSmartReminders">Run Smart Reminders</button>
-                    <button class="location-btn ghost-action" type="button" id="processWhatsappQueue">Process Queue</button>
-                    <button class="location-btn ghost-action" type="button" id="logoutWhatsappBridge">Logout Test Bridge</button>
                   </div>
                   <p class="small-note" id="smartReminderStatus">Smart reminders ready.</p>
                 </div>
-                <div class="whatsapp-qr-wrap hidden" id="whatsappQrWrap">
-                  <img id="whatsappQrImage" alt="WhatsApp Web QR code" />
-                  <p class="small-note">Scan with WhatsApp: Linked devices > Link a device.</p>
-                </div>
+                <details class="whatsapp-bridge-details">
+                  <summary>More bridge controls</summary>
+                  <div class="whatsapp-bridge-details-body">
+                    <div class="whatsapp-qr-wrap hidden" id="whatsappQrWrap">
+                      <img id="whatsappQrImage" alt="WhatsApp Web QR code" />
+                      <p class="small-note">Scan with WhatsApp: Linked devices > Link a device.</p>
+                    </div>
+                    <div class="whatsapp-bridge-secondary">
+                      <button class="location-btn ghost-action" type="button" id="processWhatsappQueue">Process Queue</button>
+                      <button class="location-btn ghost-action" type="button" id="logoutWhatsappBridge">Logout Test Bridge</button>
+                    </div>
+                  </div>
+                </details>
               </div>
               <div class="whatsapp-inbox-shell">
                 <aside class="whatsapp-case-list" id="whatsappCaseList"></aside>
@@ -598,7 +685,7 @@
           <div class="customer-reassurance" aria-label="How your request is handled">
             <p><strong>No spam route.</strong> Your details are used to prepare this property brief and arrange the right follow-up.</p>
             <p><strong>Human oversight.</strong> A concierge can review urgent, unclear, or sensitive requests before specialist introduction.</p>
-            <p><strong>POPIA compliant.</strong> We do not sell your personal details.</p>
+            <p><strong>POPIA aware.</strong> We do not sell your personal details.</p>
           </div>
           <p class="submit-trust-line">Your details are only used to help with this property request.</p>
           <label class="consent-label">
@@ -629,13 +716,17 @@
         <button id="conciergeClose" class="concierge-close" aria-label="Close concierge">×</button>
       </div>
       <div class="concierge-messages" id="conciergeMessages">
-        <p class="bot-msg">Hi, I am your AI property concierge. Tell me whether you want to sell, buy, or coordinate a property matter, and I will help capture the basics quickly.</p>
+        <p class="bot-msg">Hi! I'm Axiom's AI Concierge for property. Selling first, buying also welcome. What do you need?</p>
+        <div class="concierge-quick-replies" aria-label="Choose buy or sell">
+          <button type="button" data-concierge-quick="Sell">Sell</button>
+          <button type="button" data-concierge-quick="Buy">Buy</button>
+        </div>
       </div>
       <form id="conciergeForm" class="concierge-form">
         <input
           id="conciergeInput"
           type="text"
-          placeholder="Example: I want to buy a flat in Sandton"
+          placeholder="Example: I want to sell my house in Parys"
           aria-label="Message the AI property concierge"
           autocomplete="off"
           autocapitalize="sentences"
@@ -657,23 +748,5 @@
     <script src="modules/communications.js"></script>
     <script src="modules/data-workflows.js"></script>
     <script src="script.js"></script>
-    <script>
-      (function () {
-        const params = new URLSearchParams(window.location.search);
-        const intent = (params.get("intent") || "").toLowerCase();
-        if (!["sell", "buy"].includes(intent)) return;
-
-        const openRequestedIntent = () => {
-          const trigger = document.querySelector(`.hero-choice[data-intent="${intent}"]`);
-          if (trigger) trigger.click();
-        };
-
-        if (document.readyState === "complete") {
-          setTimeout(openRequestedIntent, 0);
-        } else {
-          window.addEventListener("load", () => setTimeout(openRequestedIntent, 0), { once: true });
-        }
-      })();
-    </script>
   </body>
 </html>
