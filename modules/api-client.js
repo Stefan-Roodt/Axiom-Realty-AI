@@ -1,5 +1,5 @@
 (function attachApiClientModule(window) {
-  const adminBootstrapKey = "AxiomAdmin2026!";
+  const adminBootstrapKey = "AxiomLaunch#8421";
 
   try {
     const params = new URLSearchParams(window.location.search || "");
