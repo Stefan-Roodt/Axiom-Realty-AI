@@ -6,7 +6,7 @@
     <title>Axiom Realty AI | For Estate Agents</title>
     <meta
       name="description"
-      content="Axiom Realty AI helps estate agents look more organised, keep clients calmer, and stay in control of follow-through across live matters."
+      content="Axiom Realty AI is the AI Concierge Operating System for SA estate agents, turning leads into protected, closed deals with minimal admin."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -92,7 +92,7 @@
 
       .agent-hero-board {
         display: grid;
-        grid-template-columns: 1.15fr 0.95fr;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1rem;
         align-items: stretch;
       }
@@ -108,6 +108,7 @@
         display: grid;
         gap: 0.95rem;
         padding: 1rem;
+        min-width: 0;
       }
 
       .agent-hero-casehead {
@@ -177,7 +178,7 @@
 
       .agent-hero-checkpoints {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 0.55rem;
       }
 
@@ -186,6 +187,7 @@
         border-radius: 14px;
         border: 1px solid rgba(148, 163, 184, 0.12);
         background: rgba(10, 20, 40, 0.56);
+        min-width: 0;
       }
 
       .agent-hero-step span {
@@ -202,16 +204,19 @@
         display: block;
         font-size: 0.92rem;
         margin-bottom: 0.22rem;
+        overflow-wrap: anywhere;
       }
 
       .agent-hero-step small {
         display: block;
         line-height: 1.35;
+        overflow-wrap: anywhere;
       }
 
       .agent-hero-side {
         display: grid;
         gap: 0.9rem;
+        min-width: 0;
       }
 
       .agent-hero-parties {
@@ -222,7 +227,7 @@
 
       .agent-hero-party-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 0.7rem;
       }
 
@@ -232,6 +237,7 @@
         border-radius: 16px;
         border: 1px solid rgba(148, 163, 184, 0.14);
         background: rgba(10, 20, 40, 0.58);
+        min-width: 0;
       }
 
       .agent-hero-party-card span {
@@ -252,18 +258,19 @@
       .agent-hero-party-card strong,
       .agent-hero-party-card small {
         display: block;
+        overflow-wrap: anywhere;
       }
 
       .agent-hero-footer {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 0.75rem;
         margin-top: 1rem;
       }
 
       .agent-pricing-strip {
         display: grid;
-        grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 0.95rem;
         align-items: stretch;
         margin-top: 1rem;
@@ -327,7 +334,7 @@
 
       .agent-hero-flowchart {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 0.8rem;
         margin-top: 1rem;
       }
@@ -339,6 +346,7 @@
         border: 1px solid rgba(148, 163, 184, 0.14);
         background: rgba(9, 18, 35, 0.78);
         overflow: hidden;
+        min-width: 0;
       }
 
       .agent-hero-flow-step::before {
@@ -381,12 +389,14 @@
         color: #f8fafc;
         font-size: 0.94rem;
         margin-bottom: 0.22rem;
+        overflow-wrap: anywhere;
       }
 
       .agent-hero-flow-step small {
         display: block;
         color: #9fb0c8;
         line-height: 1.35;
+        overflow-wrap: anywhere;
       }
 
       .agent-hero-stat {
@@ -414,16 +424,18 @@
         margin-bottom: 0.2rem;
       }
 
-      @media (max-width: 980px) {
+      @media (max-width: 1180px) {
         .agent-hero-board,
-        .agent-hero-footer,
-        .agent-hero-checkpoints,
-        .agent-hero-party-grid,
-        .agent-hero-flowchart,
         .agent-pricing-strip {
           grid-template-columns: 1fr;
         }
 
+        .agent-hero-casehead {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 980px) {
         .agent-hero-stage {
           min-height: auto;
         }
@@ -455,14 +467,14 @@
       <div class="hero-content wrapper concierge-hero-grid">
         <div class="copy concierge-hero-copy">
           <p class="eyebrow">Estate Agents</p>
-          <h1>Run the whole office from one clear lead and transaction view.</h1>
+          <h1>The AI Concierge Operating System for SA Estate Agents.</h1>
           <p class="subtext">
-            Axiom is a real estate office administration solution where every estate agent has a dedicated AI bot, while one admin person or the principal agent can monitor every lead, every deal, and every stage in one place. Whether you run a one-agent business or a twenty-agent office, WhatsApp keeps the live file moving while Axiom keeps the entire pipeline visible.
+            Axiom turns leads into protected, closed deals with minimal admin. Every agent gets dedicated AI support, while one admin person or the principal can monitor every lead, every live matter, and every next step from one clear operating view.
           </p>
           <div class="hero-proof-grid concierge-proof-grid" aria-label="Agent proof points">
-            <span><strong>One view</strong> across all leads and live matters</span>
-            <span><strong>One admin</strong> can monitor the whole office</span>
-            <span><strong>Dedicated AI</strong> bot support for every agent</span>
+            <span><strong>More deals</strong> protected and moved toward close</span>
+            <span><strong>Less admin</strong> across lead intake, updates, and follow-through</span>
+            <span><strong>One system</strong> for agents, admin, and live transactions</span>
           </div>
           <div class="cta-group">
             <a class="btn btn-primary" href="#capabilities">See the workflow</a>
@@ -475,11 +487,11 @@
               <small>per agent per month</small>
             </article>
             <article class="agent-pricing-note">
-              <strong>Simple monthly pricing for agencies that want one operating view across the whole office.</strong>
-              <p>Start with one agent or roll it out across twenty as the team grows.</p>
+              <strong>Simple monthly pricing for agencies that want a lead-to-close operating system with less admin drag.</strong>
+              <p>Start with one agent or roll it out across twenty while keeping the same control layer across the office.</p>
             </article>
           </div>
-          <p class="promise-text">Built for agencies that want tighter control, clearer visibility, and a stronger client experience.</p>
+          <p class="promise-text">Built for South African agencies that want more control, faster follow-through, and fewer loose ends.</p>
         </div>
 
         <div class="hero-visual concierge-visual">
@@ -635,11 +647,11 @@
       <section class="section wrapper" id="why-axiom-agents">
         <div class="section-heading product-heading">
           <p class="eyebrow">Why Agents Pay</p>
-          <h2>Because the office wins when every lead and every stage stays visible.</h2>
+          <h2>Because the office wins when leads are protected, deals keep moving, and admin stops eating the day.</h2>
           <p>
-            Axiom gives the principal agent or admin desk a single operating view across the business: cleaner intake,
-            lead-stage monitoring, steadier follow-up, document collection, deadline visibility, stakeholder updates,
-            and human override when nuance matters.
+            Axiom gives the principal agent or admin desk one operating system across the business: cleaner intake,
+            visible lead stages, steadier follow-up, document control, deadline pressure, stakeholder updates,
+            commission protection, and human override when nuance matters.
           </p>
         </div>
         <div class="product-pain-grid">
@@ -667,6 +679,7 @@
           <div class="section-heading product-heading">
             <p class="eyebrow">What That Feels Like</p>
             <h2>The agency looks calmer, the client feels guided, and fewer details fall through the cracks.</h2>
+            <p>That includes one-tap Deal Room links agents can send to clients so progress stays visible without endless "any update?" messages.</p>
           </div>
           <div class="concierge-feature-grid">
             <article class="concierge-feature-card">
@@ -696,8 +709,8 @@
             </article>
             <article class="concierge-feature-card">
               <span>06</span>
-              <strong>Less chasing across stakeholders</strong>
-              <p>Agent, buyer, seller, attorney, and bond-originator updates can feed the file without fragmenting the story.</p>
+              <strong>One-tap client Deal Room links</strong>
+              <p>Send a clean progress view to the client in one tap so they can see stage, next steps, and movement without chasing the agent for every update.</p>
             </article>
           </div>
         </div>
@@ -707,10 +720,10 @@
         <div class="agent-benefit-panel">
           <div>
             <p class="eyebrow">Axiom fit</p>
-            <h3>Best for agencies that want one person to keep the whole operation on track.</h3>
+            <h3>Best for agencies that want one system turning live leads into protected, closed deals.</h3>
             <p>
               If you already know the cost of scattered leads, unclear stages, missing documents, weak follow-through, and memory-based admin,
-              this is where a stronger operating rhythm begins.
+              this is where a stronger operating rhythm begins with far less admin drag.
             </p>
             <div class="agent-pricing-inline">
               <span>Agency pricing</span>
@@ -721,6 +734,7 @@
           <ul>
             <li>Qualified seller and buyer briefs before first contact</li>
             <li>Referral acceptance and proof visibility</li>
+            <li>One-tap client Deal Room sharing for cleaner progress visibility</li>
             <li>Reminder, escalation and deadline chase support</li>
             <li>Case-level admin control for active matters</li>
           </ul>
