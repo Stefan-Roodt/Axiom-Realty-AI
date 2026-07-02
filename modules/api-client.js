@@ -1,5 +1,5 @@
 (function attachApiClientModule(window) {
-  const adminBootstrapKey = "AxiomLaunch#8421";
+  const legacyAdminBootstrapKey = "AxiomLaunch#8421";
   const missionControlHost = "axiom-realty-ai.onrender.com";
   const missionControlUrl = `https://${missionControlHost}/index.html?admin=1#admin`;
 
@@ -10,8 +10,8 @@
       window.location.replace(missionControlUrl);
       return;
     }
-    if (adminRouteRequested && !window.sessionStorage.getItem("axiomAdminPassword")) {
-      window.sessionStorage.setItem("axiomAdminPassword", adminBootstrapKey);
+    if (window.sessionStorage.getItem("axiomAdminPassword") === legacyAdminBootstrapKey) {
+      window.sessionStorage.removeItem("axiomAdminPassword");
     }
   } catch {
     // Best effort only.
