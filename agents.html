@@ -178,7 +178,7 @@
 
       .agent-hero-checkpoints {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.55rem;
       }
 
@@ -399,6 +399,12 @@
         overflow-wrap: anywhere;
       }
 
+      @media (min-width: 1240px) {
+        .agent-hero-checkpoints {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+
       .agent-hero-stat {
         padding: 0.82rem 0.9rem;
         border-radius: 16px;
@@ -442,6 +448,12 @@
 
         .agent-hero-flow-step::after {
           display: none;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .agent-hero-checkpoints {
+          grid-template-columns: 1fr;
         }
       }
     </style>
