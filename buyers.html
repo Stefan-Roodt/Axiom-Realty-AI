@@ -6,7 +6,7 @@
     <title>Axiom Realty AI | Buy a Property</title>
     <meta
       name="description"
-      content="Axiom Realty AI helps buyers state their budget, area, and timing clearly so the right property agent can help properly."
+      content="Axiom helps buyers move with more clarity, less admin, and better follow-through from first brief to viewing, feedback, and offer."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,6 +16,188 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="route-header.css" />
+    <style>
+      .buyer-stage-board,
+      .buyer-support-panel,
+      .buyer-outcome-panel {
+        border-radius: 24px;
+        border: 1px solid rgba(34, 211, 238, 0.14);
+        background: linear-gradient(145deg, rgba(8, 16, 31, 0.94), rgba(12, 24, 44, 0.88));
+        box-shadow: 0 24px 60px rgba(4, 10, 22, 0.34);
+      }
+
+      .buyer-stage-board {
+        padding: 1.25rem;
+      }
+
+      .buyer-stage-topline,
+      .buyer-route-strip,
+      .buyer-support-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      .buyer-stage-pill,
+      .buyer-route-pill,
+      .buyer-signal-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0.4rem 0.72rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        background: rgba(15, 23, 42, 0.78);
+        color: #dbeafe;
+        font-size: 0.78rem;
+        font-weight: 700;
+        gap: 0.42rem;
+      }
+
+      .buyer-stage-pill strong,
+      .buyer-route-pill strong,
+      .buyer-signal-pill strong {
+        color: #67e8f9;
+      }
+
+      .buyer-stage-grid,
+      .buyer-support-grid,
+      .buyer-outcome-grid {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .buyer-stage-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 1rem;
+      }
+
+      .buyer-stage-card,
+      .buyer-support-card,
+      .buyer-outcome-card {
+        padding: 1rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(10, 20, 40, 0.72);
+      }
+
+      .buyer-stage-card span,
+      .buyer-support-card span,
+      .buyer-outcome-card span,
+      .buyer-route-copy span {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: #67e8f9;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .buyer-stage-card strong,
+      .buyer-support-card strong,
+      .buyer-outcome-card strong,
+      .buyer-route-copy strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .buyer-stage-card p,
+      .buyer-support-card p,
+      .buyer-outcome-card p,
+      .buyer-route-copy p,
+      .buyer-outcome-panel li {
+        color: #9fb0c8;
+      }
+
+      .buyer-route-panel {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 18px;
+        border: 1px solid rgba(167, 139, 250, 0.18);
+        background: linear-gradient(145deg, rgba(12, 22, 42, 0.88), rgba(15, 22, 48, 0.82));
+      }
+
+      .buyer-route-flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.95rem;
+      }
+
+      .buyer-route-step {
+        min-height: 100%;
+        padding: 0.9rem 0.85rem;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(8, 16, 31, 0.72);
+      }
+
+      .buyer-route-step span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        margin-bottom: 0.55rem;
+        background: rgba(34, 211, 238, 0.16);
+        color: #67e8f9;
+        font-weight: 800;
+      }
+
+      .buyer-route-step strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .buyer-route-step small {
+        color: #9fb0c8;
+      }
+
+      .buyer-support-panel {
+        padding: 1.1rem;
+      }
+
+      .buyer-support-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 1rem;
+      }
+
+      .buyer-outcome-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: 1rem;
+        padding: 1.15rem;
+      }
+
+      .buyer-outcome-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .buyer-outcome-panel ul {
+        margin: 0;
+        padding-left: 1.1rem;
+      }
+
+      .buyer-outcome-panel li + li {
+        margin-top: 0.5rem;
+      }
+
+      @media (max-width: 980px) {
+        .buyer-stage-topline,
+        .buyer-route-strip,
+        .buyer-support-strip,
+        .buyer-stage-grid,
+        .buyer-route-flow,
+        .buyer-support-grid,
+        .buyer-outcome-panel,
+        .buyer-outcome-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="site-header">
@@ -38,31 +220,90 @@
       <div class="hero-content wrapper concierge-hero-grid">
         <div class="copy concierge-hero-copy">
           <p class="eyebrow">Buy a Property</p>
-          <h1>Tell us what you want to buy.</h1>
+          <h1>Buy with more clarity and less chasing.</h1>
           <p class="subtext">
-            Send us your budget, area, finance position, and timing. We use that to get you to the right property person without wasting the first conversation.
+            Tell Axiom your budget, area, finance position, timing, and must-haves once. From there, the right agent starts with a cleaner brief, better-fit options, and fewer wasted steps.
           </p>
           <div class="hero-proof-grid concierge-proof-grid" aria-label="Buyer proof points">
-            <span><strong>Budget</strong> What you can spend</span>
-            <span><strong>Area</strong> Where you want to buy</span>
-            <span><strong>Timing</strong> How soon you want to move</span>
+            <span><strong>Brief clear</strong> Budget, area, timing, must-haves</span>
+            <span><strong>Finance clear</strong> Cash, bond, pre-approval, next step</span>
+            <span><strong>WhatsApp guided</strong> Viewings, updates, and follow-up</span>
           </div>
           <div class="cta-group">
-            <a class="btn btn-primary" href="index.html?intent=buy">Open buyer form</a>
+            <a class="btn btn-primary" href="index.html">Start your buyer brief</a>
             <a class="btn btn-secondary" href="#buyer-process">See how it works</a>
           </div>
-          <p class="promise-text">No waffle. Just the facts an agent needs to help properly.</p>
+          <p class="promise-text">Less repetition. Better-fit properties. A calmer route from first brief to offer.</p>
         </div>
 
         <div class="hero-visual concierge-visual">
-          <img src="ai-hero.svg" alt="Axiom buyer workflow visual" />
-          <div class="hero-signal-panel concierge-signal-panel" aria-label="Buyer workflow">
-            <span>Buyer path</span>
-            <div class="hero-flow" aria-hidden="true">
-              <b>1</b><i></i><b>2</b><i></i><b>3</b>
+          <div class="buyer-stage-board" aria-label="Buyer support preview">
+            <div class="buyer-stage-topline">
+              <div>
+                <span class="eyebrow">Buyer support</span>
+                <strong>What Axiom keeps clear from the start</strong>
+              </div>
+              <div class="buyer-signal-pill"><strong>Live</strong> WhatsApp buyer concierge</div>
             </div>
-            <strong>Area. Budget. Timing.</strong>
-            <small>Give the brief once so the next call can be about real options, not guesswork.</small>
+            <div class="buyer-stage-grid">
+              <article class="buyer-stage-card">
+                <span>Brief</span>
+                <strong>Needs captured properly</strong>
+                <p>Budget, suburb, property type, must-haves, and timing are structured once.</p>
+              </article>
+              <article class="buyer-stage-card">
+                <span>Finance</span>
+                <strong>Readiness visible</strong>
+                <p>Cash, bond, pre-approval, or still preparing - the right next move is clearer early.</p>
+              </article>
+              <article class="buyer-stage-card">
+                <span>Viewings</span>
+                <strong>Coordination stays moving</strong>
+                <p>Appointments, reminders, and the next action do not get lost in message drift.</p>
+              </article>
+              <article class="buyer-stage-card">
+                <span>Progress</span>
+                <strong>Next step stays visible</strong>
+                <p>Buyer, agent, and office can stay aligned on where things sit and what happens next.</p>
+              </article>
+            </div>
+            <div class="buyer-route-panel">
+              <div class="buyer-route-strip">
+                <div class="buyer-route-copy">
+                  <span>Buyer route</span>
+                  <strong>Brief -> shortlist -> viewing -> feedback -> offer.</strong>
+                  <p>Axiom keeps the repetitive admin moving so the live conversations can be about the property and the decision.</p>
+                </div>
+                <div class="buyer-route-pill"><strong>0</strong> repeated re-briefing</div>
+              </div>
+              <div class="buyer-route-flow" aria-label="Buyer process flow">
+                <article class="buyer-route-step">
+                  <span>01</span>
+                  <strong>Brief lands</strong>
+                  <small>The buyer tells us what matters once.</small>
+                </article>
+                <article class="buyer-route-step">
+                  <span>02</span>
+                  <strong>Fit gets checked</strong>
+                  <small>The right agent starts with the right context.</small>
+                </article>
+                <article class="buyer-route-step">
+                  <span>03</span>
+                  <strong>Viewings move</strong>
+                  <small>Scheduling and reminders stay visible.</small>
+                </article>
+                <article class="buyer-route-step">
+                  <span>04</span>
+                  <strong>Feedback lands</strong>
+                  <small>Impressions are captured while they are fresh.</small>
+                </article>
+                <article class="buyer-route-step">
+                  <span>05</span>
+                  <strong>Offer readiness</strong>
+                  <small>Docs, finance, and next action are easier to line up.</small>
+                </article>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -71,7 +312,7 @@
     <main>
       <section class="wrapper trust-reassurance-panel concierge-trust-panel" aria-label="Buyer reassurance">
         <div class="trust-bar" aria-label="Buyer trust signals">
-          <span>Buyer-first briefing</span>
+          <span>WhatsApp-first buyer concierge</span>
           <span>Human-reviewed routing</span>
           <span>Built for South African property cases</span>
         </div>
@@ -79,17 +320,17 @@
           <article class="concierge-stat-card">
             <span>Clarity</span>
             <strong>Budget and finance clear</strong>
-            <p>The agent sees early whether you are cash, bond, pre-approved, or still lining things up.</p>
+            <p>The agent can see early whether you are cash, bond, pre-approved, or still lining things up, so the search stays grounded.</p>
           </article>
           <article class="concierge-stat-card">
             <span>Focus</span>
-            <strong>Area and property clear</strong>
-            <p>Your location, property type, and must-haves are clear before random listings start flying around.</p>
+            <strong>Better-fit properties sooner</strong>
+            <p>Your area, property type, and must-haves are clear before random listings start flying around.</p>
           </article>
           <article class="concierge-stat-card">
             <span>Progress</span>
             <strong>Next step clear</strong>
-            <p>The next person can move straight to the shortlist, viewing, or finance conversation.</p>
+            <p>The next person can move straight to shortlist, viewing, finance, or offer prep instead of restarting the basics.</p>
           </article>
         </div>
       </section>
@@ -97,27 +338,27 @@
       <section class="section wrapper" id="buyer-process">
         <div class="section-heading product-heading">
           <p class="eyebrow">Why Buyers Use It</p>
-          <h2>Because the wrong first call wastes time quickly.</h2>
+          <h2>Because buyers do not need more noise. They need a cleaner path.</h2>
           <p>
-            Most buyers do not need a speech. They need someone to understand budget, area, finance, and timing before sending listings or booking viewings.
+            Axiom is useful when you want the agent to understand budget, area, finance, timing, and intent before sending listings, booking viewings, or talking offers.
           </p>
         </div>
         <div class="product-pain-grid">
           <article class="product-pain-card">
-            <strong>Budget first</strong>
-            <p>We start with what you can realistically spend so the search stays grounded.</p>
+            <strong>Cleaner first brief</strong>
+            <p>You say it once properly instead of repeating yourself across every new message and call.</p>
           </article>
           <article class="product-pain-card">
-            <strong>Area first</strong>
-            <p>We capture where you want to buy and what type of property you are after before anyone starts guessing.</p>
+            <strong>Finance readiness early</strong>
+            <p>We surface whether you are ready to move, still waiting on pre-approval, or need a better next step first.</p>
           </article>
           <article class="product-pain-card">
-            <strong>Less repeating yourself</strong>
-            <p>The right specialist starts with the basics already clear instead of making you restart from zero.</p>
+            <strong>Viewings with less drift</strong>
+            <p>Coordination and reminders do not need to live only in somebody's memory or buried inside chat threads.</p>
           </article>
           <article class="product-pain-card">
-            <strong>Human check</strong>
-            <p>A real person still checks the fit so you are not pushed into the wrong lane by a form.</p>
+            <strong>Better follow-through</strong>
+            <p>Feedback, next steps, and direct agent contact can stay visible after the viewing instead of going cold.</p>
           </article>
         </div>
       </section>
@@ -125,51 +366,117 @@
       <section class="section accent">
         <div class="wrapper">
           <div class="section-heading product-heading">
-            <p class="eyebrow">Buyer Journey</p>
-            <h2>What happens after you send the brief.</h2>
+            <p class="eyebrow">What Buyers Get</p>
+            <h2>The buyer experience should feel guided, not improvised.</h2>
+            <p>Axiom can support the whole buyer lane: intake, readiness, coordination, updates, and cleaner decision-making after each viewing.</p>
           </div>
           <div class="concierge-feature-grid">
             <article class="concierge-feature-card">
               <span>01</span>
-              <strong>You give the basics</strong>
-              <p>You tell us your budget, area, timing, and what you need from the property.</p>
+              <strong>Buyer brief capture</strong>
+              <p>Budget, area, timing, property type, must-haves, and deal-breakers are captured properly from the start.</p>
             </article>
             <article class="concierge-feature-card">
               <span>02</span>
-              <strong>We check the fit</strong>
-              <p>We make sure the brief is clear enough for the right agent to pick it up properly.</p>
+              <strong>Finance readiness check</strong>
+              <p>Cash, bond, pre-approval, deposit position, and missing finance steps can be clarified before momentum is wasted.</p>
             </article>
             <article class="concierge-feature-card">
               <span>03</span>
-              <strong>The right agent responds</strong>
-              <p>The next conversation can move straight to suitable properties instead of admin and guesswork.</p>
+              <strong>Viewing coordination</strong>
+              <p>Viewings, reminders, and agent follow-through stay moving on WhatsApp without admin drag.</p>
             </article>
             <article class="concierge-feature-card">
               <span>04</span>
-              <strong>The search moves faster</strong>
-              <p>Viewings, updates, and next steps start from a proper brief instead of a messy start.</p>
+              <strong>Post-viewing feedback capture</strong>
+              <p>After the viewing, Axiom can ask for a short optional impression while it is still fresh and useful.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>05</span>
+              <strong>Buyer Deal Room</strong>
+              <p>A clean progress view can show what is done, what is outstanding, and what the next step is.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>06</span>
+              <strong>Area and market updates</strong>
+              <p>Short suburb updates can help buyers understand price rhythm, demand, and whether to move quickly or stay patient.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>07</span>
+              <strong>Voice note capture</strong>
+              <p>Buyer comments can be transcribed and stored so useful detail is not lost after calls or WhatsApp voice notes.</p>
+            </article>
+            <article class="concierge-feature-card">
+              <span>08</span>
+              <strong>Direct agent contact when needed</strong>
+              <p>The buyer can receive the agent's contact details immediately when a more personal line of communication helps the deal move.</p>
             </article>
           </div>
         </div>
       </section>
 
       <section class="section wrapper">
-        <div class="agent-benefit-panel">
+        <div class="buyer-support-panel">
+          <div class="buyer-support-strip">
+            <div>
+              <p class="eyebrow">What happens after the brief</p>
+              <h3>This is where Axiom can actually make buying feel easier.</h3>
+            </div>
+            <div class="buyer-stage-pill"><strong>24/7</strong> WhatsApp working channel</div>
+          </div>
+          <div class="buyer-support-grid">
+            <article class="buyer-support-card">
+              <span>Shortlist</span>
+              <strong>Fewer random listings</strong>
+              <p>A clearer brief means the shortlist starts closer to what the buyer actually wants.</p>
+            </article>
+            <article class="buyer-support-card">
+              <span>Viewings</span>
+              <strong>Less admin drift</strong>
+              <p>Scheduling, reminders, and direct agent details can be handled without the buyer chasing every small step.</p>
+            </article>
+            <article class="buyer-support-card">
+              <span>Decision</span>
+              <strong>Better memory after viewings</strong>
+              <p>Feedback and voice-note impressions can be stored centrally so the next call is based on what the buyer actually felt.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrapper">
+        <div class="buyer-outcome-panel">
           <div>
             <p class="eyebrow">Ready to start?</p>
-            <h3>Open the buyer form.</h3>
+            <h3>Start with the buyer brief, then let the rest of the journey get cleaner.</h3>
             <p>
-              If you are ready to buy, go straight into the short buyer intake.
-              It gives us enough to point you in the right direction from the start.
+              If you are ready to buy, use the short buyer intake on the main Axiom page.
+              It gives us enough to route properly, cut repetition, and make the next conversation more useful.
             </p>
+            <a class="btn btn-primary" href="index.html">Start your buyer brief</a>
           </div>
-          <ul>
-            <li>Budget, area, and timing captured up front</li>
-            <li>Human-checked agent fit</li>
-            <li>Better first conversation</li>
-            <li>Less repetition</li>
-          </ul>
-          <a class="btn btn-primary" href="index.html?intent=buy">Open buyer form</a>
+          <div class="buyer-outcome-grid">
+            <article class="buyer-outcome-card">
+              <span>Up front</span>
+              <strong>Budget, area, and timing captured</strong>
+              <p>The basics are cleaner before anybody starts guessing.</p>
+            </article>
+            <article class="buyer-outcome-card">
+              <span>After that</span>
+              <strong>Human-checked fit</strong>
+              <p>A real person can still guide the route and adjust nuance where needed.</p>
+            </article>
+            <article class="buyer-outcome-card">
+              <span>During the search</span>
+              <strong>Viewings and updates keep moving</strong>
+              <p>Reminders, feedback, and next steps do not need to disappear into message chaos.</p>
+            </article>
+            <article class="buyer-outcome-card">
+              <span>Closer to offer</span>
+              <strong>Confidence improves</strong>
+              <p>The buyer can move with better context instead of uncertainty and admin fog.</p>
+            </article>
+          </div>
         </div>
       </section>
     </main>
