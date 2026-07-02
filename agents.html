@@ -261,6 +261,70 @@
         margin-top: 1rem;
       }
 
+      .agent-hero-flowchart {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.8rem;
+        margin-top: 1rem;
+      }
+
+      .agent-hero-flow-step {
+        position: relative;
+        padding: 0.9rem 0.82rem;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(9, 18, 35, 0.78);
+        overflow: hidden;
+      }
+
+      .agent-hero-flow-step::before {
+        content: "";
+        position: absolute;
+        inset: auto auto 0 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.95), rgba(167, 139, 250, 0.88));
+        opacity: 0.9;
+      }
+
+      .agent-hero-flow-step::after {
+        content: "->";
+        position: absolute;
+        top: 50%;
+        right: -0.58rem;
+        transform: translateY(-50%);
+        color: rgba(34, 211, 238, 0.88);
+        font-size: 1rem;
+        font-weight: 900;
+      }
+
+      .agent-hero-flow-step:last-child::after {
+        display: none;
+      }
+
+      .agent-hero-flow-step span {
+        display: block;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.32rem;
+      }
+
+      .agent-hero-flow-step strong {
+        display: block;
+        color: #f8fafc;
+        font-size: 0.94rem;
+        margin-bottom: 0.22rem;
+      }
+
+      .agent-hero-flow-step small {
+        display: block;
+        color: #9fb0c8;
+        line-height: 1.35;
+      }
+
       .agent-hero-stat {
         padding: 0.82rem 0.9rem;
         border-radius: 16px;
@@ -278,12 +342,17 @@
         .agent-hero-board,
         .agent-hero-footer,
         .agent-hero-checkpoints,
-        .agent-hero-party-grid {
+        .agent-hero-party-grid,
+        .agent-hero-flowchart {
           grid-template-columns: 1fr;
         }
 
         .agent-hero-stage {
           min-height: auto;
+        }
+
+        .agent-hero-flow-step::after {
+          display: none;
         }
       }
     </style>
@@ -414,6 +483,34 @@
               <article class="agent-hero-stat">
                 <strong>0 drift</strong>
                 <span>clear next action before the matter stalls</span>
+              </article>
+            </div>
+
+            <div class="agent-hero-flowchart" aria-label="WhatsApp automation flow">
+              <article class="agent-hero-flow-step">
+                <span>01</span>
+                <strong>Lead lands</strong>
+                <small>WhatsApp captures the case the moment it starts.</small>
+              </article>
+              <article class="agent-hero-flow-step">
+                <span>02</span>
+                <strong>Brief builds</strong>
+                <small>Core facts and intent are structured automatically.</small>
+              </article>
+              <article class="agent-hero-flow-step">
+                <span>03</span>
+                <strong>Nudges fire</strong>
+                <small>Reminders and check-ins go out without waiting on admin.</small>
+              </article>
+              <article class="agent-hero-flow-step">
+                <span>04</span>
+                <strong>Parties update</strong>
+                <small>Buyer, seller, attorney, and bond team stay in the loop.</small>
+              </article>
+              <article class="agent-hero-flow-step">
+                <span>05</span>
+                <strong>Human steps in</strong>
+                <small>A concierge overrides, guides, or escalates when nuance matters.</small>
               </article>
             </div>
           </div>
