@@ -32,7 +32,7 @@
           <a class="admin-nav-link primary-route-link" href="sellers.html">Sell</a>
           <a class="admin-nav-link" href="buyers.html">Buy</a>
           <a class="admin-nav-link" href="agents.html">Agents</a>
-          <a class="nav-utility-link" href="?admin=1#admin">Team login</a>
+          <a class="nav-utility-link" href="?admin=1#admin">Mission Control</a>
         </div>
       </nav>
     </div>
@@ -657,5 +657,16 @@
     <script src="modules/communications.js"></script>
     <script src="modules/data-workflows.js"></script>
     <script src="script.js"></script>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const intent = (params.get("intent") || "").toLowerCase();
+        if (!["sell", "buy"].includes(intent)) return;
+        window.addEventListener("load", () => {
+          const trigger = document.querySelector(`.hero-choice[data-intent="${intent}"]`);
+          if (trigger) trigger.click();
+        });
+      })();
+    </script>
   </body>
 </html>
