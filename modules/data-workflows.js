@@ -62,6 +62,14 @@
           placeholder: "Start typing town name"
         },
         {
+          name: "gpsLocation",
+          label: "Property GPS location (optional)",
+          type: "text",
+          required: false,
+          allowCurrentLocation: true,
+          placeholder: "Use the button to capture this device's location"
+        },
+        {
           name: "expectedPrice",
           label: "Expected selling price (ZAR)",
           type: "text",
