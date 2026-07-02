@@ -16,6 +16,287 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="route-header.css" />
+    <style>
+      .valuation-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+        padding: 1.5rem;
+        border-radius: 24px;
+        border: 1px solid rgba(125, 211, 252, 0.2);
+        background: linear-gradient(160deg, rgba(7, 20, 37, 0.96), rgba(18, 23, 52, 0.9));
+        box-shadow: 0 20px 60px rgba(2, 6, 23, 0.28);
+      }
+
+      .valuation-topline {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.9fr);
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .valuation-topline h3,
+      .valuation-result-shell h4,
+      .valuation-metric strong,
+      .valuation-list strong,
+      .valuation-note strong,
+      .valuation-json-shell strong,
+      .valuation-status strong {
+        color: #f8fafc;
+      }
+
+      .valuation-topline p,
+      .valuation-list li,
+      .valuation-note small,
+      .valuation-json-shell code,
+      .valuation-status small {
+        color: #cbd5e1;
+      }
+
+      .valuation-pill-grid {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .valuation-pill {
+        padding: 0.9rem 1rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .valuation-pill span,
+      .valuation-metric span,
+      .valuation-status span {
+        display: block;
+        margin-bottom: 0.24rem;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .valuation-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.95rem;
+      }
+
+      .valuation-form label {
+        display: grid;
+        gap: 0.42rem;
+        color: #e2e8f0;
+        font-weight: 600;
+      }
+
+      .valuation-form input,
+      .valuation-form select,
+      .valuation-form textarea {
+        width: 100%;
+        padding: 0.88rem 0.95rem;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.82);
+        color: #f8fafc;
+      }
+
+      .valuation-form textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      .valuation-span-2 {
+        grid-column: 1 / -1;
+      }
+
+      .valuation-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.8rem;
+      }
+
+      .valuation-actions .btn {
+        min-width: 190px;
+      }
+
+      .valuation-result {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .valuation-result[hidden] {
+        display: none;
+      }
+
+      .valuation-result-shell,
+      .valuation-json-shell,
+      .valuation-note,
+      .valuation-status {
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        background: rgba(8, 16, 31, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .valuation-result-shell h4 {
+        margin: 0 0 0.35rem;
+      }
+
+      .valuation-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.8rem;
+        margin-top: 0.95rem;
+      }
+
+      .valuation-metric {
+        padding: 0.9rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.84);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .valuation-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      .valuation-list {
+        padding: 1rem;
+        border-radius: 18px;
+        background: rgba(10, 20, 40, 0.62);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .valuation-list strong {
+        display: block;
+        margin-bottom: 0.55rem;
+      }
+
+      .valuation-list ul {
+        margin: 0;
+        padding-left: 1rem;
+      }
+
+      .valuation-list li + li {
+        margin-top: 0.32rem;
+      }
+
+      .valuation-status {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+      }
+
+      .valuation-comparables-shell {
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        background: rgba(8, 16, 31, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .valuation-comparables-shell h4 {
+        margin: 0 0 0.35rem;
+        color: #f8fafc;
+      }
+
+      .valuation-comparables-shell p {
+        margin: 0 0 0.9rem;
+        color: #cbd5e1;
+      }
+
+      .valuation-comparables-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+      }
+
+      .valuation-comparable-card {
+        padding: 0.95rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.84);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .valuation-comparable-card span {
+        display: block;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.24rem;
+      }
+
+      .valuation-comparable-card strong {
+        display: block;
+        color: #f8fafc;
+        margin-bottom: 0.22rem;
+      }
+
+      .valuation-comparable-card small {
+        display: block;
+        color: #cbd5e1;
+      }
+
+      .valuation-json-shell code {
+        display: block;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 0.86rem;
+        line-height: 1.55;
+      }
+
+      .valuation-message-shell {
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        background: rgba(8, 16, 31, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .valuation-message-shell strong {
+        display: block;
+        color: #f8fafc;
+        margin-bottom: 0.55rem;
+      }
+
+      .valuation-message-shell pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #cbd5e1;
+        font-family: inherit;
+        line-height: 1.65;
+      }
+
+      .valuation-message-shell small {
+        display: block;
+        margin-top: 0.7rem;
+        color: #9fb0c8;
+      }
+
+      @media (max-width: 980px) {
+        .valuation-topline,
+        .valuation-form,
+        .valuation-metrics,
+        .valuation-detail-grid,
+        .valuation-status,
+        .valuation-comparables-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .valuation-actions {
+          flex-direction: column;
+        }
+
+        .valuation-actions .btn {
+          width: 100%;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="site-header">
@@ -40,15 +321,15 @@
           <p class="eyebrow">Sell a Property</p>
           <h1>Sell with more confidence, clarity, and control.</h1>
           <p class="subtext">
-            Axiom helps you present the property properly from day one, so the first expert conversation feels informed, credible, and worth having.
+            Axiom helps you present the property properly from day one, then gets your brief to the best-fit selling expert for your area, property, and likely buyer.
           </p>
           <div class="hero-proof-grid concierge-proof-grid" aria-label="Seller proof points">
-            <span><strong>Sharper</strong> property brief</span>
-            <span><strong>Stronger</strong> area fit</span>
-            <span><strong>Less</strong> back-and-forth</span>
+            <span><strong>Best-fit agent</strong> for your property and area</span>
+            <span><strong>Prepared from the start</strong> with the right facts already in hand</span>
+            <span><strong>Less wasted time</strong> and less back-and-forth</span>
           </div>
           <div class="cta-group">
-            <a class="btn btn-primary" href="index.html?intent=sell">Open seller form</a>
+            <a class="btn btn-primary" href="index.html">Start your seller brief</a>
             <a class="btn btn-secondary" href="#seller-process">See how it works</a>
           </div>
           <p class="promise-text">Walk into the sale feeling prepared, not scrambled.</p>
@@ -62,7 +343,7 @@
               <b>1</b><i></i><b>2</b><i></i><b>3</b>
             </div>
             <strong>Prepare. Align. Progress.</strong>
-            <small>Your story starts clearly, then the right selling expert steps in ready to move.</small>
+            <small>Your property is framed properly first, then the best-fit selling expert steps in ready to move.</small>
           </div>
         </div>
       </div>
@@ -154,13 +435,188 @@
         </div>
       </section>
 
+      <section class="section wrapper" id="seller-valuation">
+        <div class="section-heading product-heading">
+          <p class="eyebrow">AI Valuation</p>
+          <h2>Get a grounded valuation range even without a Property24 listing.</h2>
+          <p>
+            This gives sellers and agents a practical starting range using the property facts, suburb context, and current case notes already in hand.
+          </p>
+        </div>
+        <div class="valuation-panel">
+          <div class="valuation-topline">
+            <div>
+              <h3>No portal dependency. Just a cleaner first pricing conversation.</h3>
+              <p>
+                Axiom can estimate a likely range, suggest a starting list price, and flag what could pull the result up or down.
+                It is fast enough for first discussions, while still making room for human judgement and formal valuation where needed.
+              </p>
+            </div>
+            <div class="valuation-pill-grid" aria-label="Valuation benefits">
+              <article class="valuation-pill">
+                <span>Seller benefit</span>
+                <strong>Walk in with a number that feels reasoned, not guessed.</strong>
+              </article>
+              <article class="valuation-pill">
+                <span>Agent benefit</span>
+                <strong>Start the mandate conversation with more confidence and structure.</strong>
+              </article>
+              <article class="valuation-pill">
+                <span>Office benefit</span>
+                <strong>Price guidance can start before every external data source is lined up.</strong>
+              </article>
+            </div>
+          </div>
+
+          <form class="valuation-form" id="valuationForm">
+            <label>
+              Suburb
+              <input id="valuationSuburb" type="text" value="Claremont" required />
+            </label>
+            <label>
+              Property type
+              <select id="valuationPropertyType">
+                <option>House</option>
+                <option>Apartment</option>
+                <option>Townhouse</option>
+                <option>Cluster</option>
+                <option>Vacant Land</option>
+                <option>Smallholding</option>
+              </select>
+            </label>
+            <label>
+              Building size (m2)
+              <input id="valuationSize" type="number" min="0" value="210" required />
+            </label>
+            <label>
+              Stand size (m2)
+              <input id="valuationStandSize" type="number" min="0" value="496" />
+            </label>
+            <label>
+              Bedrooms
+              <input id="valuationBedrooms" type="number" min="0" value="3" required />
+            </label>
+            <label>
+              Bathrooms
+              <input id="valuationBathrooms" type="number" min="0" step="0.5" value="2" />
+            </label>
+            <label class="valuation-span-2">
+              Condition and features
+              <textarea id="valuationCondition">Renovated kitchen, neat bathrooms, secure parking, good natural light, work-from-home nook, move-in ready.</textarea>
+            </label>
+            <label class="valuation-span-2">
+              Seller notes
+              <textarea id="valuationNotes">Seller wants a clean, credible guide price before meeting an agent. Quiet street, close to schools, strong owner-occupier appeal.</textarea>
+            </label>
+            <label class="valuation-span-2">
+              Available market context
+              <textarea id="valuationMarketContext">General suburb trends suggest stable demand for well-presented family homes, but buyers remain price-sensitive and compare value carefully.</textarea>
+            </label>
+            <div class="valuation-actions valuation-span-2">
+              <button class="btn btn-secondary" type="button" id="resetValuation">Reset</button>
+              <button class="btn btn-primary" type="submit">Generate AI Valuation</button>
+            </div>
+          </form>
+
+          <div class="valuation-result" id="valuationResult" hidden>
+            <div class="valuation-result-shell">
+              <h4 id="valuationSummaryTitle">Valuation ready.</h4>
+              <p id="valuationSummaryText">Axiom has prepared a working range and recommended list price.</p>
+              <div class="valuation-metrics">
+                <article class="valuation-metric">
+                  <span>Low range</span>
+                  <strong id="valuationLow">R0</strong>
+                </article>
+                <article class="valuation-metric">
+                  <span>High range</span>
+                  <strong id="valuationHigh">R0</strong>
+                </article>
+                <article class="valuation-metric">
+                  <span>Recommended list</span>
+                  <strong id="valuationListPrice">R0</strong>
+                </article>
+                <article class="valuation-metric">
+                  <span>Confidence</span>
+                  <strong id="valuationConfidence">Medium</strong>
+                </article>
+              </div>
+            </div>
+
+            <div class="valuation-status">
+              <article>
+                <span>Valuation date</span>
+                <strong id="valuationDate">-</strong>
+              </article>
+              <article>
+                <span>Method</span>
+                <strong>No Property24 dependency</strong>
+              </article>
+              <article>
+                <span>Starting point</span>
+                <strong>Seller + suburb context</strong>
+              </article>
+            </div>
+
+            <div class="valuation-comparables-shell">
+              <h4>Comparable sales used</h4>
+              <p id="valuationComparablesIntro">Axiom can lean on recent comparable sales so the first pricing conversation starts with market anchors, not vague instincts.</p>
+              <div class="valuation-comparables-grid" id="valuationComparablesGrid"></div>
+            </div>
+
+            <div class="valuation-detail-grid">
+              <div class="valuation-list">
+                <strong>Key factors</strong>
+                <ul id="valuationFactors"></ul>
+              </div>
+              <div class="valuation-list">
+                <strong>Risks</strong>
+                <ul id="valuationRisks"></ul>
+              </div>
+            </div>
+
+            <div class="valuation-note">
+              <strong>Summary</strong>
+              <small id="valuationNarrative"></small>
+            </div>
+
+            <div class="valuation-note">
+              <strong>Disclaimer</strong>
+              <small id="valuationDisclaimer"></small>
+            </div>
+
+            <div class="valuation-message-shell">
+              <strong>WhatsApp prompt before valuation</strong>
+              <pre id="valuationOptInMessage"></pre>
+              <small id="valuationOptInChoices">Reply options: Yes please, send the rough guide. / No thanks, I'll wait for the call.</small>
+            </div>
+
+            <div class="valuation-message-shell">
+              <strong>5-minute follow-up if seller says yes</strong>
+              <pre id="valuationFollowupMessage"></pre>
+              <small>Use this once the seller opts in, then send the rough comparative guide about 5 minutes later.</small>
+            </div>
+
+            <div class="valuation-message-shell">
+              <strong>Client-ready message</strong>
+              <pre id="valuationClientMessage"></pre>
+              <small>WhatsApp first. Email only if the client wants a written copy, documents, or a more formal follow-up.</small>
+            </div>
+
+            <div class="valuation-json-shell">
+              <strong>Structured payload</strong>
+              <code id="valuationJsonOutput"></code>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section wrapper">
         <div class="agent-benefit-panel">
           <div>
             <p class="eyebrow">Ready to start?</p>
-            <h3>Open the seller form.</h3>
+            <h3>Take the first step with a sharper seller brief.</h3>
             <p>
-              If you are ready to sell, go straight into the short seller intake.
+              If you are ready to sell, start with the short seller intake on the main Axiom page.
               It gives the team enough substance to respond properly from the very beginning.
             </p>
           </div>
@@ -170,9 +626,407 @@
             <li>Cleaner next-step visibility</li>
             <li>Less repetition and less admin noise</li>
           </ul>
-          <a class="btn btn-primary" href="index.html?intent=sell">Open seller form</a>
+          <a class="btn btn-primary" href="index.html">Start your seller brief</a>
         </div>
       </section>
     </main>
+
+    <script>
+      (function () {
+        const form = document.getElementById("valuationForm");
+        const result = document.getElementById("valuationResult");
+        const resetButton = document.getElementById("resetValuation");
+
+        if (!form || !result) {
+          return;
+        }
+
+        const initialValues = {
+          suburb: "Claremont",
+          propertyType: "House",
+          size: "210",
+          standSize: "496",
+          bedrooms: "3",
+          bathrooms: "2",
+          condition: "Renovated kitchen, neat bathrooms, secure parking, good natural light, work-from-home nook, move-in ready.",
+          notes: "Seller wants a clean, credible guide price before meeting an agent. Quiet street, close to schools, strong owner-occupier appeal.",
+          marketContext: "General suburb trends suggest stable demand for well-presented family homes, but buyers remain price-sensitive and compare value carefully.",
+        };
+
+        const fields = {
+          suburb: document.getElementById("valuationSuburb"),
+          propertyType: document.getElementById("valuationPropertyType"),
+          size: document.getElementById("valuationSize"),
+          standSize: document.getElementById("valuationStandSize"),
+          bedrooms: document.getElementById("valuationBedrooms"),
+          bathrooms: document.getElementById("valuationBathrooms"),
+          condition: document.getElementById("valuationCondition"),
+          notes: document.getElementById("valuationNotes"),
+          marketContext: document.getElementById("valuationMarketContext"),
+        };
+
+        const outputs = {
+          title: document.getElementById("valuationSummaryTitle"),
+          summaryText: document.getElementById("valuationSummaryText"),
+          low: document.getElementById("valuationLow"),
+          high: document.getElementById("valuationHigh"),
+          listPrice: document.getElementById("valuationListPrice"),
+          confidence: document.getElementById("valuationConfidence"),
+          date: document.getElementById("valuationDate"),
+          factors: document.getElementById("valuationFactors"),
+          risks: document.getElementById("valuationRisks"),
+          summary: document.getElementById("valuationNarrative"),
+          disclaimer: document.getElementById("valuationDisclaimer"),
+          optInMessage: document.getElementById("valuationOptInMessage"),
+          followupMessage: document.getElementById("valuationFollowupMessage"),
+          clientMessage: document.getElementById("valuationClientMessage"),
+          json: document.getElementById("valuationJsonOutput"),
+          comparablesIntro: document.getElementById("valuationComparablesIntro"),
+          comparablesGrid: document.getElementById("valuationComparablesGrid"),
+        };
+
+        function currency(value) {
+          return new Intl.NumberFormat("en-ZA", {
+            style: "currency",
+            currency: "ZAR",
+            maximumFractionDigits: 0,
+          }).format(value);
+        }
+
+        function roundToNearest5000(value) {
+          return Math.round(value / 5000) * 5000;
+        }
+
+        function formatClientCurrency(value) {
+          if (value >= 1000000) {
+            const millions = (value / 1000000).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+            return `R${millions}m`;
+          }
+          return currency(value);
+        }
+
+        const demoComparableLibrary = [
+          {
+            suburb: "claremont",
+            property_type: "House",
+            bedrooms: 3,
+            bathrooms: 2,
+            size_m2: 198,
+            sold_price: 1795000,
+            sold_date: "2026-05-14",
+          },
+          {
+            suburb: "claremont",
+            property_type: "House",
+            bedrooms: 4,
+            bathrooms: 2.5,
+            size_m2: 228,
+            sold_price: 2010000,
+            sold_date: "2026-04-06",
+          },
+          {
+            suburb: "claremont",
+            property_type: "Townhouse",
+            bedrooms: 3,
+            bathrooms: 2,
+            size_m2: 176,
+            sold_price: 1710000,
+            sold_date: "2026-03-28",
+          },
+          {
+            suburb: "sandton",
+            property_type: "Apartment",
+            bedrooms: 2,
+            bathrooms: 2,
+            size_m2: 121,
+            sold_price: 2480000,
+            sold_date: "2026-05-22",
+          },
+          {
+            suburb: "sandton",
+            property_type: "Cluster",
+            bedrooms: 3,
+            bathrooms: 2.5,
+            size_m2: 214,
+            sold_price: 3125000,
+            sold_date: "2026-04-19",
+          },
+          {
+            suburb: "umhlanga",
+            property_type: "Apartment",
+            bedrooms: 3,
+            bathrooms: 2,
+            size_m2: 164,
+            sold_price: 3390000,
+            sold_date: "2026-05-02",
+          },
+        ];
+
+        function getDemoPrivatePropertyComparables(suburb, bedrooms) {
+          const suburbKey = (suburb || "").trim().toLowerCase();
+          let matches = demoComparableLibrary.filter((item) => item.suburb === suburbKey);
+
+          if (Number.isFinite(Number(bedrooms))) {
+            const bedMatches = matches.filter((item) => item.bedrooms === Number(bedrooms));
+            if (bedMatches.length) {
+              matches = bedMatches;
+            }
+          }
+
+          return matches.slice(0, 3);
+        }
+
+        function generateValuationNoProperty24(propertyData, marketContext, comparables) {
+          const typeBaseRates = {
+            House: 11000,
+            Apartment: 18000,
+            Townhouse: 14500,
+            Cluster: 15000,
+            "Vacant Land": 2200,
+            Smallholding: 7000,
+          };
+
+          const suburbAdjustments = [
+            { match: "claremont", factor: 1.12 },
+            { match: "sandton", factor: 1.28 },
+            { match: "umhlanga", factor: 1.26 },
+            { match: "sea point", factor: 1.34 },
+            { match: "durbanville", factor: 1.08 },
+            { match: "stellenbosch", factor: 1.22 },
+          ];
+
+          const suburb = (propertyData.suburb || "").toLowerCase();
+          const propertyType = propertyData.property_type || "House";
+          const size = Number(propertyData.size_m2) || 0;
+          const standSize = Number(propertyData.stand_size_m2) || 0;
+          const bedrooms = Number(propertyData.bedrooms) || 0;
+          const bathrooms = Number(propertyData.bathrooms) || 0;
+          const conditionText = `${propertyData.condition || ""} ${propertyData.notes || ""} ${marketContext || ""}`.toLowerCase();
+
+          const baseRate = typeBaseRates[propertyType] || 11500;
+          const suburbFactor = suburbAdjustments.find((item) => suburb.includes(item.match))?.factor || 1;
+
+          let conditionFactor = 1;
+          if (/(renovat|modern|move-in|secure|updated|excellent|neat)/.test(conditionText)) {
+            conditionFactor += 0.08;
+          }
+          if (/(pool|view|solar|inverter|flatlet|office|double garage|work-from-home)/.test(conditionText)) {
+            conditionFactor += 0.05;
+          }
+          if (/(dated|work needed|tired|fixer|repair|older)/.test(conditionText)) {
+            conditionFactor -= 0.08;
+          }
+
+          let bedroomFactor = 1 + Math.min(bedrooms, 5) * 0.025;
+          let bathroomFactor = 1 + Math.min(bathrooms, 4) * 0.015;
+          let standFactor = standSize > 0 ? 1 + Math.min(standSize / Math.max(size || 1, 1), 3) * 0.03 : 1;
+
+          let baseEstimate = size * baseRate * suburbFactor * conditionFactor * bedroomFactor * bathroomFactor * standFactor;
+
+          if (propertyType === "Vacant Land") {
+            baseEstimate = standSize * baseRate * suburbFactor * conditionFactor;
+          }
+
+          if (comparables.length) {
+            const comparableAverage =
+              comparables.reduce((sum, item) => sum + Number(item.sold_price || 0), 0) / comparables.length;
+            baseEstimate = (baseEstimate * 0.55) + (comparableAverage * 0.45);
+          }
+
+          const uncertainty = baseEstimate * 0.08;
+          const low = roundToNearest5000(baseEstimate - uncertainty);
+          const high = roundToNearest5000(baseEstimate + uncertainty);
+          const recommended = roundToNearest5000((low + high) / 2);
+
+          const completenessScore = [
+            propertyData.suburb,
+            propertyData.property_type,
+            propertyData.size_m2,
+            propertyData.bedrooms,
+            propertyData.condition,
+            marketContext,
+            comparables.length,
+          ].filter(Boolean).length;
+
+          const confidence = comparables.length >= 2 ? "Medium" : completenessScore >= 6 ? "Medium" : "Low";
+          const valuationDate = new Date().toISOString().slice(0, 10);
+          const evidenceLine = comparables.length
+            ? `${comparables.length} recent comparable sale${comparables.length === 1 ? "" : "s"} helped anchor the range.`
+            : "No direct comparable set was available, so the range leans more heavily on the property description and suburb context.";
+
+          return {
+            valuation_date: valuationDate,
+            estimated_range_low: low,
+            estimated_range_high: high,
+            recommended_listing_price: recommended,
+            confidence,
+            key_factors: [
+              `${propertyType} size and layout`,
+              `${propertyData.suburb} positioning and suburb demand`,
+              comparables.length ? "Recent comparable sale evidence in the same suburb" : "General suburb pricing tone only",
+              "Condition, presentation, and practical features",
+              "How closely the price meets current buyer expectations",
+            ],
+            risks: [
+              "Interest rate pressure on affordability",
+              "Competing stock priced aggressively in the same area",
+              "Condition gaps or overpricing relative to buyer expectations",
+            ],
+            summary: `Based on the property details and available suburb context, a realistic working range sits between ${currency(low)} and ${currency(high)}, with a sensible starting list price near ${currency(recommended)}. ${evidenceLine}`,
+            disclaimer: "This is an AI-assisted estimate using user input and general market context. It is for discussion purposes only and should not replace a formal opinion from a registered professional valuer or an in-person agent assessment. Market conditions can change quickly.",
+          };
+        }
+
+        function renderList(target, items) {
+          target.innerHTML = "";
+          items.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent = item;
+            target.appendChild(li);
+          });
+        }
+
+        function renderComparables(comparables) {
+          outputs.comparablesGrid.innerHTML = "";
+
+          if (!comparables.length) {
+            const emptyCard = document.createElement("article");
+            emptyCard.className = "valuation-comparable-card";
+            emptyCard.innerHTML = `
+              <span>No direct comparables</span>
+              <strong>Using suburb context only</strong>
+              <small>The valuation can still run, but the confidence stays more conservative until comparable sales are added.</small>
+            `;
+            outputs.comparablesGrid.appendChild(emptyCard);
+            return;
+          }
+
+          comparables.forEach((item) => {
+            const card = document.createElement("article");
+            card.className = "valuation-comparable-card";
+            card.innerHTML = `
+              <span>${item.property_type}</span>
+              <strong>${currency(item.sold_price)}</strong>
+              <small>${item.bedrooms} bed / ${item.bathrooms} bath · ${item.size_m2} m2</small>
+              <small>${item.sold_date} · ${item.suburb}</small>
+            `;
+            outputs.comparablesGrid.appendChild(card);
+          });
+        }
+
+        function buildClientValuationMessage(clientName, propertyLabel, valuation) {
+          const factorsText = (valuation.key_factors || [])
+            .slice(0, 4)
+            .map((item) => `• ${item}`)
+            .join("\n");
+
+          return `Hi ${clientName},
+
+As promised, here is your AI-assisted rough comparative guide for ${propertyLabel} as of today:
+
+Estimated Value Range: ${formatClientCurrency(valuation.estimated_range_low)} - ${formatClientCurrency(valuation.estimated_range_high)}
+Recommended Listing Price: ${formatClientCurrency(valuation.recommended_listing_price)}
+Confidence Level: ${valuation.confidence}
+
+Key Factors Considered:
+${factorsText}
+
+Important Note: This is an estimate based on available information. For a formal valuation, I recommend a registered valuer.
+
+Would you like a local specialist to review this with you and discuss a listing strategy?
+
+Disclaimer: AI-generated estimate only. Not a substitute for professional valuation.`;
+        }
+
+        function buildComparativeOptInMessage(clientName, suburb) {
+          return `Hi ${clientName},
+
+Thank you, I have sent your details through to the concierge.
+
+While you wait for the call, would you like me to send you a rough comparative guide for ${suburb} in the meantime?`;
+        }
+
+        function buildComparativeYesFollowup(clientName, suburb) {
+          return `Perfect, ${clientName}.
+
+I will send you a rough AI-assisted comparative guide for ${suburb} in about 5 minutes so you have something useful to look at while you wait.
+
+It is a starting point for discussion, not a formal valuation. After that, I can help arrange a local specialist review and listing discussion if you would like.`;
+        }
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const propertyData = {
+            suburb: fields.suburb.value.trim(),
+            property_type: fields.propertyType.value,
+            size_m2: fields.size.value,
+            stand_size_m2: fields.standSize.value,
+            bedrooms: fields.bedrooms.value,
+            bathrooms: fields.bathrooms.value,
+            condition: fields.condition.value.trim(),
+            notes: fields.notes.value.trim(),
+          };
+
+          const comparables = getDemoPrivatePropertyComparables(
+            propertyData.suburb,
+            propertyData.bedrooms,
+          );
+          const valuation = generateValuationNoProperty24(
+            propertyData,
+            fields.marketContext.value.trim(),
+            comparables,
+          );
+
+          outputs.title.textContent = `Valuation ready for ${propertyData.suburb || "this property"}.`;
+          outputs.summaryText.textContent = comparables.length
+            ? "Axiom has prepared a practical seller-first range using the property brief plus recent comparable sale anchors."
+            : "Axiom has prepared a practical seller-first range without relying on a live portal listing.";
+          outputs.low.textContent = currency(valuation.estimated_range_low);
+          outputs.high.textContent = currency(valuation.estimated_range_high);
+          outputs.listPrice.textContent = currency(valuation.recommended_listing_price);
+          outputs.confidence.textContent = valuation.confidence;
+          outputs.date.textContent = valuation.valuation_date;
+          outputs.summary.textContent = valuation.summary;
+          outputs.disclaimer.textContent = valuation.disclaimer;
+          outputs.optInMessage.textContent = buildComparativeOptInMessage(
+            "Client Name",
+            propertyData.suburb || "your area",
+          );
+          outputs.followupMessage.textContent = buildComparativeYesFollowup(
+            "Client Name",
+            propertyData.suburb || "your area",
+          );
+          outputs.clientMessage.textContent = buildClientValuationMessage(
+            "Client Name",
+            `${propertyData.property_type} in ${propertyData.suburb}`,
+            valuation,
+          );
+          outputs.comparablesIntro.textContent = comparables.length
+            ? `Axiom found ${comparables.length} demo comparable sale${comparables.length === 1 ? "" : "s"} for ${propertyData.suburb} to help anchor the first pricing discussion.`
+            : `No direct demo comparable sales were available for ${propertyData.suburb}, so the range leans on the property brief and suburb context only.`;
+          renderList(outputs.factors, valuation.key_factors);
+          renderList(outputs.risks, valuation.risks);
+          renderComparables(comparables);
+          outputs.json.textContent = JSON.stringify(valuation, null, 2);
+
+          result.hidden = false;
+        });
+
+        resetButton?.addEventListener("click", () => {
+          fields.suburb.value = initialValues.suburb;
+          fields.propertyType.value = initialValues.propertyType;
+          fields.size.value = initialValues.size;
+          fields.standSize.value = initialValues.standSize;
+          fields.bedrooms.value = initialValues.bedrooms;
+          fields.bathrooms.value = initialValues.bathrooms;
+          fields.condition.value = initialValues.condition;
+          fields.notes.value = initialValues.notes;
+          fields.marketContext.value = initialValues.marketContext;
+          outputs.comparablesGrid.innerHTML = "";
+          result.hidden = true;
+        });
+      })();
+    </script>
   </body>
 </html>
