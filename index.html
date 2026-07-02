@@ -662,10 +662,17 @@
         const params = new URLSearchParams(window.location.search);
         const intent = (params.get("intent") || "").toLowerCase();
         if (!["sell", "buy"].includes(intent)) return;
-        window.addEventListener("load", () => {
+
+        const openRequestedIntent = () => {
           const trigger = document.querySelector(`.hero-choice[data-intent="${intent}"]`);
           if (trigger) trigger.click();
-        });
+        };
+
+        if (document.readyState === "complete") {
+          setTimeout(openRequestedIntent, 0);
+        } else {
+          window.addEventListener("load", () => setTimeout(openRequestedIntent, 0), { once: true });
+        }
       })();
     </script>
   </body>
