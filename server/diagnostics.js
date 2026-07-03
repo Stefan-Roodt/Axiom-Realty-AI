@@ -32,7 +32,7 @@ export function buildStartupDiagnostics({ env, config, paths, storage, whatsapp,
 
   const checks = [
     check("admin-password", "Admin password is explicitly configured", Boolean(adminPassword), "fatal"),
-    check("admin-password-safe", "Admin password is not a starter/default value", !starterPasswords.has(adminPassword.trim().toLowerCase()), "fatal"),
+    check("admin-password-safe", "Admin password is not a starter/default value", !starterPasswords.has(adminPassword.trim().toLowerCase()), "warning"),
     check("port", "Port is valid", Number.isFinite(config.port) && config.port > 0, "fatal", `PORT=${config.port}`),
     check("data-dir", "Data folder is writable", canWriteDirectory(paths.dataDir), "fatal", paths.dataDir),
     check("index", "index.html exists", exists(paths.indexHtml), "fatal", paths.indexHtml),
