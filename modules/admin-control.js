@@ -201,10 +201,79 @@
     }
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", attachMissionControlUnlockPatch, { once: true });
-  } else {
+  function restoreHomepageRoutesAndCopy() {
+    const path = window.location.pathname || "/";
+    const onHomepage = path === "/" || path.endsWith("/index.html");
+    if (!onHomepage) return;
+
+    const navLinks = document.querySelector(".nav-links");
+    if (navLinks) {
+      navLinks.innerHTML = [
+        '<a class="admin-nav-link" href="#top" data-home-intent-link="sell">Sell a Property</a>',
+        '<a class="admin-nav-link" href="#top" data-home-intent-link="buy">Buy a Property</a>',
+        '<a class="admin-nav-link" href="agents.html">Estate Agents</a>',
+        '<a class="admin-nav-link" href="?admin=1#admin">Mission Control</a>'
+      ].join("");
+    }
+
+    const heroHeading = document.querySelector(".hero .copy h1");
+    const heroSubtext = document.querySelector(".hero .copy .subtext");
+    const proofGrid = document.querySelector(".hero-proof-grid");
+    const ctaGroup = document.querySelector(".cta-group");
+    const primarySellButton = document.querySelector('.hero-choice[data-intent="sell"]');
+    const primaryBuyButton = document.querySelector('.hero-choice[data-intent="buy"]');
+    const promiseText = document.querySelector(".promise-text");
+    const flowTitle = document.querySelector(".hero-signal-panel strong");
+    const flowCopy = document.querySelector(".hero-signal-panel small");
+
+    if (heroHeading) heroHeading.textContent = "Sell smarter. Move sooner. Start properly.";
+    if (heroSubtext) {
+      heroSubtext.textContent =
+        "Axiom helps sellers come in prepared, well positioned, and taken seriously while serious buyers move faster with clearer briefs and cleaner next steps. The sooner the right conversation starts, the better the chance of keeping momentum on your side.";
+    }
+    if (proofGrid) {
+      proofGrid.innerHTML = [
+        "<span><strong>Sellers</strong> Catch demand while it is still warm</span>",
+        "<span><strong>Buyers</strong> Get lined up before the right property moves</span>",
+        "<span><strong>Agents</strong> Respond faster with real context</span>"
+      ].join("");
+    }
+    if (primarySellButton) primarySellButton.textContent = "I Want to Sell";
+    if (primaryBuyButton) primaryBuyButton.textContent = "I Want to Buy";
+    if (promiseText) promiseText.textContent = "Faster contact. Better timing. Stronger momentum.";
+    if (flowTitle) flowTitle.textContent = "Property. Area. Timing.";
+    if (flowCopy) flowCopy.textContent = "The next conversation starts with urgency, context, and a clearer chance of closing.";
+
+    if (ctaGroup && !ctaGroup.querySelector('[data-home-agent-link="true"]')) {
+      const agentLink = document.createElement("a");
+      agentLink.className = "btn btn-secondary";
+      agentLink.href = "agents.html";
+      agentLink.dataset.homeAgentLink = "true";
+      agentLink.textContent = "I Am an Agent";
+      ctaGroup.appendChild(agentLink);
+    }
+
+    document.querySelectorAll("[data-home-intent-link]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const intent = event.currentTarget?.getAttribute("data-home-intent-link");
+        const targetButton = intent ? document.querySelector(`.hero-choice[data-intent="${intent}"]`) : null;
+        if (targetButton instanceof HTMLButtonElement) {
+          event.preventDefault();
+          targetButton.click();
+        }
+      });
+    });
+  }
+
+  function bootAxiomPatches() {
     attachMissionControlUnlockPatch();
+    restoreHomepageRoutesAndCopy();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootAxiomPatches, { once: true });
+  } else {
+    bootAxiomPatches();
   }
 
   window.AxiomAdminControl = Object.freeze({
