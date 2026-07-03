@@ -141,6 +141,72 @@
     }
   };
 
+  function attachMissionControlUnlockPatch() {
+    const adminGate = document.getElementById("adminGate");
+    const adminMessage = document.getElementById("adminMessage");
+    const analyticsSection = document.getElementById("analytics");
+    const operationsPanel = document.getElementById("operationsPanel");
+    const operationsRoleSelect = document.getElementById("operationsRole");
+    const operationsRoleHint = document.getElementById("operationsRoleHint");
+    const overviewTab = document.querySelector('[data-operations-tab="overview"]');
+    const overviewPanel = document.querySelector('[data-operations-panel="overview"]');
+
+    if (!adminGate || !adminMessage || !analyticsSection || !operationsPanel) {
+      return;
+    }
+
+    function openMissionControlView() {
+      analyticsSection.classList.remove("hidden");
+      operationsPanel.classList.remove("hidden");
+      adminGate.classList.add("hidden");
+
+      if (operationsRoleSelect) {
+        operationsRoleSelect.value = "admin";
+        operationsRoleSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      if (operationsRoleHint) {
+        operationsRoleHint.textContent = "Admin overview: full overview";
+      }
+
+      if (overviewTab instanceof HTMLButtonElement) {
+        overviewTab.click();
+      } else if (overviewPanel) {
+        document
+          .querySelectorAll("[data-operations-panel]")
+          .forEach((panel) => panel.setAttribute("hidden", ""));
+        overviewPanel.removeAttribute("hidden");
+        overviewPanel.classList.add("active");
+      }
+    }
+
+    function hasUnlockSuccess() {
+      return /Mission Control unlocked/i.test(adminMessage.textContent || "");
+    }
+
+    const observer = new MutationObserver(() => {
+      if (hasUnlockSuccess()) {
+        openMissionControlView();
+      }
+    });
+
+    observer.observe(adminMessage, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+
+    if (hasUnlockSuccess()) {
+      openMissionControlView();
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", attachMissionControlUnlockPatch, { once: true });
+  } else {
+    attachMissionControlUnlockPatch();
+  }
+
   window.AxiomAdminControl = Object.freeze({
     estateAgencyOptions,
     manualLifecycleStageOptions,
