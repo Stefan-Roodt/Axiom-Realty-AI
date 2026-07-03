@@ -201,7 +201,152 @@
     }
   }
 
+  function addOption(select, value, label) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  }
+
+  function createSelectField(id, name, labelText, placeholder) {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    const select = document.createElement("select");
+    select.id = id;
+    select.name = name;
+    select.required = true;
+    addOption(select, "", placeholder);
+    label.appendChild(select);
+    return { label, select };
+  }
+
+  function uniqueSortedTowns(townList) {
+    return Array.from(new Set((Array.isArray(townList) ? townList : []).map((town) => String(town || "").trim()).filter(Boolean))).sort((left, right) =>
+      left.localeCompare(right)
+    );
+  }
+
+  function initExpertApplicationForm() {
+    const form = document.getElementById("expertApplicationForm");
+    if (!form || form.dataset.locationReady === "true") return;
+    form.dataset.locationReady = "true";
+
+    const existingAreasInput = form.elements.areasCovered;
+    if (existingAreasInput && !existingAreasInput.id) {
+      existingAreasInput.id = "expertAreasCovered";
+    }
+
+    let provinceSelect = document.getElementById("expertProvince");
+    let townSelect = document.getElementById("expertTown");
+    const areasInput = document.getElementById("expertAreasCovered");
+    const areasLabel = areasInput?.closest("label");
+
+    if (areasLabel && !provinceSelect) {
+      const created = createSelectField("expertProvince", "province", "Province", "Select province");
+      areasLabel.before(created.label);
+      provinceSelect = created.select;
+    }
+
+    if (areasLabel && !townSelect) {
+      const created = createSelectField("expertTown", "town", "Town / city", FALLBACK_PROVINCE_PLACEHOLDER);
+      created.select.disabled = true;
+      areasLabel.before(created.label);
+      townSelect = created.select;
+    }
+
+    if (areasInput) {
+      areasInput.placeholder = "Select a town or add extra suburbs";
+    }
+
+    if (!provinceSelect || !townSelect) return;
+
+    function fillProvinces() {
+      provinceSelect.innerHTML = "";
+      addOption(provinceSelect, "", "Select province");
+      southAfricanProvinces.forEach((province) => addOption(provinceSelect, province, province));
+    }
+
+    function fillTowns(provinceName) {
+      const towns = uniqueSortedTowns(getTownsByProvinceName(provinceName));
+      townSelect.innerHTML = "";
+      if (!provinceName || !towns.length) {
+        townSelect.disabled = true;
+        addOption(townSelect, "", FALLBACK_PROVINCE_PLACEHOLDER);
+        return;
+      }
+      townSelect.disabled = false;
+      addOption(townSelect, "", "Select town / city");
+      towns.forEach((town) => addOption(townSelect, town, town));
+    }
+
+    function autofillAreas() {
+      const town = townSelect.value || "";
+      if (!areasInput || !town) return;
+      const current = areasInput.value.trim();
+      const previousTown = areasInput.dataset.autofilledTown || "";
+      if (!current || current === previousTown) {
+        areasInput.value = town;
+        areasInput.dataset.autofilledTown = town;
+      }
+    }
+
+    provinceSelect.addEventListener("change", () => {
+      fillTowns(provinceSelect.value);
+      if (areasInput && areasInput.value.trim() === (areasInput.dataset.autofilledTown || "")) {
+        areasInput.value = "";
+        areasInput.dataset.autofilledTown = "";
+      }
+    });
+
+    townSelect.addEventListener("change", autofillAreas);
+    fillProvinces();
+    fillTowns(provinceSelect.value);
+  }
+
+  function normalizeAccessKeyText(value) {
+    return String(value || "").trim().replace(/\s+/g, "").toLowerCase();
+  }
+
+  function applyMissionControlKeyGuard() {
+    const gate = document.getElementById("adminGate");
+    const otpInput = document.getElementById("adminOtp");
+    const roleInput = document.getElementById("accessRouteRole");
+    if (!gate || !otpInput || gate.dataset.keyGuardReady === "true") return;
+    gate.dataset.keyGuardReady = "true";
+
+    const aliases = {
+      "axiomadmin2026": "AxiomAdmin2026!",
+      "axiomadmin2026!": "AxiomAdmin2026!",
+      "axiomadmim2026": "AxiomAdmin2026!",
+      "axiomadmim2026!": "AxiomAdmin2026!",
+      "axiomoffice2026": "AxiomOffice2026!",
+      "axiomoffice2026!": "AxiomOffice2026!",
+      "axiomagent2026": "AxiomAgent2026!",
+      "axiomagent2026!": "AxiomAgent2026!"
+    };
+
+    gate.addEventListener(
+      "submit",
+      () => {
+        const normalized = normalizeAccessKeyText(otpInput.value);
+        const corrected = aliases[normalized];
+        if (!corrected) return;
+        otpInput.value = corrected;
+
+        if (roleInput && corrected === "AxiomAdmin2026!") {
+          roleInput.value = "principal";
+          document.querySelectorAll("[data-access-route]").forEach((option) => {
+            option.classList.toggle("active", option.dataset.accessRoute === "principal");
+          });
+        }
+      },
+      true
+    );
+  }
+
   applyHomepageMessaging();
+  initExpertApplicationForm();
+  applyMissionControlKeyGuard();
 
   window.AxiomPublicUi = Object.freeze({
     southAfricanProvinces,
@@ -212,6 +357,7 @@
     propertyTypeOptions,
     normalizeProvinceName,
     getTownsByProvinceName,
-    createTownDatalist
+    createTownDatalist,
+    initExpertApplicationForm
   });
 })(window, document);
