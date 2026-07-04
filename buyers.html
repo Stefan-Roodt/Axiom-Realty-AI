@@ -14,8 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="route-header.css" />
+    <link rel="stylesheet" href="styles.css?v=20260704-fix2" />
+    <link rel="stylesheet" href="route-header.css?v=20260704-fix2" />
     <style>
       .buyer-stage-board,
       .buyer-support-panel,
@@ -187,6 +187,75 @@
         color: #9fb0c8;
       }
 
+      .buyer-experience-rail {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        position: relative;
+        margin-top: 1.15rem;
+      }
+
+      .buyer-experience-rail::before {
+        content: "";
+        position: absolute;
+        left: 1.15rem;
+        right: 1.15rem;
+        top: 1.25rem;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.58), rgba(167, 139, 250, 0.6));
+        opacity: 0.8;
+      }
+
+      .buyer-experience-step {
+        position: relative;
+        z-index: 1;
+        padding: 0 0.2rem;
+      }
+
+      .buyer-experience-step span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 0.55rem;
+        border-radius: 999px;
+        background: #67e8f9;
+        color: #07111f;
+        font-size: 0.78rem;
+        font-weight: 800;
+        box-shadow: 0 0 0 7px rgba(34, 211, 238, 0.12);
+      }
+
+      .buyer-experience-step strong {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: #f8fafc;
+      }
+
+      .buyer-experience-step p {
+        color: #9fb0c8;
+      }
+
+      .buyer-guidance-note {
+        margin-top: 1.2rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(167, 139, 250, 0.16);
+        background: linear-gradient(145deg, rgba(12, 22, 42, 0.92), rgba(15, 22, 48, 0.84));
+      }
+
+      .buyer-guidance-note strong {
+        display: block;
+        color: #f8fafc;
+        margin-bottom: 0.22rem;
+      }
+
+      .buyer-guidance-note p {
+        color: #9fb0c8;
+        margin: 0;
+      }
+
       .buyer-support-panel {
         padding: 1.1rem;
       }
@@ -268,6 +337,7 @@
         .buyer-support-strip,
         .buyer-stage-grid,
         .buyer-route-flow,
+        .buyer-experience-rail,
         .buyer-support-grid,
         .buyer-outcome-panel,
         .buyer-outcome-grid {
@@ -282,6 +352,16 @@
           width: 2px;
           height: auto;
           background: linear-gradient(180deg, rgba(34, 211, 238, 0.6), rgba(167, 139, 250, 0.62));
+        }
+
+        .buyer-experience-rail::before {
+          left: 1rem;
+          right: auto;
+          top: 1rem;
+          bottom: 1rem;
+          width: 2px;
+          height: auto;
+          background: linear-gradient(180deg, rgba(34, 211, 238, 0.58), rgba(167, 139, 250, 0.6));
         }
       }
     </style>
@@ -430,23 +510,31 @@
             Axiom is useful when you want the agent to understand budget, area, finance, timing, and intent before sending listings, booking viewings, or talking offers.
           </p>
         </div>
-        <div class="product-pain-grid">
-          <article class="product-pain-card">
-            <strong>Cleaner first brief</strong>
-            <p>You say it once properly instead of repeating yourself across every new message and call.</p>
+        <div class="buyer-experience-rail" aria-label="Buyer journey benefits">
+          <article class="buyer-experience-step">
+            <span>01</span>
+            <strong>Say it once properly</strong>
+            <p>You do not keep repeating budget, area, timing, and must-haves across every fresh message or call.</p>
           </article>
-          <article class="product-pain-card">
-            <strong>Finance readiness early</strong>
-            <p>We surface whether you are ready to move, still waiting on pre-approval, or need a better next step first.</p>
+          <article class="buyer-experience-step">
+            <span>02</span>
+            <strong>Get the gaps checked early</strong>
+            <p>Finance position, urgency, and missing details are cleaned up before momentum is wasted on the wrong move.</p>
           </article>
-          <article class="product-pain-card">
-            <strong>Viewings with less drift</strong>
-            <p>Coordination and reminders do not need to live only in somebody's memory or buried inside chat threads.</p>
+          <article class="buyer-experience-step">
+            <span>03</span>
+            <strong>Keep viewings moving</strong>
+            <p>Scheduling, reminders, and direct contact details stay visible instead of disappearing into chat clutter.</p>
           </article>
-          <article class="product-pain-card">
-            <strong>Better follow-through</strong>
-            <p>Feedback, next steps, and direct agent contact can stay visible after the viewing instead of going cold.</p>
+          <article class="buyer-experience-step">
+            <span>04</span>
+            <strong>Decide with better context</strong>
+            <p>Feedback, next steps, and offer readiness stay attached to the same journey instead of starting from scratch again.</p>
           </article>
+        </div>
+        <div class="buyer-guidance-note">
+          <strong>What this changes in practice</strong>
+          <p>The right agent starts with a cleaner brief, the buyer gets calmer follow-through, and the whole search feels less improvised from the first enquiry onward.</p>
         </div>
       </section>
 
