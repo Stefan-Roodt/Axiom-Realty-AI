@@ -1851,15 +1851,117 @@
 
       .access-route-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
         gap: 0.8rem;
       }
 
+      .access-flow-panel {
+        margin-bottom: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.86), rgba(12, 24, 44, 0.78)),
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 32%);
+      }
+
+      .access-flow-panel strong,
+      .access-flow-node strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .access-flow-panel > p,
+      .access-flow-node small,
+      .access-flow-note {
+        color: #9fb0c8;
+      }
+
+      .access-flow-strip {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.95rem;
+      }
+
+      .access-flow-node {
+        position: relative;
+        padding: 0.85rem 0.9rem 0.85rem 1.1rem;
+        border-left: 2px solid rgba(34, 211, 238, 0.42);
+        background: rgba(15, 23, 42, 0.52);
+      }
+
+      .access-flow-node::before {
+        content: "";
+        position: absolute;
+        left: -7px;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: #67e8f9;
+        box-shadow: 0 0 0 6px rgba(34, 211, 238, 0.12);
+      }
+
+      .access-flow-node::after {
+        content: "";
+        position: absolute;
+        top: 1.28rem;
+        right: -0.62rem;
+        width: 0.9rem;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.62), rgba(167, 139, 250, 0.62));
+      }
+
+      .access-flow-node:last-child::after {
+        display: none;
+      }
+
+      .access-flow-node span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        margin-bottom: 0.42rem;
+        padding: 0.14rem 0.48rem;
+        border-radius: 999px;
+        background: rgba(8, 16, 31, 0.88);
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .access-flow-node.client {
+        border-left-color: rgba(125, 211, 252, 0.56);
+      }
+
+      .access-flow-node.client::before {
+        background: #7dd3fc;
+        box-shadow: 0 0 0 6px rgba(125, 211, 252, 0.12);
+      }
+
+      .access-flow-node.internal {
+        border-left-color: rgba(167, 139, 250, 0.54);
+      }
+
+      .access-flow-node.internal::before {
+        background: #a78bfa;
+        box-shadow: 0 0 0 6px rgba(167, 139, 250, 0.12);
+      }
+
+      .access-flow-note {
+        margin-top: 0.9rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
       .access-route-option {
+        position: relative;
         display: grid;
         gap: 0.28rem;
         min-height: 100%;
-        padding: 0.9rem 0.95rem;
+        padding: 1rem 0.95rem 0.9rem;
         border-radius: 16px;
         border: 1px solid rgba(148, 163, 184, 0.14);
         background: rgba(15, 23, 42, 0.82);
@@ -1868,6 +1970,27 @@
         text-align: left;
         cursor: pointer;
         font: inherit;
+      }
+
+      .admin-gate {
+        counter-reset: access-route;
+      }
+
+      .access-route-option::before {
+        counter-increment: access-route;
+        content: "0" counter(access-route);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-bottom: 0.25rem;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        background: rgba(8, 16, 31, 0.88);
+        color: #67e8f9;
+        font-size: 0.72rem;
+        font-weight: 800;
       }
 
       .access-route-option.active {
@@ -1898,6 +2021,7 @@
 
       @media (max-width: 980px) {
         .access-route-grid,
+        .access-flow-strip,
         .admin-row,
         .market-update-strip,
         .market-update-meta,
@@ -1920,6 +2044,16 @@
         .referral-terms-copy-grid,
         .referral-terms-meta-grid {
           grid-template-columns: 1fr;
+        }
+
+        .access-flow-node::after {
+          top: auto;
+          right: auto;
+          left: 1rem;
+          bottom: -0.42rem;
+          width: 2px;
+          height: 0.7rem;
+          background: linear-gradient(180deg, rgba(34, 211, 238, 0.62), rgba(167, 139, 250, 0.62));
         }
 
         .market-update-actions,
@@ -2400,8 +2534,41 @@
         <div class="section-heading product-heading">
           <p class="eyebrow">Mission Control</p>
           <h2>Axiom Caseflow Command</h2>
+          <p>One secure doorway, with a different working layer for each role player in the deal.</p>
         </div>
         <form class="admin-gate" id="adminGate">
+          <div class="access-flow-panel" aria-label="Axiom access flow">
+            <strong>How the operating system opens up across the deal.</strong>
+            <p>The public concierge gathers the brief first. From there, each person only sees the layer they actually need.</p>
+            <div class="access-flow-strip">
+              <article class="access-flow-node">
+                <span>Public</span>
+                <strong>Buyer / seller intake</strong>
+                <small>The first story lands cleanly instead of scattered across chats and calls.</small>
+              </article>
+              <article class="access-flow-node client">
+                <span>Client</span>
+                <strong>Deal Room access</strong>
+                <small>Buyers and sellers see their own progress, next steps, and shared updates.</small>
+              </article>
+              <article class="access-flow-node internal">
+                <span>Agent</span>
+                <strong>Assigned workspace</strong>
+                <small>The agent gets a briefed case, WhatsApp context, reminders, and protection prompts.</small>
+              </article>
+              <article class="access-flow-node internal">
+                <span>Office</span>
+                <strong>Concierge / admin desk</strong>
+                <small>Follow-up, missing docs, delays, and action queues stay visible in one working lane.</small>
+              </article>
+              <article class="access-flow-node internal">
+                <span>Principal</span>
+                <strong>Full command view</strong>
+                <small>Exposure, performance, commission protection, and branch visibility roll up properly.</small>
+              </article>
+            </div>
+            <p class="access-flow-note">That means less oversharing, less confusion, and a cleaner operating rhythm from first lead to payout.</p>
+          </div>
           <div class="access-route-intro">
             <strong>Choose the correct entry route first.</strong>
             <small>The right person should only see the right layer: public pages for browsing, Deal Room for clients, agent workspace for agents, office operations for admin staff, and full command access for the principal.</small>
