@@ -11,6 +11,10 @@ body {
   padding-top: 6rem;
 }
 
+.site-header + .hero {
+  padding-top: clamp(8.5rem, 12vw, 11rem);
+}
+
 .nav {
   padding: 0.9rem 1rem;
   border: 1px solid rgba(34, 211, 238, 0.16);
@@ -102,6 +106,10 @@ body {
     padding-top: 5.3rem;
   }
 
+  .site-header + .hero {
+    padding-top: 17rem;
+  }
+
   .nav {
     gap: 0.8rem;
   }
@@ -129,6 +137,10 @@ body {
 @media (max-width: 430px) {
   body {
     padding-top: 5rem;
+  }
+
+  .site-header + .hero {
+    padding-top: 14rem;
   }
 
   .brand img {
