@@ -4,15 +4,21 @@
   left: 0;
   right: 0;
   z-index: 70;
-  padding: 0.75rem 0 0;
+  padding: 0.35rem 0;
+}
+
+.site-header .nav {
+  width: min(var(--max-width), calc(100% - 1.2rem));
+  margin: 0 auto;
+  padding: 0.65rem 0.8rem;
+}
+
+.site-header + .hero {
+  padding-top: clamp(2.8rem, 5vw, 3.75rem);
 }
 
 body {
   padding-top: 6rem;
-}
-
-.site-header + .hero {
-  padding-top: clamp(8.5rem, 12vw, 11rem);
 }
 
 .hero > .nav {
@@ -24,7 +30,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.9rem 1rem;
+  padding: 0.55rem 0.95rem;
   border: 1px solid rgba(34, 211, 238, 0.16);
   border-radius: 18px;
   background: rgba(5, 12, 26, 0.82);
@@ -35,19 +41,19 @@ body {
 .site-header .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   text-decoration: none;
   flex: 0 0 auto;
 }
 
 .site-header .brand img {
-  width: 180px;
+  width: 78px;
 }
 
 .site-header .brand-text {
   color: rgba(226, 232, 240, 0.72);
   font-family: "Space Grotesk", sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
   text-transform: uppercase;
@@ -83,6 +89,15 @@ body {
     box-shadow 160ms ease;
 }
 
+.site-header .admin-nav-link {
+  min-width: 88px;
+}
+
+.site-header .nav-utility-link {
+  min-width: 154px;
+  padding-inline: 1rem;
+}
+
 .primary-route-link {
   background: linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(34, 197, 94, 0.12));
   box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.16);
@@ -97,11 +112,11 @@ body {
 
 @media (max-width: 860px) {
   .site-header {
-    padding-top: 0;
+    padding-top: 0.25rem;
   }
 
   .site-header .brand img {
-    width: 190px;
+    width: 74px;
   }
 
   .site-header .nav {
@@ -127,12 +142,8 @@ body {
 }
 
 @media (max-width: 700px) {
-  body {
-    padding-top: 5.3rem;
-  }
-
   .site-header + .hero {
-    padding-top: 17rem;
+    padding-top: 2.4rem;
   }
 
   .site-header .nav {
@@ -150,8 +161,16 @@ body {
     padding-inline: 1rem;
   }
 
+  .site-header .admin-nav-link {
+    min-width: 82px;
+  }
+
+  .site-header .nav-utility-link {
+    min-width: 144px;
+  }
+
   .site-header .brand img {
-    width: 168px;
+    width: 68px;
   }
 
   .site-header .brand-text {
@@ -160,21 +179,25 @@ body {
 }
 
 @media (max-width: 430px) {
-  body {
-    padding-top: 5rem;
-  }
-
   .site-header + .hero {
-    padding-top: 14rem;
+    padding-top: 2rem;
   }
 
   .site-header .brand img {
-    width: 150px;
+    width: 62px;
   }
 
   .site-header .admin-nav-link,
   .site-header .nav-utility-link {
     font-size: 0.92rem;
     padding-inline: 0.85rem;
+  }
+
+  .site-header .admin-nav-link {
+    min-width: 76px;
+  }
+
+  .site-header .nav-utility-link {
+    min-width: 132px;
   }
 }
