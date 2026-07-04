@@ -39,12 +39,10 @@
           return String(value || "").trim().replace(/\s+/g, "").toLowerCase();
         }
 
-        function prepareMissionFrame() {
-          const doc = frame && frame.contentDocument;
-          if (!doc || doc.body?.dataset.missionStandaloneReady === "true") return;
-          doc.body.dataset.missionStandaloneReady = "true";
-
+        function ensureStandaloneStyles(doc) {
+          if (doc.getElementById("missionStandaloneStyles")) return;
           const style = doc.createElement("style");
+          style.id = "missionStandaloneStyles";
           style.textContent = `
             header.hero,
             main > section:not(#analytics),
@@ -143,33 +141,133 @@
             }
           `;
           doc.head.appendChild(style);
+        }
 
-          const analytics = doc.getElementById("analytics");
-          if (analytics) analytics.classList.remove("hidden");
+        function showMissionTab(doc, key) {
+          if (!key) return false;
+          const tabs = Array.from(doc.querySelectorAll("[data-operations-tab]"));
+          const panels = Array.from(doc.querySelectorAll("[data-operations-panel]"));
+          if (!panels.length) return false;
 
-          const gate = doc.getElementById("adminGate");
-          const keyInput = doc.getElementById("adminPassword") || doc.getElementById("adminOtp");
-          if (gate && keyInput && gate.dataset.parentKeyGuardReady !== "true") {
-            gate.dataset.parentKeyGuardReady = "true";
-            gate.addEventListener(
-              "submit",
-              function () {
-                const corrected = keyAliases[normalizeKey(keyInput.value)];
-                if (corrected) keyInput.value = corrected;
+          tabs.forEach(function (tab) {
+            const isActive = tab.dataset.operationsTab === key;
+            tab.classList.toggle("active", isActive);
+            tab.setAttribute("aria-selected", isActive ? "true" : "false");
+          });
+
+          panels.forEach(function (panel) {
+            const isActive = panel.dataset.operationsPanel === key;
+            panel.classList.toggle("active", isActive);
+            panel.classList.toggle("hidden", !isActive);
+            panel.hidden = !isActive;
+            panel.style.display = isActive ? "block" : "none";
+          });
+
+          const menu = doc.getElementById("operationsMoreMenu");
+          const menuToggle = doc.getElementById("operationsMoreToggle");
+          if (menu) menu.hidden = true;
+          if (menuToggle) menuToggle.setAttribute("aria-expanded", "false");
+          return true;
+        }
+
+        function installMissionTabs(doc) {
+          const tabs = Array.from(doc.querySelectorAll("[data-operations-tab]"));
+          const panels = Array.from(doc.querySelectorAll("[data-operations-panel]"));
+          if (!tabs.length || !panels.length) return;
+
+          tabs.forEach(function (tab) {
+            if (tab.dataset.missionTabBound === "true") return;
+            tab.dataset.missionTabBound = "true";
+            tab.addEventListener(
+              "click",
+              function (event) {
+                const key = tab.dataset.operationsTab;
+                if (!key) return;
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                showMissionTab(doc, key);
               },
               true
             );
-          }
+          });
 
-          setTimeout(function () {
-            const anchor = doc.getElementById("admin") || analytics;
-            if (anchor) anchor.scrollIntoView({ block: "start" });
-          }, 50);
+          Array.from(doc.querySelectorAll("[data-open-operations-tab]")).forEach(function (button) {
+            if (button.dataset.missionOpenTabBound === "true") return;
+            button.dataset.missionOpenTabBound = "true";
+            button.addEventListener(
+              "click",
+              function (event) {
+                const key = button.dataset.openOperationsTab;
+                if (!key) return;
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                showMissionTab(doc, key);
+              },
+              true
+            );
+          });
+
+          const activeTab = tabs.find(function (tab) {
+            return tab.classList.contains("active") || tab.getAttribute("aria-selected") === "true";
+          });
+          const activePanel = panels.find(function (panel) {
+            return panel.classList.contains("active") && !panel.hidden && panel.style.display !== "none";
+          });
+          if (activeTab && (!activePanel || activePanel.dataset.operationsPanel !== activeTab.dataset.operationsTab)) {
+            showMissionTab(doc, activeTab.dataset.operationsTab);
+          }
+        }
+
+        function installKeyGuard(doc) {
+          const gate = doc.getElementById("adminGate");
+          const keyInput = doc.getElementById("adminPassword") || doc.getElementById("adminOtp");
+          if (!gate || !keyInput || gate.dataset.parentKeyGuardReady === "true") return;
+          gate.dataset.parentKeyGuardReady = "true";
+          gate.addEventListener(
+            "submit",
+            function () {
+              const corrected = keyAliases[normalizeKey(keyInput.value)];
+              if (corrected) keyInput.value = corrected;
+            },
+            true
+          );
+        }
+
+        function installMutationWatch(doc) {
+          if (!doc.body || doc.body.dataset.missionMutationWatchReady === "true") return;
+          const MutationObserver = doc.defaultView && doc.defaultView.MutationObserver;
+          if (!MutationObserver) return;
+          doc.body.dataset.missionMutationWatchReady = "true";
+          const observer = new MutationObserver(function () {
+            installMissionTabs(doc);
+          });
+          observer.observe(doc.body, { childList: true, subtree: true });
+        }
+
+        function prepareMissionFrame() {
+          const doc = frame && frame.contentDocument;
+          if (!doc || !doc.body || !doc.head) return;
+
+          ensureStandaloneStyles(doc);
+          const analytics = doc.getElementById("analytics");
+          if (analytics) analytics.classList.remove("hidden");
+          installKeyGuard(doc);
+          installMissionTabs(doc);
+          installMutationWatch(doc);
+
+          if (doc.body.dataset.missionStandaloneScrolled !== "true") {
+            doc.body.dataset.missionStandaloneScrolled = "true";
+            setTimeout(function () {
+              const anchor = doc.getElementById("admin") || analytics;
+              if (anchor) anchor.scrollIntoView({ block: "start" });
+            }, 50);
+          }
         }
 
         frame.addEventListener("load", prepareMissionFrame);
-        setTimeout(prepareMissionFrame, 500);
-        setTimeout(prepareMissionFrame, 1500);
+        [150, 500, 1000, 2000, 3500].forEach(function (delay) {
+          setTimeout(prepareMissionFrame, delay);
+        });
       })();
     </script>
   </body>
