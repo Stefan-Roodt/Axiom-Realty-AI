@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Axiom Realty AI | Sell With Confidence</title>
+    <title>Axiom Realty AI | Property Concierge + Mission Control</title>
     <meta
       name="description"
-      content="Axiom Realty AI helps property owners sell with more confidence, gives buyers a clearer start, and helps estate agents deliver a sharper client experience."
+      content="Axiom Realty AI helps sellers and buyers start properly while giving estate agents the operating system behind the deal: concierge follow-up, case visibility, and Mission Control."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,7 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260704-fix2" />
+    <link rel="stylesheet" href="route-header.css?v=20260704-fix2" />
     <style>
       .import-lead-strip {
         display: grid;
@@ -2172,44 +2173,46 @@
       }
     </style>
   </head>
-  <body>
+  <body class="public-home">
     <div class="server-status-banner hidden" id="serverStatusBanner" role="status">
       Local server is offline. Reopen START-DEVELOPING.cmd, then refresh this page.
     </div>
-    <header class="hero" id="top">
-      <div class="mesh" aria-hidden="true"></div>
-      <nav class="nav wrapper">
-        <a class="brand" href="#top">
+    <div class="site-header">
+      <nav class="nav wrapper" aria-label="Primary">
+        <a class="brand" href="index.html">
           <img src="assets-logo.svg" alt="Axiom Realty AI" />
+          <span class="brand-text">Property Concierge</span>
         </a>
         <div class="nav-links">
-          <a class="admin-nav-link" href="sellers.html">Sell a Property</a>
-          <a class="admin-nav-link" href="buyers.html">Buy a Property</a>
-          <a class="admin-nav-link" href="agents.html">Estate Agents</a>
-          <a class="admin-nav-link" href="mission-control.html">Mission Control</a>
+          <a class="admin-nav-link" href="sellers.html">Sell</a>
+          <a class="admin-nav-link" href="buyers.html">Buy</a>
+          <a class="admin-nav-link" href="agents.html">Agents</a>
+          <a class="nav-utility-link" id="missionControlNavLink" href="mission-control.html">Mission Control</a>
         </div>
       </nav>
-
+    </div>
+    <header class="hero" id="top">
+      <div class="mesh" aria-hidden="true"></div>
       <div class="hero-content wrapper">
         <div class="copy">
           <p class="eyebrow">Axiom Realty AI</p>
-          <h1>Sell smarter. Move sooner. Start properly.</h1>
+          <h1>Start the property move properly.</h1>
           <p class="subtext">
-            Axiom helps sellers come in prepared, well positioned, and taken seriously while serious buyers move faster with clearer briefs and cleaner next steps. The sooner the right conversation starts, the better the chance of keeping momentum on your side.
+            Axiom gives sellers and buyers a calmer, faster way to start, while agents, admin teams, and principals run the live matter inside Mission Control: concierge follow-up, WhatsApp activity, case visibility, commission protection, and next steps in one working system.
           </p>
           <div class="hero-proof-grid" aria-label="Quick reassurance">
-            <span><strong>Sellers</strong> Catch demand while it is still warm</span>
-            <span><strong>Buyers</strong> Get lined up before the right property moves</span>
-            <span><strong>Agents</strong> Respond faster with real context</span>
+            <span><strong>Sellers</strong> Start while urgency is still on your side</span>
+            <span><strong>Buyers</strong> Get clear before the right property moves</span>
+            <span><strong>Mission Control</strong> Runs the deal behind the public concierge</span>
           </div>
 
           <div class="cta-group">
             <button class="btn btn-primary hero-choice" data-intent="sell">I Want to Sell</button>
             <button class="btn btn-secondary hero-choice" data-intent="buy">I Want to Buy</button>
-            <a class="btn btn-secondary" href="agents.html">I Am an Agent</a>
+            <a class="btn btn-secondary" href="mission-control.html">Open the operating system</a>
           </div>
 
-          <p class="promise-text">Faster contact. Better timing. Stronger momentum.</p>
+          <p class="promise-text">Public concierge in front. Mission Control underneath.</p>
         </div>
 
         <div class="hero-visual">
@@ -2289,29 +2292,30 @@
 
       <section class="section wrapper" id="property-experts">
         <div class="section-heading">
-          <p class="eyebrow">Estate Agents</p>
-          <h2>Axiom also gives estate agents a calmer operating layer.</h2>
+          <p class="eyebrow">Mission Control</p>
+          <h2>This is the agent operating system behind the public concierge.</h2>
           <p>
-            We partner with responsive, professional property experts who want better-qualified opportunities, stronger client confidence,
-            and cleaner control over updates, documents, deadlines, and commission visibility.
+            Axiom is not just the public-facing intake. It is the working layer behind the deal: qualified briefs, WhatsApp follow-up,
+            progress tracking, commission protection, and one clear command view for the agent, admin team, or principal.
           </p>
         </div>
         <div class="agent-benefit-panel">
           <div>
-            <p class="eyebrow">Axiom Admin Support</p>
-            <h3>Look more organised. Respond with more confidence. Chase less.</h3>
+            <p class="eyebrow">Agent Operating System</p>
+            <h3>Lead Radar. Progress Tracker. Protection Desk. Concierge Comms. One office view.</h3>
             <p>
-              Axiom prepares the seller or buyer brief before you engage, keeps WhatsApp follow-up visible, and tracks documents,
-              case notes, deadlines, and next actions in one place so clients feel the difference.
+              Every lead can enter one system, every case can move through one working view, and every office can see what matters now without chasing updates across phones, inboxes, and memory. That is what makes Axiom feel like the operating system, not just another lead source.
             </p>
           </div>
           <ul>
             <li>Stronger buyer and seller context before first contact</li>
+            <li>Mission Control visibility for agents, admin, and principals</li>
             <li>Clear referral proof and acceptance visibility</li>
             <li>Document and requirement tracking for each live matter</li>
             <li>Messages, notes, and updates saved back to the file</li>
           </ul>
           <div class="cta-group">
+            <a class="btn btn-primary" href="mission-control.html">Open Mission Control</a>
             <a class="btn btn-secondary" href="agents.html">Open the agents page</a>
             <a class="btn btn-secondary" href="#expertApplicationForm">Apply as a property expert</a>
           </div>
@@ -2384,7 +2388,7 @@
 
       <span id="admin" class="anchor-target" aria-hidden="true"></span>
       <section class="section wrapper hidden" id="analytics" aria-label="Mission Control access">
-        <div class="section-heading">
+        <div class="section-heading product-heading">
           <p class="eyebrow">Mission Control</p>
           <h2>Axiom Caseflow Command</h2>
         </div>
@@ -3720,7 +3724,7 @@ Protect commission on the Durban North referral before noon.</textarea>
             <p><strong>No spam route.</strong> Your details are used to prepare this property brief and arrange the right follow-up.</p>
             <p><strong>Human oversight.</strong> A concierge can review urgent, unclear, or sensitive requests before specialist introduction.</p>
             <p><strong>WhatsApp first.</strong> Mobile contact matters most. Email can be added later if you want documents, valuation notes, or formal written updates.</p>
-            <p><strong>POPIA aware.</strong> We do not sell your personal details.</p>
+            <p><strong>POPIA compliant.</strong> We do not sell your personal details.</p>
           </div>
           <p class="submit-trust-line">Your details are only used to help with this property request. Mobile first, email only when needed.</p>
           <label class="consent-label">
@@ -6354,6 +6358,11 @@ Protect commission on the Durban North referral before noon.</textarea>
 
         function showAdminShell() {
           document.body.classList.add("mission-control-mode");
+          const missionControlNavLink = document.getElementById("missionControlNavLink");
+          if (missionControlNavLink) {
+            missionControlNavLink.classList.add("primary-route-link");
+            missionControlNavLink.setAttribute("aria-current", "page");
+          }
           analytics.classList.remove("hidden");
         }
 
@@ -7983,6 +7992,7 @@ Protect commission on the Durban North referral before noon.</textarea>
     <script src="modules/public-ui.js"></script>
     <script src="modules/admin-control.js"></script>
     <script src="modules/api-client.js"></script>
+    <script src="modules/public-intake.js?v=20260704-feature2"></script>
     <script src="modules/communications.js"></script>
     <script src="modules/data-workflows.js"></script>
     <script src="script.js"></script>
