@@ -73,6 +73,10 @@
       if (href.includes("sellers.html")) link.textContent = "Sell a Property";
       if (href.includes("buyers.html")) link.textContent = "Buy a Property";
       if (href.includes("agents.html")) link.textContent = "Estate Agents";
+      if (href.includes("admin=1") || href.includes("#admin")) {
+        link.textContent = "Mission Control";
+        link.setAttribute("href", "mission-control.html");
+      }
     });
 
     const hero = document.querySelector("header.hero .copy");
@@ -309,7 +313,7 @@
 
   function applyMissionControlKeyGuard() {
     const gate = document.getElementById("adminGate");
-    const otpInput = document.getElementById("adminOtp");
+    const otpInput = document.getElementById("adminOtp") || document.getElementById("adminPassword");
     const roleInput = document.getElementById("accessRouteRole");
     if (!gate || !otpInput || gate.dataset.keyGuardReady === "true") return;
     gate.dataset.keyGuardReady = "true";
