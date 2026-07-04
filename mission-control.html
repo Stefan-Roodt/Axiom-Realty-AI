@@ -34,6 +34,8 @@
           axiomadmim2026: "AxiomAdmin2026!",
           "axiomadmim2026!": "AxiomAdmin2026!"
         };
+        let tabSyncInProgress = false;
+        let tabSyncTimer = 0;
 
         function normalizeKey(value) {
           return String(value || "").trim().replace(/\s+/g, "").toLowerCase();
@@ -149,24 +151,34 @@
           const panels = Array.from(doc.querySelectorAll("[data-operations-panel]"));
           if (!panels.length) return false;
 
-          tabs.forEach(function (tab) {
-            const isActive = tab.dataset.operationsTab === key;
-            tab.classList.toggle("active", isActive);
-            tab.setAttribute("aria-selected", isActive ? "true" : "false");
-          });
+          tabSyncInProgress = true;
+          try {
+            tabs.forEach(function (tab) {
+              const isActive = tab.dataset.operationsTab === key;
+              if (tab.classList.contains("active") !== isActive) tab.classList.toggle("active", isActive);
+              if (tab.getAttribute("aria-selected") !== (isActive ? "true" : "false")) {
+                tab.setAttribute("aria-selected", isActive ? "true" : "false");
+              }
+            });
 
-          panels.forEach(function (panel) {
-            const isActive = panel.dataset.operationsPanel === key;
-            panel.classList.toggle("active", isActive);
-            panel.classList.toggle("hidden", !isActive);
-            panel.hidden = !isActive;
-            panel.style.display = isActive ? "block" : "none";
-          });
+            panels.forEach(function (panel) {
+              const isActive = panel.dataset.operationsPanel === key;
+              if (panel.classList.contains("active") !== isActive) panel.classList.toggle("active", isActive);
+              if (panel.classList.contains("hidden") === isActive) panel.classList.toggle("hidden", !isActive);
+              if (panel.hidden === isActive) panel.hidden = !isActive;
+              const displayValue = isActive ? "block" : "none";
+              if (panel.style.display !== displayValue) panel.style.display = displayValue;
+            });
 
-          const menu = doc.getElementById("operationsMoreMenu");
-          const menuToggle = doc.getElementById("operationsMoreToggle");
-          if (menu) menu.hidden = true;
-          if (menuToggle) menuToggle.setAttribute("aria-expanded", "false");
+            const menu = doc.getElementById("operationsMoreMenu");
+            const menuToggle = doc.getElementById("operationsMoreToggle");
+            if (menu) menu.hidden = true;
+            if (menuToggle) menuToggle.setAttribute("aria-expanded", "false");
+          } finally {
+            setTimeout(function () {
+              tabSyncInProgress = false;
+            }, 0);
+          }
           return true;
         }
 
@@ -207,15 +219,19 @@
             );
           });
 
-          const activeTab = tabs.find(function (tab) {
-            return tab.classList.contains("active") || tab.getAttribute("aria-selected") === "true";
-          });
-          const activePanel = panels.find(function (panel) {
-            return panel.classList.contains("active") && !panel.hidden && panel.style.display !== "none";
-          });
-          if (activeTab && (!activePanel || activePanel.dataset.operationsPanel !== activeTab.dataset.operationsTab)) {
-            showMissionTab(doc, activeTab.dataset.operationsTab);
-          }
+          const activeTab =
+            tabs.find(function (tab) {
+              return tab.classList.contains("active") && tab.dataset.operationsTab;
+            }) ||
+            tabs.find(function (tab) {
+              return tab.getAttribute("aria-selected") === "true" && tab.dataset.operationsTab;
+            }) ||
+            tabs.find(function (tab) {
+              return tab.dataset.operationsTab === "overview";
+            }) ||
+            tabs[0];
+
+          if (activeTab) showMissionTab(doc, activeTab.dataset.operationsTab);
         }
 
         function installKeyGuard(doc) {
@@ -239,9 +255,13 @@
           if (!MutationObserver) return;
           doc.body.dataset.missionMutationWatchReady = "true";
           const observer = new MutationObserver(function () {
-            installMissionTabs(doc);
+            if (tabSyncInProgress) return;
+            clearTimeout(tabSyncTimer);
+            tabSyncTimer = setTimeout(function () {
+              installMissionTabs(doc);
+            }, 50);
           });
-          observer.observe(doc.body, { childList: true, subtree: true });
+          observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden", "aria-selected", "style"] });
         }
 
         function prepareMissionFrame() {
