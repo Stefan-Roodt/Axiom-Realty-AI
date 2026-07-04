@@ -58,13 +58,88 @@
               background: #050816 !important;
             }
             main {
-              padding: 28px 0 !important;
+              padding: 24px 0 36px !important;
             }
-            #analytics {
-              display: block !important;
-            }
+            #analytics,
             #analytics.hidden {
               display: block !important;
+            }
+            #analytics.wrapper {
+              width: min(1280px, calc(100% - 24px)) !important;
+              max-width: 1280px !important;
+            }
+            #analytics .section-heading {
+              margin-bottom: 0.85rem !important;
+            }
+            #analytics .section-heading h2 {
+              font-size: clamp(1.65rem, 3vw, 2.25rem) !important;
+            }
+            #analytics .operations-workspace-head,
+            #analytics .operations-tabs,
+            #analytics .operations-tab-panel > .card {
+              border-radius: 14px !important;
+            }
+            #analytics .analytics-grid {
+              display: grid !important;
+              grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)) !important;
+              gap: 0.6rem !important;
+              align-items: stretch !important;
+            }
+            #analytics .analytics-grid .metric-card {
+              min-height: 82px !important;
+              padding: 0.72rem 0.78rem !important;
+              border-radius: 12px !important;
+              display: grid !important;
+              grid-template-columns: minmax(0, 1fr) auto !important;
+              grid-template-rows: auto 1fr !important;
+              align-items: center !important;
+              gap: 0.12rem 0.55rem !important;
+              background:
+                linear-gradient(145deg, rgba(9, 18, 35, 0.98), rgba(13, 24, 43, 0.9)),
+                radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.12), transparent 38%) !important;
+              box-shadow: none !important;
+              border-color: rgba(34, 211, 238, 0.2) !important;
+            }
+            #analytics .analytics-grid .metric-card h3 {
+              grid-column: 1 / span 2 !important;
+              margin: 0 !important;
+              color: #dbeafe !important;
+              font-size: 0.78rem !important;
+              line-height: 1.15 !important;
+              letter-spacing: 0 !important;
+            }
+            #analytics .analytics-grid .metric-card p {
+              grid-column: 1 / span 2 !important;
+              margin: 0 !important;
+              color: #dffbff !important;
+              font-size: clamp(1.25rem, 4.6vw, 1.72rem) !important;
+              line-height: 1 !important;
+              font-weight: 900 !important;
+            }
+            #analytics .overview-grid,
+            #analytics .sprint-grid {
+              grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+              gap: 0.7rem !important;
+            }
+            #analytics .overview-card,
+            #analytics .progress-desk-card,
+            #analytics .risk-command-card {
+              min-height: 86px !important;
+              padding: 0.78rem !important;
+              border-radius: 12px !important;
+            }
+            @media (max-width: 560px) {
+              #analytics.wrapper {
+                width: min(100% - 12px, 1280px) !important;
+              }
+              #analytics .analytics-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.5rem !important;
+              }
+              #analytics .analytics-grid .metric-card {
+                min-height: 72px !important;
+                padding: 0.62rem !important;
+              }
             }
           `;
           doc.head.appendChild(style);
