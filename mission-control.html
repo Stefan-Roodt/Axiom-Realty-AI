@@ -25,5 +25,77 @@
   </head>
   <body>
     <iframe class="mission-frame" src="index.html?admin=1#admin" title="Axiom Mission Control"></iframe>
+    <script>
+      (function () {
+        const frame = document.querySelector(".mission-frame");
+        const keyAliases = {
+          axiomadmin2026: "AxiomAdmin2026!",
+          "axiomadmin2026!": "AxiomAdmin2026!",
+          axiomadmim2026: "AxiomAdmin2026!",
+          "axiomadmim2026!": "AxiomAdmin2026!"
+        };
+
+        function normalizeKey(value) {
+          return String(value || "").trim().replace(/\s+/g, "").toLowerCase();
+        }
+
+        function prepareMissionFrame() {
+          const doc = frame && frame.contentDocument;
+          if (!doc || doc.body?.dataset.missionStandaloneReady === "true") return;
+          doc.body.dataset.missionStandaloneReady = "true";
+
+          const style = doc.createElement("style");
+          style.textContent = `
+            header.hero,
+            main > section:not(#analytics),
+            .intake-overlay,
+            .footer,
+            .concierge-toggle,
+            .concierge-panel {
+              display: none !important;
+            }
+            body {
+              background: #050816 !important;
+            }
+            main {
+              padding: 28px 0 !important;
+            }
+            #analytics {
+              display: block !important;
+            }
+            #analytics.hidden {
+              display: block !important;
+            }
+          `;
+          doc.head.appendChild(style);
+
+          const analytics = doc.getElementById("analytics");
+          if (analytics) analytics.classList.remove("hidden");
+
+          const gate = doc.getElementById("adminGate");
+          const keyInput = doc.getElementById("adminPassword") || doc.getElementById("adminOtp");
+          if (gate && keyInput && gate.dataset.parentKeyGuardReady !== "true") {
+            gate.dataset.parentKeyGuardReady = "true";
+            gate.addEventListener(
+              "submit",
+              function () {
+                const corrected = keyAliases[normalizeKey(keyInput.value)];
+                if (corrected) keyInput.value = corrected;
+              },
+              true
+            );
+          }
+
+          setTimeout(function () {
+            const anchor = doc.getElementById("admin") || analytics;
+            if (anchor) anchor.scrollIntoView({ block: "start" });
+          }, 50);
+        }
+
+        frame.addEventListener("load", prepareMissionFrame);
+        setTimeout(prepareMissionFrame, 500);
+        setTimeout(prepareMissionFrame, 1500);
+      })();
+    </script>
   </body>
 </html>
