@@ -36,6 +36,15 @@ body {
   display: none !important;
 }
 
+.site-header ~ .site-header {
+  display: none !important;
+}
+
+body.public-home .floating-concierge,
+body.public-home .hero-signal-panel {
+  display: none !important;
+}
+
 .site-header .nav {
   display: flex;
   align-items: center;
