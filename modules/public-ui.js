@@ -134,9 +134,44 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     fillTowns("");
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initExpertApplicationForm);
-  } else {
+  function pageIsPublicRoute() {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes("mission-control")) return true;
+    if (path.includes("client-progress")) return true;
+    return ["", "/", "/index.html", "/sellers.html", "/buyers.html", "/agents.html", "/concierge.html"].includes(path);
+  }
+
+  function initFloatingConcierge() {
+    if (document.querySelector(".floating-concierge") || !pageIsPublicRoute()) return;
+
+    const panel = document.createElement("aside");
+    panel.className = "floating-concierge";
+    panel.setAttribute("aria-label", "Axiom floating concierge");
+    panel.innerHTML = `
+      <div class="floating-concierge__mark" aria-hidden="true">A</div>
+      <div class="floating-concierge__body">
+        <span>Axiom Concierge</span>
+        <strong>Start clean. Stay followed up.</strong>
+        <small>Seller, buyer, or office route - the right brief opens first.</small>
+      </div>
+      <div class="floating-concierge__actions">
+        <a href="sellers.html#seller-intake">Sell</a>
+        <a href="buyers.html#buyer-process">Buy</a>
+        <a href="mission-control.html#admin">Mission Control</a>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
+  }
+
+  function initPublicUi() {
     initExpertApplicationForm();
+    initFloatingConcierge();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPublicUi);
+  } else {
+    initPublicUi();
   }
 })();
