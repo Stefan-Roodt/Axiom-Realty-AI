@@ -417,6 +417,24 @@ async function run() {
         agentId: "agent-re-max-potch-agent-1-re-max-potchefstroom"
       })
     });
+    const branchTeamRollout = await requestJson(baseUrl, "/api/admin/onboard-team", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie
+      },
+      body: JSON.stringify({
+        agencyName: "RE/MAX Potchefstroom",
+        branchName: "Potchefstroom",
+        town: "Potchefstroom",
+        province: "North West",
+        admins: "Potch Office Admin | potch.admin@remax-potch.example.co.za | +27 82 000 1200",
+        agents: [
+          "RE/MAX Potch Agent 1 | agent1@remax-potch.example.co.za | +27 82 000 1201",
+          "RE/MAX Potch Agent 2 | agent2@remax-potch.example.co.za | +27 82 000 1202"
+        ]
+      })
+    });
     const queueMessage = await requestJson(baseUrl, "/api/admin/whatsapp/queue", {
       method: "POST",
       headers: {
@@ -575,6 +593,13 @@ async function run() {
       sellerOnboarding.body?.onboarding?.recordType !== "partyUser" && "Seller onboarding did not create a case party user",
       sellerOnboarding.body?.onboarding?.signIn?.accessScope?.caseIds?.[0] !== "verify-case" &&
         "Seller onboarding did not bind seller to the linked case",
+      sellerOnboarding.body?.onboarding?.accessRecord?.profileImage?.status !== "requested" &&
+        "Seller onboarding did not request a consent-based profile selfie",
+      !branchTeamRollout.ok && `/api/admin/onboard-team returned ${branchTeamRollout.status}`,
+      branchTeamRollout.body?.rollout?.counts?.admins !== 1 && "Branch team rollout did not create one admin",
+      branchTeamRollout.body?.rollout?.counts?.agents !== 2 && "Branch team rollout did not create two agents",
+      !branchTeamRollout.body?.rollout?.created?.every((item) => item.scope?.agencyIds?.[0] === "agency-re-max-potchefstroom") &&
+        "Branch team rollout did not scope all people to RE/MAX Potchefstroom",
       !accessModel.body?.onboardingModel?.caseRoles?.some((item) => item.role === "buyer") &&
         "Access model missing buyer onboarding path",
       !accessModel.body?.onboardingModel?.internalRoles?.some((item) => item.role === "agent") &&
