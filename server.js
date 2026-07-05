@@ -5816,6 +5816,528 @@ function handleReportingSnapshot(request, response) {
     });
 }
 
+function createPrincipalOnboardingRecord(payload = {}, session = {}) {
+  const createdAt = nowIso();
+  const agencyName = String(payload.agencyName || payload.agency || "Agency to confirm").trim();
+  const branchName = String(payload.branchName || payload.branch || payload.town || "Main branch").trim();
+  const provinceId = normalizeProvinceId(payload.province || payload.provinceId || "north-west");
+  const province = formatProvinceLabel(provinceId);
+  const town = String(payload.town || branchName).trim();
+  const principalName = String(payload.principalName || payload.name || "Principal to confirm").trim();
+  const principalEmail = normalizeEmail(payload.principalEmail || payload.email);
+  const principalMobile = normalizeContactNumber(payload.principalMobile || payload.mobile || payload.whatsapp);
+  const principalContact = normalizeSigninContact(principalEmail || principalMobile);
+  const agencyId = String(payload.agencyId || `agency-${slugify(agencyName)}`).trim();
+  const branchId = String(payload.branchId || `branch-${slugify(agencyName)}-${slugify(branchName)}`).trim();
+  const principalId = String(payload.principalId || `principal-${slugify(principalName)}-${slugify(agencyName)}`).trim();
+  const agentSeats = Math.max(0, Number(payload.agentSeats || payload.agentCount || 0));
+  const adminSeats = Math.max(0, Number(payload.adminSeats || payload.adminCount || 0));
+  const packageLabel = String(payload.packageLabel || payload.package || "Axiom agent operating system").trim();
+  const scope = {
+    allAccess: false,
+    agencyIds: [agencyId],
+    branchIds: [branchId],
+    provinceIds: [provinceId],
+    agentIds: [],
+    caseIds: []
+  };
+
+  if (!principalContact) {
+    throw new Error("Principal email or mobile is required before access can be created.");
+  }
+
+  return {
+    createdAt,
+    agency: {
+      id: agencyId,
+      name: agencyName,
+      provinceIds: [provinceId],
+      branchIds: [branchId],
+      status: "onboarding",
+      onboarding: {
+        signedUpAt: createdAt,
+        packageLabel,
+        agentSeats,
+        adminSeats,
+        createdBy: session.name || session.userId || "Axiom"
+      }
+    },
+    branch: {
+      id: branchId,
+      agencyId,
+      name: branchName,
+      town,
+      provinceId,
+      province,
+      adminIds: [],
+      agentIds: [],
+      status: "onboarding"
+    },
+    principal: {
+      id: principalId,
+      name: principalName,
+      role: "principal",
+      agencyId,
+      branchId,
+      provinceId,
+      scope,
+      lane: `${branchName} / principal`,
+      contact: principalContact,
+      email: principalEmail,
+      mobile: principalMobile,
+      whatsapp: principalMobile,
+      status: "invited",
+      onboarding: {
+        invitedAt: createdAt,
+        packageLabel,
+        agentSeats,
+        adminSeats,
+        firstLogin: "OTP required",
+        nextStep: "Principal signs in, confirms branch setup, then adds admins and agents."
+      },
+      responsibilities: [
+        "Approve branch setup",
+        "Invite office admin and agents",
+        "Review agency, branch, province and agent rollups"
+      ]
+    }
+  };
+}
+
+function isPartyRole(role) {
+  return ["buyer", "seller", "attorney", "bond_originator"].includes(normalizeRole(role));
+}
+
+function roleOnboardingName(payload = {}, role = "principal") {
+  return String(
+    payload.personName ||
+      payload.principalName ||
+      payload.agentName ||
+      payload.adminName ||
+      payload.clientName ||
+      payload.name ||
+      `${getRoleProfile(role).label} to confirm`
+  ).trim();
+}
+
+function roleOnboardingContact(payload = {}) {
+  const email = normalizeEmail(
+    payload.email ||
+      payload.principalEmail ||
+      payload.agentEmail ||
+      payload.adminEmail ||
+      payload.clientEmail
+  );
+  const mobile = normalizeContactNumber(
+    payload.mobile ||
+      payload.whatsapp ||
+      payload.phone ||
+      payload.principalMobile ||
+      payload.agentMobile ||
+      payload.adminMobile ||
+      payload.clientMobile
+  );
+  return {
+    email,
+    mobile,
+    contact: normalizeSigninContact(email || mobile)
+  };
+}
+
+function buildRoleScope({ role, agencyId, branchId, provinceId, agentId, caseId, extraAgentIds = [], extraCaseIds = [] }) {
+  const normalizedRole = normalizeRole(role);
+  const agencyIds = unique(agencyId);
+  const branchIds = unique(branchId);
+  const provinceIds = unique(provinceId);
+  const agentIds = normalizedRole === "agent" ? unique([agentId]) : unique([agentId, ...extraAgentIds]);
+  const caseIds = isPartyRole(normalizedRole) ? unique([caseId, ...extraCaseIds]) : unique(extraCaseIds);
+
+  return {
+    allAccess: false,
+    agencyIds,
+    branchIds,
+    provinceIds,
+    agentIds,
+    caseIds
+  };
+}
+
+function createRoleOnboardingRecord(payload = {}, session = {}) {
+  const createdAt = nowIso();
+  const role = normalizeRole(payload.role || payload.accessRole || "principal");
+  const profile = getRoleProfile(role);
+  const agencyName = String(payload.agencyName || payload.agency || "Agency to confirm").trim();
+  const branchName = String(payload.branchName || payload.branch || payload.town || "Main branch").trim();
+  const provinceId = normalizeProvinceId(payload.province || payload.provinceId || session.provinceId || "north-west");
+  const province = formatProvinceLabel(provinceId);
+  const town = String(payload.town || branchName).trim();
+  const personName = roleOnboardingName(payload, role);
+  const { email, mobile, contact } = roleOnboardingContact(payload);
+  const agencyId = String(payload.agencyId || `agency-${slugify(agencyName)}`).trim();
+  const branchId = String(payload.branchId || `branch-${slugify(agencyName)}-${slugify(branchName)}`).trim();
+  const agentId = String(
+    payload.agentId ||
+      payload.assignedAgentId ||
+      (role === "agent" ? `agent-${slugify(personName)}-${slugify(agencyName)}` : "")
+  ).trim();
+  const caseId = String(payload.caseId || payload.leadId || payload.dealRoomId || "").trim();
+  const userId = String(
+    payload.userId ||
+      payload.personId ||
+      `${role}-${slugify(personName)}-${slugify(isPartyRole(role) ? caseId || agencyName : agencyName)}`
+  ).trim();
+  const packageLabel = String(payload.packageLabel || payload.package || "Axiom Mission Control").trim();
+  const agentSeats = Math.max(0, Number(payload.agentSeats || payload.agentCount || 0));
+  const adminSeats = Math.max(0, Number(payload.adminSeats || payload.adminCount || 0));
+  const extraAgentIds = ensureArray(payload.agentIds);
+  const extraCaseIds = ensureArray(payload.caseIds);
+  const scope = buildRoleScope({
+    role,
+    agencyId,
+    branchId,
+    provinceId,
+    agentId,
+    caseId,
+    extraAgentIds,
+    extraCaseIds
+  });
+
+  if (!contact) {
+    throw new Error(`${profile.label} email or mobile is required before access can be created.`);
+  }
+
+  if (isPartyRole(role) && !scope.caseIds.length) {
+    throw new Error(`${profile.label} access needs a linked case or Deal Room before it can be created.`);
+  }
+
+  if (role === "agent" && !scope.agentIds.length) {
+    throw new Error("Agent access needs an agent record before it can be created.");
+  }
+
+  const baseRecord = {
+    id: userId,
+    name: personName,
+    role,
+    agencyId,
+    branchId,
+    provinceId,
+    contact,
+    email,
+    mobile,
+    whatsapp: mobile,
+    status: "invited",
+    verificationStatus: "operator_verified",
+    verifiedBy: session.userId || session.name || "axiom",
+    verifiedAt: createdAt,
+    scope,
+    onboarding: {
+      invitedAt: createdAt,
+      packageLabel,
+      firstLogin: "OTP required",
+      verificationOwner: role === "principal" ? "Axiom concierge or existing principal" : "Principal, concierge, or assigned admin",
+      nextStep: "Send OTP invite, confirm first login, then complete role-specific setup."
+    }
+  };
+
+  const teamResponsibilities = {
+    principal: [
+      "Approve branch setup",
+      "Invite office admin and agents",
+      "Review agency, branch, province and agent rollups"
+    ],
+    office_admin: [
+      "Verify incoming people and case access",
+      "Route leads and monitor follow-ups",
+      "Keep WhatsApp approvals and seller updates moving"
+    ],
+    agent: [
+      "Accept qualified leads",
+      "Work assigned buyer and seller matters",
+      "Use WhatsApp drafts, reminders and protection tools"
+    ]
+  };
+
+  const partyResponsibilities = {
+    buyer: ["View own buying progress", "Respond to next-step requests", "Keep the message trail in one place"],
+    seller: ["View own sale progress", "Receive approved seller updates", "Keep the message trail in one place"],
+    attorney: ["Update assigned transfer progress", "Flag missing documents", "Keep transfer comms attached to the case"],
+    bond_originator: ["Update assigned finance progress", "Flag missing finance items", "Keep bond comms attached to the case"]
+  };
+
+  const record = isPartyRole(role)
+    ? {
+        ...baseRecord,
+        partyType: role,
+        agentId,
+        assignedAgentId: agentId,
+        caseIds: scope.caseIds,
+        responsibilities: partyResponsibilities[role] || []
+      }
+    : {
+        ...baseRecord,
+        lane: `${branchName} / ${profile.label}`,
+        agentId: role === "agent" ? scope.agentIds[0] : undefined,
+        assignedAgentId: role === "agent" ? scope.agentIds[0] : undefined,
+        responsibilities: teamResponsibilities[role] || []
+      };
+
+  return {
+    createdAt,
+    role,
+    roleLabel: profile.label,
+    recordType: isPartyRole(role) ? "partyUser" : "teamMember",
+    agency: {
+      id: agencyId,
+      name: agencyName,
+      provinceIds: [provinceId],
+      branchIds: [branchId],
+      status: "onboarding",
+      onboarding: {
+        signedUpAt: createdAt,
+        packageLabel,
+        agentSeats,
+        adminSeats,
+        createdBy: session.name || session.userId || "Axiom"
+      }
+    },
+    branch: {
+      id: branchId,
+      agencyId,
+      name: branchName,
+      town,
+      provinceId,
+      province,
+      adminIds: role === "office_admin" ? [userId] : [],
+      agentIds: role === "agent" ? [record.agentId || userId] : [],
+      status: "onboarding"
+    },
+    accessRecord: record,
+    signIn: {
+      role,
+      roleLabel: profile.label,
+      contact,
+      method: "OTP",
+      accessScope: scope
+    },
+    verification: {
+      status: "operator_verified",
+      verifiedBy: session.name || session.userId || "Axiom",
+      note:
+        role === "principal"
+          ? "Axiom/concierge verifies the principal and agency before the OTP invite is useful."
+          : isPartyRole(role)
+            ? "The linked case controls what this party can see."
+            : "The principal or concierge verifies this person before office access is issued."
+    }
+  };
+}
+
+function upsertById(list, record) {
+  const index = list.findIndex((item) => item.id === record.id);
+  if (index >= 0) {
+    list[index] = { ...list[index], ...record };
+    return "updated";
+  }
+  list.unshift(record);
+  return "created";
+}
+
+function applyRoleOnboarding(operations, onboarding, session = {}) {
+  const { agency, branch, accessRecord, recordType, role, createdAt } = onboarding;
+  const agencyStatus = upsertById(operations.organisations, agency);
+  const branchStatus = upsertById(operations.branches, branch);
+  const targetList = recordType === "partyUser" ? operations.partyUsers : operations.teamMembers;
+  const accessStatus = upsertById(targetList, accessRecord);
+  const storedBranch = operations.branches.find((item) => item.id === branch.id);
+
+  if (storedBranch) {
+    if (role === "office_admin") storedBranch.adminIds = unique([...(storedBranch.adminIds || []), accessRecord.id]);
+    if (role === "agent") storedBranch.agentIds = unique([...(storedBranch.agentIds || []), accessRecord.agentId || accessRecord.id]);
+  }
+
+  operations.tasks.unshift({
+    id: createOpsId("task"),
+    caseId: isPartyRole(role) ? onboarding.signIn.accessScope.caseIds[0] : agency.id,
+    title: `Activate ${onboarding.roleLabel}: ${accessRecord.name}`,
+    category: "access-onboarding",
+    priority: role === "principal" ? "high" : "medium",
+    status: "open",
+    ownerId: session.userId,
+    ownerName: session.name || "Axiom",
+    dueLabel: role === "principal" ? "Before first branch import" : "Before first live handover",
+    nextAction: `${onboarding.verification.note} Send the OTP invite once the contact route is confirmed.`,
+    agencyId: agency.id,
+    branchId: branch.id,
+    provinceId: branch.provinceId,
+    agentId: accessRecord.agentId || "",
+    assignedAgentId: accessRecord.assignedAgentId || "",
+    createdAt
+  });
+
+  operations.whatsapp.queue.unshift({
+    id: createOpsId("wa"),
+    caseId: isPartyRole(role) ? onboarding.signIn.accessScope.caseIds[0] : agency.id,
+    caseName: isPartyRole(role) ? `${accessRecord.name} access` : `${agency.name} onboarding`,
+    category: `${role}-onboarding`,
+    toName: accessRecord.name,
+    toRole: role,
+    ownerName: session.name || "Axiom",
+    channel: "whatsapp",
+    status: "awaiting_approval",
+    body: `Hi ${accessRecord.name}. Axiom has prepared your ${onboarding.roleLabel} access. You will sign in with your linked email/mobile and a one-time code. Your view is limited to the correct ${isPartyRole(role) ? "case" : "agency, branch and role"} scope.`,
+    agencyId: agency.id,
+    branchId: branch.id,
+    provinceId: branch.provinceId,
+    agentId: accessRecord.agentId || "",
+    assignedAgentId: accessRecord.assignedAgentId || "",
+    createdAt
+  });
+
+  return { agencyStatus, branchStatus, accessStatus };
+}
+
+async function handleRoleOnboarding(request, response) {
+  const session = requirePermission(request, response, ["org.manage_assigned", "rollups.view_all"], ["principal", "office_admin"]);
+  if (!session) return;
+
+  try {
+    const body = await readBody(request, 64 * 1024);
+    const operations = getOperationsState();
+    const onboarding = createRoleOnboardingRecord(body, session);
+    const mutation = applyRoleOnboarding(operations, onboarding, session);
+
+    audit("role-onboarded", {
+      role: onboarding.role,
+      recordType: onboarding.recordType,
+      recordId: onboarding.accessRecord.id,
+      agencyId: onboarding.agency.id,
+      branchId: onboarding.branch.id,
+      provinceId: onboarding.branch.provinceId,
+      createdBy: session.userId
+    });
+    await persistState();
+
+    sendJson(response, 200, {
+      ok: true,
+      onboarding: {
+        ...onboarding,
+        mutation
+      },
+      snapshot: buildOperationsSnapshot(session)
+    });
+  } catch (error) {
+    sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : "Role onboarding failed." });
+  }
+}
+
+async function handlePrincipalOnboarding(request, response) {
+  const session = requirePermission(request, response, ["org.manage_assigned", "rollups.view_all"], ["principal", "office_admin"]);
+  if (!session) return;
+
+  try {
+    const body = await readBody(request, 64 * 1024);
+    const operations = getOperationsState();
+    const onboarding = createPrincipalOnboardingRecord(body, session);
+    const { agency, branch, principal, createdAt } = onboarding;
+
+    const existingAgencyIndex = operations.organisations.findIndex((item) => item.id === agency.id);
+    if (existingAgencyIndex >= 0) {
+      operations.organisations[existingAgencyIndex] = {
+        ...operations.organisations[existingAgencyIndex],
+        ...agency,
+        provinceIds: unique([...(operations.organisations[existingAgencyIndex].provinceIds || []), ...agency.provinceIds]),
+        branchIds: unique([...(operations.organisations[existingAgencyIndex].branchIds || []), ...agency.branchIds])
+      };
+    } else {
+      operations.organisations.unshift(agency);
+    }
+
+    const existingBranchIndex = operations.branches.findIndex((item) => item.id === branch.id);
+    if (existingBranchIndex >= 0) {
+      operations.branches[existingBranchIndex] = {
+        ...operations.branches[existingBranchIndex],
+        ...branch
+      };
+    } else {
+      operations.branches.unshift(branch);
+    }
+
+    const existingPrincipalIndex = operations.teamMembers.findIndex((item) => item.id === principal.id);
+    if (existingPrincipalIndex >= 0) {
+      operations.teamMembers[existingPrincipalIndex] = {
+        ...operations.teamMembers[existingPrincipalIndex],
+        ...principal
+      };
+    } else {
+      operations.teamMembers.unshift(principal);
+    }
+
+    operations.tasks.unshift({
+      id: createOpsId("task"),
+      caseId: agency.id,
+      title: `Activate ${agency.name}`,
+      category: "agency-onboarding",
+      priority: "high",
+      status: "open",
+      ownerId: session.userId,
+      ownerName: session.name || "Axiom",
+      dueLabel: "Before first agent import",
+      nextAction: `Confirm ${principal.name}'s contact, then invite admins and agents for ${branch.name}.`,
+      agencyId: agency.id,
+      branchId: branch.id,
+      provinceId: branch.provinceId,
+      agentId: "",
+      assignedAgentId: "",
+      createdAt
+    });
+
+    operations.whatsapp.queue.unshift({
+      id: createOpsId("wa"),
+      caseId: agency.id,
+      caseName: `${agency.name} onboarding`,
+      category: "principal-onboarding",
+      toName: principal.name,
+      toRole: "principal",
+      ownerName: session.name || "Axiom",
+      channel: "whatsapp",
+      status: "awaiting_approval",
+      body: `Hi ${principal.name}. Axiom has prepared your ${agency.name} Mission Control access for ${branch.name}. You will sign in with your linked email/mobile and a one-time code. Once inside, you can see branch, agent, province and agency rollups for your own office.`,
+      agencyId: agency.id,
+      branchId: branch.id,
+      provinceId: branch.provinceId,
+      createdAt
+    });
+
+    audit("principal-onboarded", {
+      agencyId: agency.id,
+      branchId: branch.id,
+      provinceId: branch.provinceId,
+      principalId: principal.id,
+      createdBy: session.userId
+    });
+    await persistState();
+
+    sendJson(response, 200, {
+      ok: true,
+      onboarding: {
+        agency,
+        branch,
+        principal,
+        signIn: {
+          role: "principal",
+          contact: principal.contact,
+          method: "OTP",
+          accessScope: principal.scope
+        },
+        inviteQueued: true
+      },
+      snapshot: buildOperationsSnapshot(session)
+    });
+  } catch (error) {
+    sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : "Principal onboarding failed." });
+  }
+}
+
 function handleAuditLog(request, response) {
   const session = requirePermission(request, response, "audit.view", ["principal"]);
   if (!session) return;
@@ -5902,6 +6424,52 @@ function handleAccessModel(_request, response) {
       llmProvider: getLlmStatus(),
       valuePattern: "AI drafts, summarises, detects risk, recommends next action and queues WhatsApp work for human approval.",
       rollupDimensions: ["agency", "branch", "province", "agent", "case", "role"]
+    },
+    onboardingModel: {
+      route: "/api/admin/onboard-role",
+      signInMethod: "OTP to verified email or mobile",
+      verificationRule: "Access is created only after an existing principal, concierge/admin, or Axiom operator confirms the person and scope.",
+      scopePattern: "Every new user is linked to agency, branch, province, role and, where relevant, agent or case.",
+      internalRoles: [
+        {
+          role: "principal",
+          verifiedBy: "Axiom concierge or existing principal",
+          sees: "Assigned agency, branch, province, admin, agent and roll-up view"
+        },
+        {
+          role: "office_admin",
+          label: "Concierge / admin",
+          verifiedBy: "Principal or Axiom concierge",
+          sees: "Assigned branches, agents, leads, reminders, comms and protection work"
+        },
+        {
+          role: "agent",
+          verifiedBy: "Principal or concierge/admin",
+          sees: "Own leads, assigned cases, client comms, protection and action queue"
+        }
+      ],
+      caseRoles: [
+        {
+          role: "seller",
+          verifiedBy: "Linked seller case contact",
+          sees: "Own seller progress, next steps, approved updates and comms"
+        },
+        {
+          role: "buyer",
+          verifiedBy: "Linked buyer case contact",
+          sees: "Own buyer progress, next steps and comms"
+        },
+        {
+          role: "attorney",
+          verifiedBy: "Linked transfer case contact",
+          sees: "Assigned transfer progress and outstanding items"
+        },
+        {
+          role: "bond_originator",
+          verifiedBy: "Linked finance case contact",
+          sees: "Assigned finance progress and outstanding items"
+        }
+      ]
     }
   });
 }
@@ -6356,6 +6924,14 @@ async function handleRequest(request, response) {
     }
     if (pathname === "/api/admin/reporting" && request.method === "GET") {
       handleReportingSnapshot(request, response);
+      return;
+    }
+    if (pathname === "/api/admin/onboard-role" && request.method === "POST") {
+      await handleRoleOnboarding(request, response);
+      return;
+    }
+    if (pathname === "/api/admin/onboard-principal" && request.method === "POST") {
+      await handlePrincipalOnboarding(request, response);
       return;
     }
     if (pathname === "/api/admin/case-brain" && request.method === "GET") {
