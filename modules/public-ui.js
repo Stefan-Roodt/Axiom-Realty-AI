@@ -151,13 +151,12 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
       <div class="floating-concierge__mark" aria-hidden="true">A</div>
       <div class="floating-concierge__body">
         <span>Axiom Concierge</span>
-        <strong>Start clean. Stay followed up.</strong>
-        <small>Seller, buyer, or office route - the right brief opens first.</small>
+        <strong>Hi, I am here to help.</strong>
+        <small>Tell me if you want to sell or buy, and I will start the right brief.</small>
       </div>
       <div class="floating-concierge__actions">
-        <a href="sellers.html#seller-intake">Sell</a>
-        <a href="buyers.html#buyer-process">Buy</a>
-        <a href="mission-control.html#admin">Mission Control</a>
+        <a href="sellers.html#seller-intake">I want to sell</a>
+        <a href="buyers.html#buyer-process">I want to buy</a>
       </div>
     `;
 
