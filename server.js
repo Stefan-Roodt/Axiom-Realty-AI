@@ -5714,6 +5714,108 @@ function handleSystemStatus(request, response) {
     });
 }
 
+function buildStateReportingSnapshot(session) {
+  const snapshot = buildOperationsSnapshot(session);
+  const metrics = snapshot.metrics || {};
+  const sourceToSale = snapshot.sourceToSale || {};
+  const servicePulse = snapshot.servicePulseRollups || { summary: {}, byAgent: [] };
+
+  return {
+    mode: "state",
+    available: true,
+    source: "scoped operations snapshot",
+    generatedAt: new Date().toISOString(),
+    scope: getSessionScope(session),
+    totals: {
+      leads: metrics.totalLeads || snapshot.leads?.length || 0,
+      cases: metrics.caseBrainTotal || snapshot.dealRooms?.length || 0,
+      tasks: metrics.openTasks || 0,
+      reminders: metrics.pendingReminders || 0,
+      escalations: metrics.openEscalations || 0,
+      commissionItems: metrics.protectedDeals || 0,
+      dealRooms: metrics.dealRooms || 0,
+      communications: snapshot.whatsapp?.queue?.length || 0,
+      servicePulse: metrics.servicePulseCount || 0,
+      agentNetworkRecords: metrics.agentNetworkRecords || 0
+    },
+    momentum: {
+      leads7d: sourceToSale.summary?.newLeads7d || 0
+    },
+    rollups: {
+      national: {
+        label: "Current scope",
+        leads: metrics.totalLeads || 0,
+        cases: metrics.caseBrainTotal || 0,
+        openTasks: metrics.openTasks || 0,
+        protectedDeals: metrics.protectedDeals || 0,
+        avgServiceScore: servicePulse.summary?.avgScore || 0,
+        recoveryItems: servicePulse.summary?.needsRecovery || 0
+      },
+      agencies: Object.entries(snapshot.rollups?.agencies || {}).map(([label, count]) => ({ label, leads: count })),
+      branches: Object.entries(snapshot.rollups?.branches || {}).map(([label, count]) => ({ label, leads: count })),
+      provinces: Object.entries(snapshot.rollups?.provinces || {}).map(([label, count]) => ({ label, leads: count })),
+      agents: (servicePulse.byAgent || []).map((agent) => ({
+        id: agent.agentId || agent.agentName,
+        label: agent.agentName,
+        leads: 0,
+        cases: 0,
+        avgServiceScore: agent.avgScore,
+        recoveryItems: agent.needsRecovery
+      }))
+    },
+    pipeline: {
+      sourceToSale: sourceToSale.bySource || []
+    },
+    protection: {
+      total: metrics.protectedDeals || 0,
+      attention: metrics.caseBrainCommissionProtections || 0
+    },
+    communications: {
+      total: snapshot.whatsapp?.queue?.length || 0,
+      queued: snapshot.whatsapp?.metrics?.queuedCount || 0,
+      awaitingApproval: snapshot.whatsapp?.metrics?.awaitingApproval || 0,
+      delivered: snapshot.whatsapp?.metrics?.deliveredToday || 0
+    },
+    servicePulse: {
+      total: servicePulse.summary?.total || 0,
+      avgScore: servicePulse.summary?.avgScore || 0,
+      recovery: servicePulse.summary?.needsRecovery || 0,
+      byAgent: servicePulse.byAgent || []
+    }
+  };
+}
+
+function handleReportingSnapshot(request, response) {
+  const session = requirePermission(request, response, ["rollups.view_all", "rollups.view_assigned", "analytics.view_all"]);
+  if (!session) return;
+
+  Promise.resolve()
+    .then(async () => {
+      const store = await ensureStorage();
+      const reporting = typeof store.reportingSnapshot === "function"
+        ? await store.reportingSnapshot({ session, scope: getSessionScope(session) })
+        : buildStateReportingSnapshot(session);
+
+      sendJson(response, 200, {
+        ok: true,
+        role: session.role,
+        identity: {
+          role: session.role,
+          userId: session.userId,
+          name: session.name,
+          agencyId: session.agencyId,
+          branchId: session.branchId,
+          provinceId: session.provinceId
+        },
+        scope: getSessionScope(session),
+        reporting: reporting?.available === false ? buildStateReportingSnapshot(session) : reporting
+      });
+    })
+    .catch((error) => {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Reporting snapshot failed." });
+    });
+}
+
 function handleAuditLog(request, response) {
   const session = requirePermission(request, response, "audit.view", ["principal"]);
   if (!session) return;
@@ -6250,6 +6352,10 @@ async function handleRequest(request, response) {
     }
     if (pathname === "/api/admin/operations" && request.method === "GET") {
       handleOperationsSnapshot(request, response);
+      return;
+    }
+    if (pathname === "/api/admin/reporting" && request.method === "GET") {
+      handleReportingSnapshot(request, response);
       return;
     }
     if (pathname === "/api/admin/case-brain" && request.method === "GET") {
