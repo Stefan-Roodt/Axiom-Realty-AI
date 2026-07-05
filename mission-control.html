@@ -1985,6 +1985,62 @@
         gap: 0.8rem;
       }
 
+      .access-command-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 0.9rem;
+        margin-bottom: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(10, 20, 40, 0.62);
+      }
+
+      .access-command-copy span,
+      .access-route-preview span,
+      .access-route-preview-grid span {
+        display: block;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.24rem;
+      }
+
+      .access-command-copy strong,
+      .access-route-preview strong,
+      .access-route-preview-grid strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .access-command-copy p,
+      .access-command-chip small,
+      .access-route-preview p,
+      .access-route-preview-grid small,
+      .access-route-preview-list li {
+        color: #9fb0c8;
+      }
+
+      .access-command-chip-row {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .access-command-chip {
+        padding: 0.8rem 0.9rem;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(15, 23, 42, 0.78);
+      }
+
+      .access-command-chip strong {
+        display: block;
+        color: #f8fafc;
+        margin-bottom: 0.2rem;
+      }
+
       .access-flow-panel {
         margin-bottom: 1rem;
         padding: 1rem 1.05rem;
@@ -2129,6 +2185,63 @@
         background: linear-gradient(145deg, rgba(10, 28, 42, 0.9), rgba(15, 23, 42, 0.88));
       }
 
+      .access-route-preview {
+        margin-top: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.86), rgba(12, 24, 44, 0.78)),
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.1), transparent 32%);
+      }
+
+      .access-route-preview-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.8rem;
+        align-items: start;
+      }
+
+      .access-route-preview-head p {
+        margin: 0.3rem 0 0;
+      }
+
+      .access-route-preview-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0.22rem 0.72rem;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        background: rgba(8, 16, 31, 0.8);
+        color: #dbeafe;
+        font-size: 0.74rem;
+        font-weight: 700;
+      }
+
+      .access-route-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+        margin-top: 0.9rem;
+      }
+
+      .access-route-preview-grid article {
+        padding: 0.85rem 0.9rem;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(15, 23, 42, 0.78);
+      }
+
+      .access-route-preview-list {
+        margin: 0.9rem 0 0;
+        padding-left: 1.15rem;
+      }
+
+      .access-route-preview-list li + li {
+        margin-top: 0.45rem;
+      }
+
       .admin-gate label {
         color: #e2e8f0;
         font-weight: 700;
@@ -2150,9 +2263,11 @@
       }
 
       @media (max-width: 980px) {
+        .access-command-strip,
         .access-route-grid,
         .access-flow-strip,
         .admin-row,
+        .access-route-preview-grid,
         .market-update-strip,
         .market-update-meta,
         .market-update-form,
@@ -2173,6 +2288,10 @@
         .referral-terms-item,
         .referral-terms-copy-grid,
         .referral-terms-meta-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .access-route-preview-head {
           grid-template-columns: 1fr;
         }
 
@@ -2743,12 +2862,29 @@
         <div class="section-heading product-heading">
           <p class="eyebrow">Mission Control</p>
           <h2>Axiom Caseflow Command</h2>
-          <p>One secure doorway, with a different working layer for each role player in the deal.</p>
+          <p>One secure doorway that opens only the layer each role player should actually see, while the office keeps one protected system of record.</p>
         </div>
         <form class="admin-gate" id="adminGate">
+          <div class="access-command-strip" aria-label="Mission Control access summary">
+            <div class="access-command-copy">
+              <span>Secure route logic</span>
+              <strong>Choose the route first. Then Axiom opens only the correct working layer.</strong>
+              <p>The public concierge gathers the story, but Mission Control narrows access instead of widening it, so the right person gets the right visibility without office noise.</p>
+            </div>
+            <div class="access-command-chip-row">
+              <article class="access-command-chip">
+                <strong>Private by role</strong>
+                <small>Clients, agents, admin teams, and principals do not land in the same view.</small>
+              </article>
+              <article class="access-command-chip">
+                <strong>OTP-first sign-in</strong>
+                <small>Verified contact route first, then one-time access instead of loose shared passwords.</small>
+              </article>
+            </div>
+          </div>
           <div class="access-flow-panel" aria-label="Axiom access flow">
             <strong>How the operating system opens up across the deal.</strong>
-            <p>The public concierge gathers the brief first. From there, each person only sees the layer they actually need.</p>
+            <p>The public concierge gathers the brief first. From there, access narrows into the exact layer each person needs to work or stay informed.</p>
             <div class="access-flow-strip">
               <article class="access-flow-node">
                 <span>Public</span>
@@ -2811,6 +2947,35 @@
               <strong>Bond Originator</strong>
               <small>Assigned finance progress only</small>
             </button>
+          </div>
+          <div class="access-route-preview" aria-live="polite">
+            <div class="access-route-preview-head">
+              <div>
+                <span>Selected route</span>
+                <strong id="accessRoutePreviewTitle">Estate principal</strong>
+                <p id="accessRoutePreviewSummary">Full agency, branch, admin, agent, client, protection, comms, and rollup visibility.</p>
+              </div>
+              <div class="access-route-preview-pill" id="accessRoutePreviewPill">Full command</div>
+            </div>
+            <div class="access-route-preview-grid">
+              <article>
+                <span>Sees</span>
+                <strong id="accessRoutePreviewVisibility">Agencies, branches, admins, agents, buyers, sellers, protection, and comms</strong>
+              </article>
+              <article>
+                <span>Opens into</span>
+                <strong id="accessRoutePreviewWorkspace">Admin overview</strong>
+              </article>
+              <article>
+                <span>Security</span>
+                <strong id="accessRoutePreviewSecurity">One-time code to the principal contact route</strong>
+              </article>
+            </div>
+            <ul class="access-route-preview-list" id="accessRoutePreviewList">
+              <li>Full command visibility across agency, branch, and province rollups.</li>
+              <li>Protection, service, and performance signals stay in one office record.</li>
+              <li>Client-facing layers remain separate from internal operating notes.</li>
+            </ul>
           </div>
           <input id="accessRouteRole" type="hidden" value="principal" />
           <label for="adminContact" id="adminPasswordLabel">Estate principal sign-in contact</label>
@@ -6661,6 +6826,13 @@ Protect commission on the Durban North referral before noon.</textarea>
         const passwordLabel = document.getElementById("adminPasswordLabel");
         const gateHint = document.getElementById("adminGateHint");
         const otpHelperText = document.getElementById("otpHelperText");
+        const routePreviewTitle = document.getElementById("accessRoutePreviewTitle");
+        const routePreviewSummary = document.getElementById("accessRoutePreviewSummary");
+        const routePreviewPill = document.getElementById("accessRoutePreviewPill");
+        const routePreviewVisibility = document.getElementById("accessRoutePreviewVisibility");
+        const routePreviewWorkspace = document.getElementById("accessRoutePreviewWorkspace");
+        const routePreviewSecurity = document.getElementById("accessRoutePreviewSecurity");
+        const routePreviewList = document.getElementById("accessRoutePreviewList");
         const requestOtpButton = document.getElementById("requestOtpButton");
         const routeRoleInput = document.getElementById("accessRouteRole");
         const accessRouteOptions = Array.from(document.querySelectorAll("[data-access-route]"));
@@ -6695,6 +6867,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["inbox", "progress", "followups", "risk", "sprint", "metrics", "registers", "whatsapp"],
             accessNote: "Signed in as estate principal. Full agency, branch, admin, agent, buyer, seller, province and rollup view unlocked.",
             roleLabel: "Estate principal",
+            routeSummary: "Full agency, branch, admin, agent, client, protection, comms, and rollup visibility.",
+            routePill: "Full command",
+            routeVisibility: "Agencies, branches, admins, agents, buyers, sellers, protection, and comms",
+            routeWorkspace: "Admin overview",
+            routeSecurity: "One-time code to the principal contact route",
+            routeBullets: [
+              "Full command visibility across agency, branch, and province rollups.",
+              "Protection, service, and performance signals stay in one office record.",
+              "Client-facing layers remain separate from internal operating notes."
+            ],
             failureText: "Estate principal sign-in could not be verified on this build.",
           },
           office_admin: {
@@ -6707,6 +6889,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["inbox", "progress", "followups", "risk", "sprint", "metrics", "registers", "whatsapp"],
             accessNote: "Signed in as concierge admin. Assigned agents, branches, leads, reminders, protection, progress, and comms are unlocked.",
             roleLabel: "Concierge / admin",
+            routeSummary: "Assigned branch and agent control desk with office follow-up, progress, protection, and comms.",
+            routePill: "Office control",
+            routeVisibility: "Assigned agents, live matters, blockers, docs, protection, and comms",
+            routeWorkspace: "Admin overview",
+            routeSecurity: "One-time code to the concierge or admin contact route",
+            routeBullets: [
+              "Run the branch desk without opening principal-only rollups.",
+              "See where documents, reminders, or updates are drifting today.",
+              "Keep the office rhythm moving while client layers stay separate."
+            ],
             failureText: "Concierge/admin sign-in could not be verified on this build.",
           },
           agent: {
@@ -6719,6 +6911,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["inbox", "progress", "followups", "risk", "metrics", "registers", "whatsapp"],
             accessNote: "Signed in as agent. Assigned cases, client updates, protection, and live comms are unlocked.",
             roleLabel: "Agent workspace",
+            routeSummary: "A cleaner working lane for the agent: briefed cases, next actions, reminders, and protected deal context.",
+            routePill: "Agent lane",
+            routeVisibility: "Assigned cases, follow-up, protection prompts, and client progress context",
+            routeWorkspace: "Agent operations",
+            routeSecurity: "One-time code to the agent contact route",
+            routeBullets: [
+              "Start with a structured brief instead of rebuilding context from messages.",
+              "See the next move, reminders, and client-facing progress without office noise.",
+              "Commission protection and live comms stay attached to the same matter."
+            ],
             failureText: "Agent workspace sign-in could not be verified on this build.",
           },
           buyer: {
@@ -6731,6 +6933,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["progress", "followups", "whatsapp"],
             accessNote: "Signed in as buyer. Only your own progress, next steps, and message trail are visible.",
             roleLabel: "Buyer",
+            routeSummary: "A private buyer view with only your own progress, next steps, outstanding items, and message trail.",
+            routePill: "Client view",
+            routeVisibility: "Own buying progress, finance steps, next actions, and relevant messages",
+            routeWorkspace: "Buyer portal",
+            routeSecurity: "One-time code to the buyer contact route",
+            routeBullets: [
+              "See only your own transaction progress and outstanding items.",
+              "Keep finance, document, and next-step clarity in one calm window.",
+              "Internal office notes and other matters remain hidden."
+            ],
             failureText: "Buyer sign-in could not be verified on this build.",
           },
           seller: {
@@ -6743,6 +6955,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["progress", "followups", "whatsapp"],
             accessNote: "Signed in as seller. Only your own sale progress, next steps, and message trail are visible.",
             roleLabel: "Seller",
+            routeSummary: "A private seller view with progress, next steps, updates, and a steadier sense of what is happening.",
+            routePill: "Client view",
+            routeVisibility: "Own sale progress, next actions, updates, and message trail",
+            routeWorkspace: "Seller portal",
+            routeSecurity: "One-time code to the seller contact route",
+            routeBullets: [
+              "See only your own sale journey, updates, and next recommendations.",
+              "Keep communication calmer without needing the full office view.",
+              "Other clients, office notes, and internal chasing remain hidden."
+            ],
             failureText: "Seller sign-in could not be verified on this build.",
           },
           attorney: {
@@ -6755,6 +6977,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["progress", "followups", "whatsapp"],
             accessNote: "Signed in as attorney. Only assigned transfer progress, outstanding items, and message trail are visible.",
             roleLabel: "Attorney",
+            routeSummary: "A transfer-limited view for the attorney with only the assigned matter, outstanding items, and relevant messages.",
+            routePill: "Transfer lane",
+            routeVisibility: "Assigned transfer progress, required items, and relevant messages",
+            routeWorkspace: "Transfer progress",
+            routeSecurity: "One-time code to the attorney contact route",
+            routeBullets: [
+              "See the transfer lane without opening buyer, seller, or office-wide records.",
+              "Outstanding items and progress stay attached to the assigned matter only.",
+              "The office keeps the broader record while your legal lane stays focused."
+            ],
             failureText: "Attorney sign-in could not be verified on this build.",
           },
           bond_originator: {
@@ -6767,6 +6999,16 @@ Protect commission on the Durban North referral before noon.</textarea>
             workspaceTabs: ["progress", "followups", "whatsapp"],
             accessNote: "Signed in as bond originator. Only assigned finance progress, outstanding items, and message trail are visible.",
             roleLabel: "Bond originator",
+            routeSummary: "A finance-limited view for the bond originator with only the assigned bond progress, outstanding items, and messages.",
+            routePill: "Finance lane",
+            routeVisibility: "Assigned finance progress, required items, and relevant messages",
+            routeWorkspace: "Finance progress",
+            routeSecurity: "One-time code to the bond originator contact route",
+            routeBullets: [
+              "See only the finance lane tied to the assigned matter.",
+              "Keep required items and next steps visible without opening office-wide data.",
+              "The office retains the broader file while finance work stays focused."
+            ],
             failureText: "Bond originator sign-in could not be verified on this build.",
           },
         };
@@ -6814,6 +7056,38 @@ Protect commission on the Durban North referral before noon.</textarea>
           if (actionText && adminMessageAction) {
             adminMessageAction.classList.remove("hidden");
             adminMessageAction.textContent = actionText;
+          }
+        }
+
+        function updateRoutePreview(profile) {
+          if (!profile) return;
+
+          if (routePreviewTitle) {
+            routePreviewTitle.textContent = profile.roleLabel || "Selected route";
+          }
+
+          if (routePreviewSummary) {
+            routePreviewSummary.textContent = profile.routeSummary || profile.hint || "";
+          }
+
+          if (routePreviewPill) {
+            routePreviewPill.textContent = profile.routePill || "Secure route";
+          }
+
+          if (routePreviewVisibility) {
+            routePreviewVisibility.textContent = profile.routeVisibility || profile.hint || "";
+          }
+
+          if (routePreviewWorkspace) {
+            routePreviewWorkspace.textContent = profile.routeWorkspace || profile.defaultView || "";
+          }
+
+          if (routePreviewSecurity) {
+            routePreviewSecurity.textContent = profile.routeSecurity || profile.otpHint || "";
+          }
+
+          if (routePreviewList && Array.isArray(profile.routeBullets)) {
+            routePreviewList.innerHTML = profile.routeBullets.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
           }
         }
 
@@ -6873,6 +7147,8 @@ Protect commission on the Durban North referral before noon.</textarea>
           if (otpHelperText) {
             otpHelperText.textContent = profile.otpHint;
           }
+
+          updateRoutePreview(profile);
 
           hideMessage();
         }
