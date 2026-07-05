@@ -2322,7 +2322,8 @@
       }
 
       .access-setup-field input,
-      .access-setup-field select {
+      .access-setup-field select,
+      .access-setup-field textarea {
         min-height: 44px;
         width: 100%;
         border: 1px solid rgba(148, 163, 184, 0.18);
@@ -2331,6 +2332,12 @@
         color: #f8fafc;
         padding: 0.72rem 0.82rem;
         font: inherit;
+      }
+
+      .access-setup-field textarea {
+        min-height: 104px;
+        resize: vertical;
+        line-height: 1.45;
       }
 
       .access-setup-field small,
@@ -2344,6 +2351,24 @@
 
       .access-setup-status {
         margin: 0.8rem 0 0;
+      }
+
+      .access-rollout-panel {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .access-rollout-panel h4 {
+        margin: 0 0 0.25rem;
+        color: #f8fafc;
+      }
+
+      .access-rollout-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-top: 0.7rem;
       }
 
       .access-setup-result {
@@ -3336,10 +3361,44 @@
                 <label for="accessSetupAgentSeats">Agent seats</label>
                 <input id="accessSetupAgentSeats" type="number" min="0" value="8" />
               </div>
+              <div class="access-setup-field access-setup-span-2">
+                <label for="accessSetupSelfieUrl">Selfie / profile image URL</label>
+                <input id="accessSetupSelfieUrl" type="url" placeholder="Optional now; otherwise Axiom asks by WhatsApp" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupSelfieConsent">Image consent</label>
+                <select id="accessSetupSelfieConsent">
+                  <option value="">Request by WhatsApp</option>
+                  <option value="yes">Consent already confirmed</option>
+                </select>
+              </div>
               <div class="access-setup-field">
                 <button class="btn btn-primary" type="submit" id="accessSetupSubmit">Create Access</button>
               </div>
             </form>
+            <div class="access-rollout-panel" aria-label="Branch team rollout">
+              <h4>Branch team rollout</h4>
+              <p class="small-note">For L. Ferreira's office: paste the concierge/admin and agents under the same agency, branch and province. Selfies are requested by WhatsApp with consent so every player has a recognisable profile image.</p>
+              <form class="access-setup-form" id="accessRolloutForm">
+                <div class="access-setup-field access-setup-span-2">
+                  <label for="accessRolloutAdmins">Concierge / admin</label>
+                  <textarea id="accessRolloutAdmins">Potch Office Admin | potch.admin@remax-potch.example.co.za | +27 82 000 1200</textarea>
+                </div>
+                <div class="access-setup-field access-setup-span-2">
+                  <label for="accessRolloutAgents">Agents</label>
+                  <textarea id="accessRolloutAgents">RE/MAX Potch Agent 1 | agent1@remax-potch.example.co.za | +27 82 000 1201
+RE/MAX Potch Agent 2 | agent2@remax-potch.example.co.za | +27 82 000 1202
+RE/MAX Potch Agent 3 | agent3@remax-potch.example.co.za | +27 82 000 1203</textarea>
+                </div>
+                <div class="access-setup-field access-setup-span-2">
+                  <small>Format: Name | email | mobile. Axiom creates scoped access and queues OTP plus selfie/profile requests.</small>
+                </div>
+                <div class="access-setup-field">
+                  <button class="btn btn-secondary" type="submit" id="accessRolloutSubmit">Create Branch Team</button>
+                </div>
+              </form>
+              <div class="access-rollout-summary" id="accessRolloutSummary"></div>
+            </div>
             <p class="small-note access-setup-status" id="accessSetupStatus">Example loaded: L. Ferreira, RE/MAX Potch principal. Change the role to set up admins, agents, sellers, buyers, attorneys, or bond originators.</p>
             <div class="access-setup-result hidden" id="accessSetupResult"></div>
           </section>
@@ -7820,9 +7879,16 @@ Protect commission on the Durban North referral before noon.</textarea>
         const accessSetupAgentId = document.getElementById("accessSetupAgentId");
         const accessSetupCaseId = document.getElementById("accessSetupCaseId");
         const accessSetupAgentSeats = document.getElementById("accessSetupAgentSeats");
+        const accessSetupSelfieUrl = document.getElementById("accessSetupSelfieUrl");
+        const accessSetupSelfieConsent = document.getElementById("accessSetupSelfieConsent");
         const accessSetupSubmit = document.getElementById("accessSetupSubmit");
         const accessSetupStatus = document.getElementById("accessSetupStatus");
         const accessSetupResult = document.getElementById("accessSetupResult");
+        const accessRolloutForm = document.getElementById("accessRolloutForm");
+        const accessRolloutAdmins = document.getElementById("accessRolloutAdmins");
+        const accessRolloutAgents = document.getElementById("accessRolloutAgents");
+        const accessRolloutSubmit = document.getElementById("accessRolloutSubmit");
+        const accessRolloutSummary = document.getElementById("accessRolloutSummary");
         const inboxCommandDeck = document.getElementById("inboxCommandDeck");
         const agentAssistList = document.getElementById("agentAssistList");
         const caseBrainBadge = document.getElementById("caseBrainBadge");
@@ -8037,7 +8103,19 @@ Protect commission on the Durban North referral before noon.</textarea>
             <span>${escapeHtml(onboarding.roleLabel || "Access")} created</span>
             <strong>${escapeHtml(record.name || "New user")} can sign in as ${escapeHtml(signIn.role || "role")} using ${escapeHtml(signIn.contact || "the verified contact")}.</strong>
             <p>${escapeHtml(scopeText || "Scope recorded.")}</p>
-            <p>WhatsApp invite queued for human approval. OTP proves control of the verified email/mobile route.</p>
+            <p>WhatsApp invite queued for human approval. OTP proves control of the verified email/mobile route. Profile image status: ${escapeHtml(record.profileImage?.status || "requested")}.</p>
+          `;
+        }
+
+        function renderAccessRolloutResult(data) {
+          if (!accessRolloutSummary) return;
+          const rollout = data?.rollout || {};
+          const counts = rollout.counts || {};
+          accessRolloutSummary.innerHTML = `
+            <span class="access-setup-pill">${Number(counts.admins || 0)} admin${Number(counts.admins || 0) === 1 ? "" : "s"}</span>
+            <span class="access-setup-pill">${Number(counts.agents || 0)} agent${Number(counts.agents || 0) === 1 ? "" : "s"}</span>
+            <span class="access-setup-pill">OTP invites queued</span>
+            <span class="access-setup-pill">Selfie requests queued</span>
           `;
         }
 
@@ -8076,6 +8154,8 @@ Protect commission on the Durban North referral before noon.</textarea>
                 agentId: accessSetupAgentId.value,
                 caseId: accessSetupCaseId.value,
                 agentSeats: accessSetupAgentSeats.value,
+                profileImageUrl: accessSetupSelfieUrl.value,
+                profileImageConsent: accessSetupSelfieConsent.value,
                 packageLabel: "Axiom Mission Control"
               })
             });
@@ -8096,6 +8176,50 @@ Protect commission on the Durban North referral before noon.</textarea>
           }
         }
 
+        async function submitAccessRollout(event) {
+          event.preventDefault();
+          if (!accessRolloutForm) return;
+
+          if (accessRolloutSubmit) {
+            accessRolloutSubmit.disabled = true;
+            accessRolloutSubmit.textContent = "Creating...";
+          }
+          if (accessSetupStatus) {
+            accessSetupStatus.textContent = "Creating branch team, scoped access routes, OTP invites and selfie requests...";
+          }
+
+          try {
+            const data = await requestJson("/api/admin/onboard-team", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                agencyName: accessSetupAgency.value,
+                branchName: accessSetupBranch.value,
+                town: accessSetupBranch.value,
+                province: accessSetupProvince.value,
+                admins: accessRolloutAdmins.value,
+                agents: accessRolloutAgents.value,
+                packageLabel: "Axiom Mission Control"
+              })
+            });
+            renderAccessRolloutResult(data);
+            if (accessSetupStatus) {
+              const counts = data.rollout?.counts || {};
+              accessSetupStatus.textContent = `Branch team created: ${counts.admins || 0} admin and ${counts.agents || 0} agents. OTP and selfie requests are queued for approval.`;
+            }
+            await refreshOperations();
+          } catch (error) {
+            if (accessSetupStatus) {
+              accessSetupStatus.textContent = error?.message || "Branch team rollout failed. Check the pasted names, emails and mobile numbers.";
+            }
+          } finally {
+            if (accessRolloutSubmit) {
+              accessRolloutSubmit.disabled = false;
+              accessRolloutSubmit.textContent = "Create Branch Team";
+            }
+          }
+        }
+
         function cssToken(value) {
           return String(value || "")
             .toLowerCase()
@@ -8105,6 +8229,7 @@ Protect commission on the Durban North referral before noon.</textarea>
         updateAccessSetupHint();
         accessSetupRole?.addEventListener("change", updateAccessSetupHint);
         accessSetupForm?.addEventListener("submit", submitAccessSetup);
+        accessRolloutForm?.addEventListener("submit", submitAccessRollout);
 
         function renderInbox(snapshot) {
           const leads = Array.isArray(snapshot.leads) ? snapshot.leads : [];
