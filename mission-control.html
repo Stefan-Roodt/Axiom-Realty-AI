@@ -7182,6 +7182,16 @@ Protect commission on the Durban North referral before noon.</textarea>
           window.location.search.includes("admin=1") ||
           window.location.hash === "#admin";
         const accessRoleSessionKey = "axiomMissionControlAccessRole";
+
+        function escapeHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
         const accessProfiles = {
           principal: {
             label: "Estate principal sign-in contact",
