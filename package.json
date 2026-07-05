@@ -9,6 +9,31 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "local": "node scripts/open-local.js",
+    "local:foreground": "node server.js",
+    "docker:build": "docker build -t axiom-realty-ai .",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:up:db": "docker compose --profile database up --build",
+    "db:migrate:json": "node scripts/migrate-json-to-postgres.js",
+    "agent-network:collate": "node scripts/collate-agent-network-directory.js",
+    "agent-network:import": "node scripts/import-agent-network-seed.js",
+    "agent-network:import-seed": "node scripts/import-agent-network-seed.js",
+    "check": "node --check server.js && node --check script.js && node --check modules/access-config.js && node --check modules/public-ui.js && node --check modules/admin-control.js && node --check modules/api-client.js && node --check modules/communications.js && node --check modules/data-workflows.js && node --check modules/storage.js && node --check scripts/open-local.js && node --check scripts/verify-backend.js && node --check scripts/migrate-json-to-postgres.js",
+    "verify": "node scripts/verify-backend.js"
+  }
+}
+{
+  "name": "axiom-realty-ai-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
     "db:migrate:json": "node scripts/migrate-json-to-postgres.js",
     "agent-network:collate": "node scripts/collate-agent-network-directory.js",
     "agent-network:import": "node scripts/import-agent-network-seed.js",
