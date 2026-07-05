@@ -3,72 +3,38 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createAccessConfig } from "./modules/access-config.js";
+import { createStorage } from "./modules/storage.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function readConfigSecret(names, fallback) {
-  for (const name of names) {
-    const value = String(process.env[name] || "").trim();
-    if (value) {
-      return { value, source: name };
-    }
-  }
-  return { value: fallback, source: "local default" };
-}
-
-function readBooleanEnv(name, fallback = false) {
-  const value = String(process.env[name] || "").trim().toLowerCase();
-  if (!value) return fallback;
-  return ["1", "true", "yes", "on"].includes(value);
-}
-
-const isRenderRuntime = readBooleanEnv("RENDER", false) || Boolean(process.env.RENDER_SERVICE_ID);
-const principalAccessKey = readConfigSecret(
-  ["PRINCIPAL_ACCESS_KEY", "ADMIN_ACCESS_KEY", "ADMIN_PASSWORD"],
-  "AxiomAdmin2026!"
-);
-const officeAdminAccessKey = readConfigSecret(["OFFICE_ADMIN_ACCESS_KEY", "OFFICE_ADMIN_PASSWORD"], "AxiomOffice2026!");
-const agentAccessKey = readConfigSecret(["AGENT_ACCESS_KEY", "AGENT_PASSWORD"], "AxiomAgent2026!");
-const buyerAccessKey = readConfigSecret(["BUYER_ACCESS_KEY", "BUYER_PASSWORD"], "AxiomBuyer2026!");
-const sellerAccessKey = readConfigSecret(["SELLER_ACCESS_KEY", "SELLER_PASSWORD"], "AxiomSeller2026!");
-const attorneyAccessKey = readConfigSecret(["ATTORNEY_ACCESS_KEY", "ATTORNEY_PASSWORD"], "AxiomAttorney2026!");
-const bondOriginatorAccessKey = readConfigSecret(
-  ["BOND_ORIGINATOR_ACCESS_KEY", "BOND_ORIGINATOR_PASSWORD"],
-  "AxiomBond2026!"
-);
+const environment = process.env.NODE_ENV || "local";
+const {
+  isRenderRuntime,
+  accessConfig,
+  permissionCatalog,
+  workspaceTabDefinitions,
+  accessProfiles,
+  normalizeRole,
+  getRoleKey,
+  getRoleProfile,
+  getRolePermissions,
+  getWorkspaceTabs,
+  getRoleSigninContact,
+  hasPermission,
+  hasAnyPermission,
+  getPermissionLabels
+} = createAccessConfig(process.env, { environment });
 
 const config = {
-  port: Number(process.env.PORT || 8080),
+  port: Number(process.env.PORT || (isRenderRuntime ? 8080 : 8098)),
   host: process.env.HOST || (isRenderRuntime ? "0.0.0.0" : "127.0.0.1"),
   appVersion: process.env.APP_VERSION || "local-dev",
-  environment: process.env.NODE_ENV || "local",
+  environment,
   isRenderRuntime,
   publicBaseUrl: String(process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || "").trim(),
-  principalAccessKey: principalAccessKey.value,
-  officeAdminAccessKey: officeAdminAccessKey.value,
-  agentAccessKey: agentAccessKey.value,
-  accessKeySources: {
-    principal: principalAccessKey.source,
-    office_admin: officeAdminAccessKey.source,
-    concierge: officeAdminAccessKey.source,
-    agent: agentAccessKey.source,
-    buyer: buyerAccessKey.source,
-    seller: sellerAccessKey.source,
-    attorney: attorneyAccessKey.source,
-    bond_originator: bondOriginatorAccessKey.source
-  },
-  principalSigninContact: (process.env.PRINCIPAL_SIGNIN_CONTACT || "principal@axiom.local").trim(),
-  officeAdminSigninContact: (process.env.OFFICE_ADMIN_SIGNIN_CONTACT || "office@axiom.local").trim(),
-  agentSigninContact: (process.env.AGENT_SIGNIN_CONTACT || "agent@axiom.local").trim(),
-  buyerSigninContact: (process.env.BUYER_SIGNIN_CONTACT || "buyer@axiom.local").trim(),
-  sellerSigninContact: (process.env.SELLER_SIGNIN_CONTACT || "seller@axiom.local").trim(),
-  attorneySigninContact: (process.env.ATTORNEY_SIGNIN_CONTACT || "attorney@axiom.local").trim(),
-  bondOriginatorSigninContact: (process.env.BOND_ORIGINATOR_SIGNIN_CONTACT || "bond@axiom.local").trim(),
-  sessionHours: Math.max(1, Number(process.env.MISSION_CONTROL_SESSION_HOURS || 8)),
-  otpMinutes: Math.max(3, Number(process.env.MISSION_CONTROL_OTP_MINUTES || 10)),
-  cookieSecure: readBooleanEnv("COOKIE_SECURE", process.env.NODE_ENV === "production"),
-  otpPreviewEnabled: readBooleanEnv("MISSION_CONTROL_OTP_PREVIEW", process.env.NODE_ENV !== "production"),
+  ...accessConfig,
   whatsappMode: String(process.env.WHATSAPP_MODE || "managed-simulation").trim(),
   llmProvider: String(
     process.env.LLM_PROVIDER ||
@@ -85,203 +51,62 @@ const config = {
   openaiModel: String(process.env.OPENAI_MODEL || "gpt-4o-mini").trim()
 };
 
-const dataDir = path.join(__dirname, "data");
-const leadsPath = path.join(dataDir, "leads.json");
-const sessionsPath = path.join(dataDir, "auth-sessions.json");
-const auditPath = path.join(dataDir, "audit-log.json");
-const otpPath = path.join(dataDir, "auth-otp.json");
-const opsPath = path.join(dataDir, "operations-state.json");
-const missionControlCookie = "axiom_mc_session";
-
-const permissionCatalog = {
-  "system.view": "See platform health and backend status",
-  "leads.create": "Register new leads and imports",
-  "leads.view_all": "See the full office lead pipeline",
-  "leads.view_assigned": "See assigned live leads",
-  "leads.assign": "Route leads between office and agents",
-  "progress.view_all": "See all live transaction progress",
-  "progress.view_assigned": "See assigned live transaction progress",
-  "reminders.view_all": "See the full reminder and action queue",
-  "reminders.view_assigned": "See assigned reminder and action queue",
-  "escalations.view_all": "See office escalation queues",
-  "escalations.view_assigned": "See assigned escalations",
-  "analytics.view_all": "See office-wide momentum and analytics",
-  "analytics.view_self": "See personal momentum and analytics",
-  "scorecards.view_all": "See all agent scorecards",
-  "scorecards.view_self": "See personal scorecards",
-  "service_pulse.view_all": "See all buyer and seller service pulse feedback",
-  "service_pulse.view_assigned": "See assigned buyer and seller service pulse feedback",
-  "service_pulse.capture": "Capture service pulse feedback",
-  "commission.view_all": "See the full commission protection desk",
-  "commission.view_assigned": "See assigned commission protection matters",
-  "commission.protect": "Protect a deal and log commission proof",
-  "comms.view_all": "See the full comms and WhatsApp trail",
-  "comms.view_assigned": "See assigned comms and WhatsApp trail",
-  "dealroom.share": "Create and share client Deal Room links",
-  "pilot.view_all": "See WhatsApp pilot readiness across agents",
-  "pilot.view_assigned": "See assigned WhatsApp pilot readiness",
-  "pilot.manage": "Manage pilot agents, WhatsApp test scenarios and pilot issues",
-  "agent_directory.view_all": "See the internal agent network directory",
-  "agent_directory.view_assigned": "See assigned agent network directory records",
-  "agent_directory.manage": "Create, verify and maintain sourced agent directory records",
-  "agent_directory.outreach": "Log controlled outreach and pilot invitations",
-  "seller_updates.approve": "Approve seller update packs before send",
-  "market_updates.send": "Create market updates for clients",
-  "referrals.accept": "Accept referral terms before lead activation",
-  "client.view_own": "See own client progress and communication trail",
-  "dealroom.view_assigned": "See assigned Deal Room progress",
-  "org.manage_assigned": "Manage assigned agencies, branches, admins and agents",
-  "rollups.view_all": "See agency, branch, province and agent rollups",
-  "rollups.view_assigned": "See assigned province, branch and agent rollups",
-  "audit.view": "See security and audit activity",
-  "export.download": "Download office backup exports"
-};
-
-const workspaceTabDefinitions = {
-  inbox: ["leads.view_all", "leads.view_assigned"],
-  progress: ["progress.view_all", "progress.view_assigned"],
-  followups: ["reminders.view_all", "reminders.view_assigned"],
-  risk: ["escalations.view_all", "escalations.view_assigned"],
-  sprint: ["analytics.view_all", "analytics.view_self"],
-  metrics: ["scorecards.view_all", "scorecards.view_self"],
-  registers: ["commission.view_all", "commission.view_assigned"],
-  whatsapp: ["comms.view_all", "comms.view_assigned", "client.view_own"],
-  network: ["agent_directory.view_all", "agent_directory.view_assigned"]
-};
-
-const accessProfiles = {
-  principal: {
-    label: "Estate principal",
-    gateLabel: "Estate principal sign-in code",
-    allowedViews: ["admin", "agent", "buyer", "seller"],
-    defaultView: "admin",
-    workspaceTabs: Object.keys(workspaceTabDefinitions),
-    accessNote: "Signed in as estate principal. Full agency, branch, admin, agent, buyer, seller, province and rollup view unlocked.",
-    permissions: Object.keys(permissionCatalog)
-  },
-  office_admin: {
-    label: "Concierge / admin",
-    gateLabel: "Concierge admin sign-in code",
-    allowedViews: ["admin", "agent", "buyer", "seller"],
-    defaultView: "admin",
-    workspaceTabs: ["inbox", "progress", "followups", "risk", "sprint", "metrics", "registers", "whatsapp", "network"],
-    accessNote: "Signed in as concierge admin. Assigned agents, branches, leads, reminders, protection, progress, and comms are unlocked.",
-    permissions: [
-      "system.view",
-      "leads.create",
-      "leads.view_all",
-      "leads.assign",
-      "progress.view_all",
-      "reminders.view_all",
-      "escalations.view_all",
-      "analytics.view_all",
-      "scorecards.view_all",
-      "service_pulse.view_all",
-      "service_pulse.capture",
-      "commission.view_all",
-      "commission.protect",
-      "comms.view_all",
-      "dealroom.share",
-      "pilot.view_all",
-      "pilot.manage",
-      "agent_directory.view_assigned",
-      "agent_directory.manage",
-      "agent_directory.outreach",
-      "seller_updates.approve",
-      "market_updates.send",
-      "referrals.accept",
-      "org.manage_assigned",
-      "rollups.view_assigned"
-    ]
-  },
-  agent: {
-    label: "Agent workspace",
-    gateLabel: "Agent workspace sign-in code",
-    allowedViews: ["agent", "buyer"],
-    defaultView: "agent",
-    workspaceTabs: ["inbox", "progress", "followups", "risk", "metrics", "registers", "whatsapp"],
-    accessNote: "Signed in as agent. Assigned cases, client updates, protection, and live comms are unlocked.",
-    permissions: [
-      "leads.create",
-      "leads.view_assigned",
-      "progress.view_assigned",
-      "reminders.view_assigned",
-      "escalations.view_assigned",
-      "analytics.view_self",
-      "scorecards.view_self",
-      "service_pulse.view_assigned",
-      "service_pulse.capture",
-      "commission.view_assigned",
-      "commission.protect",
-      "comms.view_assigned",
-      "dealroom.share",
-      "pilot.view_assigned",
-      "seller_updates.approve",
-      "market_updates.send",
-      "referrals.accept"
-    ]
-  },
-  buyer: {
-    label: "Buyer",
-    gateLabel: "Buyer sign-in code",
-    allowedViews: ["buyer"],
-    defaultView: "buyer",
-    workspaceTabs: ["progress", "followups", "whatsapp"],
-    accessNote: "Signed in as buyer. Only your own progress, next steps, and message trail are visible.",
-    permissions: [
-      "client.view_own",
-      "dealroom.view_assigned",
-      "progress.view_assigned",
-      "reminders.view_assigned",
-      "comms.view_assigned"
-    ]
-  },
-  seller: {
-    label: "Seller",
-    gateLabel: "Seller sign-in code",
-    allowedViews: ["seller"],
-    defaultView: "seller",
-    workspaceTabs: ["progress", "followups", "whatsapp"],
-    accessNote: "Signed in as seller. Only your own sale progress, next steps, and message trail are visible.",
-    permissions: [
-      "client.view_own",
-      "dealroom.view_assigned",
-      "progress.view_assigned",
-      "reminders.view_assigned",
-      "comms.view_assigned"
-    ]
-  },
-  attorney: {
-    label: "Attorney",
-    gateLabel: "Attorney sign-in code",
-    allowedViews: ["seller"],
-    defaultView: "seller",
-    workspaceTabs: ["progress", "followups", "whatsapp"],
-    accessNote: "Signed in as attorney. Only assigned transfer progress, outstanding items, and message trail are visible.",
-    permissions: [
-      "client.view_own",
-      "dealroom.view_assigned",
-      "progress.view_assigned",
-      "reminders.view_assigned",
-      "comms.view_assigned"
-    ]
-  },
-  bond_originator: {
-    label: "Bond originator",
-    gateLabel: "Bond originator sign-in code",
-    allowedViews: ["buyer"],
-    defaultView: "buyer",
-    workspaceTabs: ["progress", "followups", "whatsapp"],
-    accessNote: "Signed in as bond originator. Only assigned finance progress, outstanding items, and message trail are visible.",
-    permissions: [
-      "client.view_own",
-      "dealroom.view_assigned",
-      "progress.view_assigned",
-      "reminders.view_assigned",
-      "comms.view_assigned"
-    ]
+function getPortSequence(preferredPort) {
+  const requested = Number(preferredPort) || 8080;
+  if (requested !== 8080) {
+    return [requested];
   }
-};
+
+  return [8080, 8098, 8099, 3000, 3001];
+}
+
+function buildListenErrorLabel(port, host, error) {
+  return `Failed to bind ${host}:${port} (${error?.code || "unknown"})`;
+}
+
+function listenOnPort(server, port, host) {
+  return new Promise((resolve, reject) => {
+    const onListen = () => {
+      cleanup();
+      resolve(port);
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
+    const cleanup = () => {
+      server.removeListener("error", onError);
+      server.removeListener("listening", onListen);
+    };
+
+    server.once("error", onError);
+    server.once("listening", onListen);
+    server.listen(port, host);
+  });
+}
+
+async function startWithFallback(server, preferredPort, host) {
+  const errors = [];
+  for (const candidate of getPortSequence(preferredPort)) {
+    try {
+      const boundPort = await listenOnPort(server, candidate, host);
+      if (candidate !== preferredPort) {
+        console.log(`Port ${preferredPort} unavailable; using fallback port ${candidate}`);
+      }
+      return boundPort;
+    } catch (error) {
+      errors.push(buildListenErrorLabel(candidate, host, error));
+      if (!["EACCES", "EADDRINUSE"].includes(error?.code)) {
+        throw error;
+      }
+    }
+  }
+  throw new Error(`Unable to start server on configured and fallback ports. ${errors.join(" | ")}`);
+}
+
+const dataDir = path.join(__dirname, "data");
+const missionControlCookie = "axiom_mc_session";
+let storage = null;
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -300,18 +125,6 @@ const state = {
   otpChallenges: [],
   operations: null
 };
-
-function normalizeRole(role) {
-  const normalized = String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-  if (normalized === "agent") return "agent";
-  if (normalized === "office_admin" || normalized === "office" || normalized === "concierge") return "office_admin";
-  if (normalized === "principal" || normalized === "admin" || normalized === "estate_principal") return "principal";
-  if (normalized === "buyer") return "buyer";
-  if (normalized === "seller") return "seller";
-  if (normalized === "attorney" || normalized === "conveyancer") return "attorney";
-  if (normalized === "bond" || normalized === "bond_originator" || normalized === "originator") return "bond_originator";
-  return "principal";
-}
 
 function hashSecret(value) {
   return createHash("sha256").update(String(value || ""), "utf8").digest("hex");
@@ -345,55 +158,6 @@ function createOtpCode() {
 
 function normalizeSigninContact(contact) {
   return String(contact || "").trim().toLowerCase();
-}
-
-function getRoleKey(role) {
-  const normalizedRole = normalizeRole(role);
-  if (normalizedRole === "agent") return config.agentAccessKey;
-  if (normalizedRole === "buyer") return buyerAccessKey.value;
-  if (normalizedRole === "seller") return sellerAccessKey.value;
-  if (normalizedRole === "attorney") return attorneyAccessKey.value;
-  if (normalizedRole === "bond_originator") return bondOriginatorAccessKey.value;
-  if (normalizedRole === "office_admin") return config.officeAdminAccessKey;
-  return config.principalAccessKey;
-}
-
-function getRoleProfile(role) {
-  return accessProfiles[normalizeRole(role)] || accessProfiles.principal;
-}
-
-function getRolePermissions(role) {
-  return getRoleProfile(role).permissions || [];
-}
-
-function getWorkspaceTabs(role) {
-  return getRoleProfile(role).workspaceTabs || [];
-}
-
-function getRoleSigninContact(role) {
-  const normalizedRole = normalizeRole(role);
-  if (normalizedRole === "agent") return config.agentSigninContact;
-  if (normalizedRole === "office_admin") return config.officeAdminSigninContact;
-  if (normalizedRole === "buyer") return config.buyerSigninContact;
-  if (normalizedRole === "seller") return config.sellerSigninContact;
-  if (normalizedRole === "attorney") return config.attorneySigninContact;
-  if (normalizedRole === "bond_originator") return config.bondOriginatorSigninContact;
-  return config.principalSigninContact;
-}
-
-function hasPermission(role, permission) {
-  return getRolePermissions(role).includes(permission);
-}
-
-function hasAnyPermission(role, permissions = []) {
-  return permissions.some((permission) => hasPermission(role, permission));
-}
-
-function getPermissionLabels(permissions = []) {
-  return permissions.map((permission) => ({
-    key: permission,
-    label: permissionCatalog[permission] || permission
-  }));
 }
 
 function ensureArray(value) {
@@ -795,6 +559,10 @@ function normalizeOperationsShape(operations) {
   operations.agentNetwork.directory = Array.isArray(operations.agentNetwork.directory) ? operations.agentNetwork.directory : [];
   operations.agentNetwork.outreachLog = Array.isArray(operations.agentNetwork.outreachLog) ? operations.agentNetwork.outreachLog : [];
   operations.agentNetwork.importBatches = Array.isArray(operations.agentNetwork.importBatches) ? operations.agentNetwork.importBatches : [];
+  operations.financeControl =
+    operations.financeControl && typeof operations.financeControl === "object"
+      ? operations.financeControl
+      : defaultFinanceControlConfig();
   operations.whatsapp = operations.whatsapp && typeof operations.whatsapp === "object" ? operations.whatsapp : {};
   operations.whatsapp.bridge =
     operations.whatsapp.bridge && typeof operations.whatsapp.bridge === "object"
@@ -871,6 +639,14 @@ function normalizeOperationsShape(operations) {
   operations.agentNetwork.directory = operations.agentNetwork.directory.map(normalizeAgentNetworkRecord);
   operations.agentNetwork.outreachLog = operations.agentNetwork.outreachLog.map(withScopeDefaults);
   operations.agentNetwork.importBatches = operations.agentNetwork.importBatches.map(withScopeDefaults);
+  operations.financeControl = {
+    ...defaultFinanceControlConfig(),
+    ...operations.financeControl,
+    budgetLines:
+      Array.isArray(operations.financeControl.budgetLines) && operations.financeControl.budgetLines.length
+        ? operations.financeControl.budgetLines
+        : defaultFinanceControlConfig().budgetLines
+  };
   operations.whatsapp.queue = operations.whatsapp.queue.map(withScopeDefaults);
   operations.whatsapp.threads = operations.whatsapp.threads.map(withScopeDefaults);
   operations.whatsapp.feedbackLog = operations.whatsapp.feedbackLog.map(withScopeDefaults);
@@ -901,6 +677,165 @@ function createCommissionTimelineEntry(payload) {
     updated: formatOpsTimestamp(createdAt),
     updatedAt: createdAt,
     riskTag: String(payload.riskTag || paymentStatus).trim()
+  };
+}
+
+function defaultFinanceControlConfig() {
+  return {
+    currency: "ZAR",
+    seatPricePerAgent: 125,
+    averageReferralFee: 20000,
+    budgetLines: [
+      { key: "concierge", label: "Concierge + admin desk", amount: 8500 },
+      { key: "ai_stack", label: "AI, WhatsApp and tooling", amount: 2800 },
+      { key: "marketing", label: "Lead generation and outreach", amount: 6000 },
+      { key: "pilot", label: "Pilot testing and QA", amount: 2200 },
+      { key: "buffer", label: "Operating buffer", amount: 2500 }
+    ],
+    note: "Working monthly planning view. Tune the budget lines later as live costs settle."
+  };
+}
+
+function formatMoneyAmount(value, currency = "ZAR") {
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+}
+
+function monthLabelFor(date = new Date()) {
+  return new Intl.DateTimeFormat("en-ZA", { month: "long", year: "numeric" }).format(date);
+}
+
+function buildFinanceControlSnapshot(sessionOrRole, visible = {}, leadActionCentre = null, agentSuccessDesk = null) {
+  const operations = getOperationsState();
+  const finance = {
+    ...defaultFinanceControlConfig(),
+    ...(operations.financeControl || {})
+  };
+  const visibleCommission = visible.commissionTimeline || filterVisible(operations.commissionTimeline, sessionOrRole);
+  const visibleLeads = visible.leads || filterVisible(state.leads.map(withScopeDefaults), sessionOrRole);
+  const visibleTeam = (visible.teamMembers || filterVisible(operations.teamMembers, sessionOrRole))
+    .filter((member) => normalizeRole(member.role) === "agent");
+  const actionCentre = leadActionCentre || buildLeadActionCentre(sessionOrRole, visible);
+  const successDesk = agentSuccessDesk || buildAgentSuccessDesk(sessionOrRole, visible, actionCentre);
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthFees = visibleCommission.filter((item) => String(item.dueDate || "").startsWith(currentMonthKey));
+  const allFeeValues = visibleCommission.map((item) => parseMoneyAmount(item.fee)).filter((amount) => amount > 0);
+  const averageReferralFee = allFeeValues.length
+    ? Math.round(allFeeValues.reduce((total, amount) => total + amount, 0) / allFeeValues.length)
+    : Number(finance.averageReferralFee || 20000);
+  const paidThisMonth = monthFees
+    .filter((item) => /paid/i.test(String(item.paymentStatus || "")))
+    .reduce((total, item) => total + parseMoneyAmount(item.fee), 0);
+  const protectedPipeline = monthFees
+    .filter((item) => !/paid/i.test(String(item.paymentStatus || "")))
+    .reduce((total, item) => total + parseMoneyAmount(item.fee), 0);
+  const seatCount = Math.max(Number(successDesk.summary?.agents || 0), visibleTeam.length);
+  const seatRevenue = seatCount * Number(finance.seatPricePerAgent || 125);
+  const budgetLines = Array.isArray(finance.budgetLines) ? finance.budgetLines : [];
+  const monthlyBudget = budgetLines.reduce((total, line) => total + Number(line.amount || 0), 0);
+  const hotLeads = visibleLeads.filter((lead) => lead.leadQuality?.band === "hot").length;
+  const warmLeads = visibleLeads.filter((lead) => lead.leadQuality?.band === "warm").length;
+  const nurtureLeads = visibleLeads.filter((lead) => lead.leadQuality?.band === "nurture").length;
+  const criticalActions = Number(actionCentre.summary?.critical || 0);
+  const aiUpside = Math.round(
+    averageReferralFee * ((hotLeads * 0.35) + (warmLeads * 0.18) + (nurtureLeads * 0.08))
+  );
+  const projectedForecast = seatRevenue + protectedPipeline + paidThisMonth;
+  const aiProjection = projectedForecast + aiUpside;
+  const forecastVariance = projectedForecast - monthlyBudget;
+  const aiVariance = aiProjection - monthlyBudget;
+  const forecastStatus =
+    projectedForecast >= monthlyBudget * 1.05
+      ? "Ahead of plan"
+      : projectedForecast >= monthlyBudget * 0.9
+        ? "Close to plan"
+        : "Below plan";
+  const aiConfidence = hotLeads + warmLeads >= 4 ? "Medium" : hotLeads >= 2 ? "Medium" : "Low";
+  const primaryDriver =
+    protectedPipeline >= seatRevenue
+      ? "Protected commission pipeline is carrying the current forecast."
+      : "Recurring seat revenue is the steadier base layer right now.";
+  const riskNote = criticalActions
+    ? `${criticalActions} critical action card${criticalActions === 1 ? "" : "s"} could delay conversion if they sit too long.`
+    : "No critical action pile-up is distorting the projection right now.";
+
+  return {
+    monthLabel: monthLabelFor(now),
+    note: finance.note || defaultFinanceControlConfig().note,
+    budget: {
+      total: monthlyBudget,
+      formattedTotal: formatMoneyAmount(monthlyBudget, finance.currency),
+      lines: budgetLines.map((line) => ({
+        ...line,
+        formattedAmount: formatMoneyAmount(line.amount, finance.currency)
+      }))
+    },
+    forecast: {
+      total: projectedForecast,
+      formattedTotal: formatMoneyAmount(projectedForecast, finance.currency),
+      variance: forecastVariance,
+      varianceLabel: forecastVariance >= 0
+        ? `${formatMoneyAmount(Math.abs(forecastVariance), finance.currency)} above budget`
+        : `${formatMoneyAmount(Math.abs(forecastVariance), finance.currency)} below budget`,
+      status: forecastStatus,
+      components: [
+        {
+          label: "Agent subscriptions",
+          value: formatMoneyAmount(seatRevenue, finance.currency),
+          note: `${seatCount} active agent seat${seatCount === 1 ? "" : "s"} at ${formatMoneyAmount(finance.seatPricePerAgent, finance.currency)} each.`
+        },
+        {
+          label: "Protected commission due",
+          value: formatMoneyAmount(protectedPipeline, finance.currency),
+          note: `${monthFees.filter((item) => !/paid/i.test(String(item.paymentStatus || ""))).length} protected matter${monthFees.filter((item) => !/paid/i.test(String(item.paymentStatus || ""))).length === 1 ? "" : "s"} due this month.`
+        },
+        {
+          label: "Paid this month",
+          value: formatMoneyAmount(paidThisMonth, finance.currency),
+          note: "Already converted inside the visible July protection timeline."
+        }
+      ],
+      primaryDriver
+    },
+    aiProjection: {
+      total: aiProjection,
+      formattedTotal: formatMoneyAmount(aiProjection, finance.currency),
+      upside: aiUpside,
+      upsideLabel: formatMoneyAmount(aiUpside, finance.currency),
+      variance: aiVariance,
+      varianceLabel: aiVariance >= 0
+        ? `${formatMoneyAmount(Math.abs(aiVariance), finance.currency)} above budget`
+        : `${formatMoneyAmount(Math.abs(aiVariance), finance.currency)} below budget`,
+      confidence: aiConfidence,
+      note: "AI projection uses live lead quality, current protected commission pipeline, and recurring agent-seat revenue. It is directional, not booked revenue.",
+      riskNote,
+      signals: [
+        {
+          label: "Hot leads",
+          value: `${hotLeads}`,
+          note: "Best immediate conversion candidates in the current workspace."
+        },
+        {
+          label: "Warm leads",
+          value: `${warmLeads}`,
+          note: "Likely to convert once the next missing step or client nudge is cleared."
+        },
+        {
+          label: "Avg protected fee",
+          value: formatMoneyAmount(averageReferralFee, finance.currency),
+          note: "Average expected fee across the visible protection desk."
+        },
+        {
+          label: "Critical action risk",
+          value: `${criticalActions}`,
+          note: riskNote
+        }
+      ]
+    }
   };
 }
 
@@ -1698,34 +1633,20 @@ function defaultOperationsState() {
   };
 }
 
-async function ensureDataDir() {
-  await fs.mkdir(dataDir, { recursive: true });
-}
-
-async function readJson(filePath, fallback) {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    if (!raw.trim()) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJson(filePath, value) {
-  await ensureDataDir();
-  const tempPath = `${filePath}.tmp`;
-  await fs.writeFile(tempPath, JSON.stringify(value, null, 2), "utf8");
-  await fs.rename(tempPath, filePath);
+async function ensureStorage() {
+  if (storage) return storage;
+  storage = await createStorage(process.env, { dataDir });
+  return storage;
 }
 
 async function loadState() {
-  await ensureDataDir();
-  state.leads = await readJson(leadsPath, []);
-  state.sessions = await readJson(sessionsPath, []);
-  state.auditLog = await readJson(auditPath, []);
-  state.otpChallenges = await readJson(otpPath, []);
-  const loadedOperations = await readJson(opsPath, null);
+  const store = await ensureStorage();
+  const snapshot = await store.loadAll();
+  state.leads = Array.isArray(snapshot.leads) ? snapshot.leads : [];
+  state.sessions = Array.isArray(snapshot.sessions) ? snapshot.sessions : [];
+  state.auditLog = Array.isArray(snapshot.auditLog) ? snapshot.auditLog : [];
+  state.otpChallenges = Array.isArray(snapshot.otpChallenges) ? snapshot.otpChallenges : [];
+  const loadedOperations = snapshot.operations;
   const shouldRepairOperations =
     !loadedOperations ||
     typeof loadedOperations !== "object" ||
@@ -1750,18 +1671,25 @@ async function loadState() {
   pruneExpiredSessions();
   pruneExpiredOtpChallenges();
   if (shouldRepairOperations) {
-    await writeJson(opsPath, state.operations);
+    await store.saveAll({
+      leads: state.leads,
+      sessions: state.sessions,
+      auditLog: state.auditLog,
+      otpChallenges: state.otpChallenges,
+      operations: state.operations
+    });
   }
 }
 
 async function persistState() {
-  await Promise.all([
-    writeJson(leadsPath, state.leads),
-    writeJson(sessionsPath, state.sessions),
-    writeJson(auditPath, state.auditLog),
-    writeJson(otpPath, state.otpChallenges),
-    writeJson(opsPath, state.operations)
-  ]);
+  const store = await ensureStorage();
+  await store.saveAll({
+    leads: state.leads,
+    sessions: state.sessions,
+    auditLog: state.auditLog,
+    otpChallenges: state.otpChallenges,
+    operations: state.operations
+  });
 }
 
 function pruneExpiredSessions() {
@@ -2357,6 +2285,40 @@ function createLeadRecord(payload) {
     briefCard: leadQuality.briefCard,
     acquisition: payload.acquisition && typeof payload.acquisition === "object" ? payload.acquisition : {},
     status: "new"
+  };
+}
+
+function buildPublicIntakeOutcome(lead) {
+  const quality = lead.leadQuality || {};
+  const briefCard = lead.briefCard || {};
+  const contact = lead.contact || {};
+  const clientName = briefCard.clientName || lead.answerSummary?.["Client name"] || "there";
+  const area = briefCard.area || lead.acquisition?.area || lead.answerSummary?.Area || "your area";
+  const isSeller = lead.intent === "sell";
+  const hasWhatsapp = Boolean(contact.hasMobile || contact.mobile);
+  const hasEmail = Boolean(contact.hasEmail || contact.email);
+  const preferredRoute = hasWhatsapp ? "WhatsApp first" : hasEmail ? "Email follow-up" : "Direct follow-up";
+  const followUpWindow = quality.handoffReady
+    ? "A specialist can now step in with a cleaner brief. Target follow-up: within 3 working hours."
+    : "The concierge will first close the missing brief items so the first specialist conversation starts properly.";
+
+  return {
+    title: isSeller ? `Seller brief received for ${clientName}.` : `Buyer brief received for ${clientName}.`,
+    summary: quality.handoffReady
+      ? `Axiom has enough context to move this ${isSeller ? "sale" : "search"} forward with a cleaner first handover.`
+      : `Axiom has the request and may ask one or two quick follow-up questions before the handover is made.`,
+    reference: lead.id,
+    routeLabel: preferredRoute,
+    followUpWindow,
+    nextStep: quality.conciergeAction || "Concierge follow-up in progress.",
+    band: quality.band || "unscored",
+    score: quality.score || 0,
+    handoffReady: Boolean(quality.handoffReady),
+    clientName,
+    area,
+    intent: lead.intent,
+    missingItems: Array.isArray(quality.missingItems) ? quality.missingItems.slice(0, 3) : [],
+    knownFacts: Array.isArray(briefCard.knownFacts) ? briefCard.knownFacts.slice(0, 4) : [],
   };
 }
 
@@ -4829,6 +4791,7 @@ function buildOperationsSnapshot(sessionOrRole) {
   });
   const agentSuccessDesk = buildAgentSuccessDesk(session, visible, leadActionCentre, servicePulseRollups);
   const agentActionDigests = buildAgentActionDigests(session, visible, agentSuccessDesk, leadActionCentre, caseBrain);
+  const financeControl = buildFinanceControlSnapshot(session, visible, leadActionCentre, agentSuccessDesk);
   const pilotControl = buildPilotControlSnapshot(session, visible);
   const agentNetworkDirectory = buildAgentNetworkDirectorySnapshot(session, visible);
   const scoredLeads = visible.leads.filter((lead) => Number.isFinite(Number(lead.leadQuality?.score)));
@@ -4856,6 +4819,7 @@ function buildOperationsSnapshot(sessionOrRole) {
     leadActionCentre,
     agentSuccessDesk,
     agentActionDigests,
+    financeControl,
     pilotControl,
     agentNetworkDirectory,
     accessScope: getSessionScope(session),
@@ -4917,6 +4881,8 @@ function buildOperationsSnapshot(sessionOrRole) {
       agentNetworkNeedsVerification: agentNetworkDirectory.summary.needsVerification || 0,
       protectedDeals: visible.commissionTimeline.length,
       dealRooms: visible.dealRooms.length,
+      budgetVsForecastGap: financeControl.forecast.variance,
+      aiBudgetGap: financeControl.aiProjection.variance,
       sessionRole: session.role
     }
   };
@@ -5018,6 +4984,7 @@ async function handleLeadCreate(request, response) {
     reason: "Lead stored, assigned, and moved into the admin action queue.",
     leadQuality: lead.leadQuality,
     briefCard: lead.briefCard,
+    publicOutcome: buildPublicIntakeOutcome(lead),
     sourceToSale: {
       sourceKey: normalizeLeadSource(lead),
       sourceLabel: sourceLabelForKey(normalizeLeadSource(lead)),
@@ -5705,37 +5672,46 @@ function handleAppStatus(_request, response) {
 function handleSystemStatus(request, response) {
   const session = requirePermission(request, response, "system.view");
   if (!session) return;
-  sendJson(response, 200, {
-    ok: true,
-    role: session.role,
-    diagnostics: {
-      uptimeSeconds: Math.round(process.uptime()),
-      leadsStored: state.leads.length,
-      activeSessions: state.sessions.length,
-      deployment: {
-        runtime: config.isRenderRuntime ? "render" : "local",
-        hostBinding: config.host,
-        port: config.port,
-        publicBaseUrl: config.publicBaseUrl || null,
-        cookieSecure: config.cookieSecure,
-        otpPreviewEnabled: config.otpPreviewEnabled,
-        accessKeyFallbackEnabled: true,
-        accessKeySources: config.accessKeySources
-      },
-      whatsapp: {
-        mode: getOperationsState().whatsapp.bridge.mode,
-        connected: getOperationsState().whatsapp.bridge.connected,
-        queued: getOperationsState().whatsapp.queue.filter((item) => item.status === "queued").length,
-        awaitingApproval: getOperationsState().whatsapp.queue.filter((item) => item.status === "awaiting_approval").length
-      },
-      agentNetwork: {
-        directoryRecords: getOperationsState().agentNetwork.directory.length,
-        outreachLog: getOperationsState().agentNetwork.outreachLog.length,
-        importBatches: getOperationsState().agentNetwork.importBatches.length
-      },
-      llm: getLlmStatus()
-    }
-  });
+  Promise.resolve()
+    .then(async () => {
+      const store = await ensureStorage();
+      const storageDiagnostics = await store.diagnostics();
+      sendJson(response, 200, {
+        ok: true,
+        role: session.role,
+        diagnostics: {
+          uptimeSeconds: Math.round(process.uptime()),
+          leadsStored: state.leads.length,
+          activeSessions: state.sessions.length,
+          deployment: {
+            runtime: config.isRenderRuntime ? "render" : "local",
+            hostBinding: config.host,
+            port: config.port,
+            publicBaseUrl: config.publicBaseUrl || null,
+            cookieSecure: config.cookieSecure,
+            otpPreviewEnabled: config.otpPreviewEnabled,
+            accessKeyFallbackEnabled: true,
+            accessKeySources: config.accessKeySources
+          },
+          storage: storageDiagnostics,
+          whatsapp: {
+            mode: getOperationsState().whatsapp.bridge.mode,
+            connected: getOperationsState().whatsapp.bridge.connected,
+            queued: getOperationsState().whatsapp.queue.filter((item) => item.status === "queued").length,
+            awaitingApproval: getOperationsState().whatsapp.queue.filter((item) => item.status === "awaiting_approval").length
+          },
+          agentNetwork: {
+            directoryRecords: getOperationsState().agentNetwork.directory.length,
+            outreachLog: getOperationsState().agentNetwork.outreachLog.length,
+            importBatches: getOperationsState().agentNetwork.importBatches.length
+          },
+          llm: getLlmStatus()
+        }
+      });
+    })
+    .catch((error) => {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Storage diagnostics failed." });
+    });
 }
 
 function handleAuditLog(request, response) {
@@ -6385,14 +6361,11 @@ export async function startServer(overrides = {}) {
   const port = Number(overrides.port ?? config.port);
   const host = overrides.host ?? config.host;
 
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, host, resolve);
-  });
+  const boundPort = await startWithFallback(server, port, host);
 
   return {
     server,
-    port,
+    port: boundPort,
     host
   };
 }
