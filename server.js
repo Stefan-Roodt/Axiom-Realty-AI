@@ -2322,6 +2322,13 @@ function buildPublicIntakeOutcome(lead) {
   };
 }
 
+function buildWhatsappClickLink(mobile, body) {
+  const digits = String(mobile || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const normalized = digits.startsWith("0") ? `27${digits.slice(1)}` : digits;
+  return `https://wa.me/${normalized}?text=${encodeURIComponent(body)}`;
+}
+
 function authPayloadForRole(role, sessionOrIdentity = {}) {
   const normalizedRole = normalizeRole(typeof role === "object" ? role.role : role);
   const profile = getRoleProfile(normalizedRole);
@@ -2645,6 +2652,7 @@ function queueWhatsappMessage(payload) {
     category: payload.category || "general",
     toName: payload.toName || "Unknown",
     toRole: payload.toRole || "contact",
+    toContact: payload.toContact || payload.toNumber || "",
     ownerName: payload.ownerName || "Axiom",
     body: String(payload.body || "").trim(),
     status: payload.approvalRequired ? "awaiting_approval" : "queued",
@@ -3191,6 +3199,17 @@ function buildLeadWhatsappDraft(lead, context = {}) {
     return `Hi ${clientName}. I want to make sure the next step is clear and that you feel properly looked after. What would help most right now?`;
   }
   return `Hi ${clientName}. Quick update from Axiom: the brief is clear, the next action is ${context.nextBestAction || "being handled"}, and we will keep the process moving.`;
+}
+
+function buildClientIntakeAcknowledgement(lead) {
+  const clientName = lead.briefCard?.clientName || lead.answerSummary?.["Client name"] || "there";
+  const area = lead.briefCard?.area || lead.acquisition?.area || lead.answerSummary?.Area || "your area";
+  const isSeller = lead.intent === "sell";
+  const route = isSeller ? "seller brief" : "buyer brief";
+  const nextStep = isSeller
+    ? "Axiom will tighten anything missing and route this to the right property specialist. Target follow-up is within 3 working hours."
+    : "Axiom will tighten anything missing and route this to the right buying specialist. Target follow-up is within 3 working hours.";
+  return `Hi ${clientName}. Thanks, your ${route} for ${area} has been received by Axiom. Reference ${lead.id}. ${nextStep}`;
 }
 
 function priorityWeight(priority) {
@@ -4914,6 +4933,38 @@ async function handleLeadCreate(request, response) {
     source: "Lead import"
   });
   const thread = ensureThread(lead.id, lead.label, [ownerName, lead.answerSummary["Client name"] || "Client"]);
+  const clientAckBody = buildClientIntakeAcknowledgement(lead);
+  const clientAckQueue =
+    lead.contact?.mobile
+      ? queueWhatsappMessage({
+          caseId: lead.id,
+          caseName: lead.label,
+          threadId: thread.id,
+          category: "public-intake-acknowledgement",
+          toName: lead.briefCard?.clientName || lead.answerSummary["Client name"] || "Client",
+          toRole: lead.intent === "sell" ? "seller" : "buyer",
+          toContact: lead.contact.mobile,
+          ownerName: "Axiom Concierge",
+          body: clientAckBody,
+          approvalRequired: false,
+          agencyId: lead.agencyId,
+          branchId: lead.branchId,
+          provinceId: lead.provinceId,
+          agentId: lead.agentId,
+          assignedAgentId: lead.assignedAgentId
+        })
+      : null;
+  addThreadMessage(thread, {
+    id: createOpsId("wa"),
+    direction: "system",
+    author: "Axiom",
+    category: "public-intake-acknowledgement",
+    body: clientAckQueue
+      ? `Client acknowledgement queued for WhatsApp: ${clientAckBody}`
+      : `Client acknowledgement prepared but no WhatsApp/mobile number was supplied: ${clientAckBody}`,
+    at: nowIso(),
+    status: clientAckQueue ? "queued" : "draft_stored"
+  });
   addThreadMessage(thread, {
     id: createOpsId("wa"),
     direction: "system",
@@ -4982,6 +5033,18 @@ async function handleLeadCreate(request, response) {
     delivered: false,
     queuedForManualHandoff: true,
     reason: "Lead stored, assigned, and moved into the admin action queue.",
+    whatsapp: {
+      mode: config.whatsappMode,
+      realDeliveryConnected: config.whatsappMode !== "managed-simulation",
+      acknowledgementQueued: Boolean(clientAckQueue),
+      acknowledgementStatus: clientAckQueue?.status || "draft_stored",
+      acknowledgementText: clientAckBody,
+      manualTestLink: buildWhatsappClickLink(lead.contact?.mobile, clientAckBody),
+      note:
+        config.whatsappMode === "managed-simulation"
+          ? "WhatsApp is in managed simulation. The message is queued and can be opened manually for testing."
+          : "WhatsApp acknowledgement has been queued for delivery."
+    },
     leadQuality: lead.leadQuality,
     briefCard: lead.briefCard,
     publicOutcome: buildPublicIntakeOutcome(lead),
@@ -5658,6 +5721,7 @@ function handleAnalytics(request, response) {
 }
 
 function handleAppStatus(_request, response) {
+  const whatsappRealDeliveryConnected = config.whatsappMode !== "managed-simulation";
   sendJson(response, 200, {
     ok: true,
     service: "axiom-realty-ai-backend",
@@ -5665,6 +5729,10 @@ function handleAppStatus(_request, response) {
     environment: config.environment,
     runtime: config.isRenderRuntime ? "render" : "local",
     whatsappMode: config.whatsappMode,
+    whatsappRealDeliveryConnected,
+    whatsappStatus: whatsappRealDeliveryConnected
+      ? "WhatsApp delivery is configured for live sending."
+      : "WhatsApp is in managed simulation. Messages are queued/stored and can be opened manually for testing until Meta credentials are connected.",
     checkedAt: new Date().toISOString()
   });
 }
