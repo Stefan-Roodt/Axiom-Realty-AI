@@ -400,6 +400,118 @@
         background: linear-gradient(145deg, rgba(8, 16, 31, 0.9), rgba(12, 24, 44, 0.82));
       }
 
+      .command-layer-panel {
+        padding: 1.15rem 1.2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.84), rgba(12, 24, 44, 0.76)),
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 34%);
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.22);
+      }
+
+      .command-layer-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.95rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .command-layer-copy span,
+      .command-layer-note span,
+      .command-intelligence-card span {
+        display: block;
+        margin-bottom: 0.28rem;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .command-layer-copy strong,
+      .command-role-step strong,
+      .command-intelligence-card strong,
+      .command-layer-note strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .command-layer-copy p,
+      .command-role-step p,
+      .command-intelligence-card p,
+      .command-layer-note p {
+        color: #9fb0c8;
+      }
+
+      .command-role-rail {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        position: relative;
+      }
+
+      .command-role-rail::before {
+        content: "";
+        position: absolute;
+        left: 1.15rem;
+        right: 1.15rem;
+        top: 1.25rem;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.52), rgba(167, 139, 250, 0.6));
+      }
+
+      .command-role-step {
+        position: relative;
+        z-index: 1;
+        padding: 0 0.15rem;
+      }
+
+      .command-role-step span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 0.55rem;
+        border-radius: 999px;
+        background: #67e8f9;
+        color: #07111f;
+        font-size: 0.78rem;
+        font-weight: 800;
+        box-shadow: 0 0 0 7px rgba(34, 211, 238, 0.12);
+      }
+
+      .command-role-step strong,
+      .command-intelligence-card strong {
+        margin-bottom: 0.3rem;
+      }
+
+      .command-intelligence-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .command-intelligence-card {
+        padding: 1rem 1.05rem;
+        border-radius: 20px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(8, 16, 31, 0.7);
+      }
+
+      .command-layer-note {
+        margin-top: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.56);
+      }
+
       .morning-brief-grid {
         display: grid;
         grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
@@ -534,6 +646,24 @@
         .morning-brief-grid,
         .morning-brief-form,
         .morning-brief-meta {
+          grid-template-columns: 1fr;
+        }
+
+        .command-role-rail,
+        .command-intelligence-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .command-role-rail::before {
+          left: 15px;
+          right: auto;
+          top: 1rem;
+          bottom: 1rem;
+          width: 2px;
+          height: auto;
+        }
+
+        .command-layer-strip {
           grid-template-columns: 1fr;
         }
       }
@@ -2399,6 +2529,85 @@
         </div>
 
         <p class="trust-guarantee">Mission Control gives the office one live working view instead of scattered phones, inboxes, and memory.</p>
+      </section>
+
+      <section class="section wrapper" id="command-layer-story">
+        <div class="section-heading product-heading">
+          <p class="eyebrow">Command Layer</p>
+          <h2>One live matter. Different useful views. One office rhythm.</h2>
+          <p>
+            Axiom does not force every role player into the same screen. The agent sees the next move. Admin sees drift. The principal sees exposure. The client gets a cleaner progress window.
+          </p>
+        </div>
+        <div class="command-layer-panel" aria-label="Mission Control command layer">
+          <div class="command-layer-strip">
+            <div class="command-layer-copy">
+              <span>Operating view</span>
+              <strong>Agent -> Admin desk -> Principal -> Client progress layer.</strong>
+              <p>One shared matter, different useful visibility, and a calmer working rhythm than scattered calls, inboxes, and memory.</p>
+            </div>
+            <a class="btn btn-secondary" href="#analytics">Open secure access</a>
+          </div>
+          <div class="command-role-rail">
+            <article class="command-role-step">
+              <span>01</span>
+              <strong>Agent</strong>
+              <p>Gets the brief, WhatsApp trail, reminders, viewing prompts, and the next action already shaped.</p>
+            </article>
+            <article class="command-role-step">
+              <span>02</span>
+              <strong>Admin desk</strong>
+              <p>Sees missing documents, overdue updates, blocked matters, and where the office needs movement today.</p>
+            </article>
+            <article class="command-role-step">
+              <span>03</span>
+              <strong>Principal</strong>
+              <p>Sees exposure, branch performance, protected commission, service quality, and where support is needed.</p>
+            </article>
+            <article class="command-role-step">
+              <span>04</span>
+              <strong>Client layer</strong>
+              <p>Gets a cleaner progress window without the office oversharing internal notes or working noise.</p>
+            </article>
+          </div>
+        </div>
+        <div class="command-intelligence-grid" aria-label="Mission Control intelligence layers">
+          <article class="command-intelligence-card">
+            <span>Case Brain</span>
+            <strong>One shared case file</strong>
+            <p>Briefs, seller updates, score signals, reminders, progress history, and protection checks stay attached to the same matter.</p>
+          </article>
+          <article class="command-intelligence-card">
+            <span>Lead Action Centre</span>
+            <strong>Rank what matters now</strong>
+            <p>Every lead becomes a clearer action card with urgency, owner, reason, and next move already visible to the office.</p>
+          </article>
+          <article class="command-intelligence-card">
+            <span>Concierge Comms</span>
+            <strong>Keep the full trail</strong>
+            <p>WhatsApp follow-up, voice notes, direct contact shares, and progress messages stay visible instead of getting lost in private chats.</p>
+          </article>
+          <article class="command-intelligence-card">
+            <span>Protection Desk</span>
+            <strong>Guard commission properly</strong>
+            <p>Referral acceptance, proof items, due dates, payment status, and recovery risk stay visible before they become awkward clean-up work.</p>
+          </article>
+          <article class="command-intelligence-card">
+            <span>Service Pulse</span>
+            <strong>See the client experience</strong>
+            <p>Buyer and seller signals roll into agent and office service visibility so quality is seen early, not guessed later.</p>
+          </article>
+          <article class="command-intelligence-card">
+            <span>Budget vs Forecast</span>
+            <strong>See the money line earlier</strong>
+            <p>Monthly budget, live forecast, and AI-informed projection can sit in the same command layer as the pipeline and protected deals.</p>
+          </article>
+        </div>
+        <div class="command-layer-note">
+          <span>Why this matters</span>
+          <strong>This is what lets one admin support one agent or twenty without the office running on memory, panic, and repeated chasing.</strong>
+          <p>Axiom keeps the repetitive rhythm moving, while still leaving room for human judgement, reassurance, escalation, and override where it matters.</p>
+        </div>
       </section>
 
       <section class="section accent">
