@@ -5944,6 +5944,28 @@ function roleOnboardingContact(payload = {}) {
   };
 }
 
+function truthyConsent(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return value === true || ["1", "true", "yes", "y", "on", "consent", "agreed"].includes(normalized);
+}
+
+function createProfileImageRecord(payload = {}, createdAt = nowIso()) {
+  const url = String(payload.profileImageUrl || payload.selfieUrl || payload.photoUrl || "").trim();
+  const consentGiven = truthyConsent(payload.profileImageConsent || payload.selfieConsent || payload.photoConsent);
+  const status = url && consentGiven ? "active" : url ? "pending_consent" : "requested";
+
+  return {
+    status,
+    url,
+    source: url ? "operator_supplied" : "whatsapp_selfie_request",
+    consentGiven,
+    requestedAt: createdAt,
+    consentText:
+      "I consent to Axiom storing this selfie/profile image so the correct people can recognise each other in this property matter or office workspace.",
+    purpose: "Profile recognition and correct-party context only. Not facial recognition or biometric identity scoring."
+  };
+}
+
 function buildRoleScope({ role, agencyId, branchId, provinceId, agentId, caseId, extraAgentIds = [], extraCaseIds = [] }) {
   const normalizedRole = normalizeRole(role);
   const agencyIds = unique(agencyId);
@@ -6025,6 +6047,7 @@ function createRoleOnboardingRecord(payload = {}, session = {}) {
     email,
     mobile,
     whatsapp: mobile,
+    profileImage: createProfileImageRecord(payload, createdAt),
     status: "invited",
     verificationStatus: "operator_verified",
     verifiedBy: session.userId || session.name || "axiom",
@@ -6193,7 +6216,180 @@ function applyRoleOnboarding(operations, onboarding, session = {}) {
     createdAt
   });
 
+  if (accessRecord.profileImage?.status !== "active") {
+    operations.tasks.unshift({
+      id: createOpsId("task"),
+      caseId: isPartyRole(role) ? onboarding.signIn.accessScope.caseIds[0] : agency.id,
+      title: `Get profile selfie: ${accessRecord.name}`,
+      category: "profile-image",
+      priority: "low",
+      status: "open",
+      ownerId: session.userId,
+      ownerName: session.name || "Axiom",
+      dueLabel: "Before first live interaction",
+      nextAction: "Request a clear selfie/profile photo with consent so the right people are recognisable in the workspace.",
+      agencyId: agency.id,
+      branchId: branch.id,
+      provinceId: branch.provinceId,
+      agentId: accessRecord.agentId || "",
+      assignedAgentId: accessRecord.assignedAgentId || "",
+      createdAt
+    });
+
+    operations.whatsapp.queue.unshift({
+      id: createOpsId("wa"),
+      caseId: isPartyRole(role) ? onboarding.signIn.accessScope.caseIds[0] : agency.id,
+      caseName: isPartyRole(role) ? `${accessRecord.name} profile` : `${agency.name} profile setup`,
+      category: "profile-selfie-request",
+      toName: accessRecord.name,
+      toRole: role,
+      ownerName: session.name || "Axiom",
+      channel: "whatsapp",
+      status: "awaiting_approval",
+      body: `Hi ${accessRecord.name}. To help everyone recognise the correct person in Axiom, please send a clear selfie/profile photo if you are comfortable with that. By sending it, you consent to Axiom storing it as your profile image for this property matter or office workspace. It will not be used for facial recognition or biometric scoring.`,
+      agencyId: agency.id,
+      branchId: branch.id,
+      provinceId: branch.provinceId,
+      agentId: accessRecord.agentId || "",
+      assignedAgentId: accessRecord.assignedAgentId || "",
+      createdAt
+    });
+  }
+
   return { agencyStatus, branchStatus, accessStatus };
+}
+
+function parseRolloutPeople(value, fallbackRole) {
+  const list = Array.isArray(value) ? value : String(value || "").split(/\r?\n/);
+  return list
+    .map((entry) => {
+      if (!entry) return null;
+      if (typeof entry === "object") {
+        return {
+          role: normalizeRole(entry.role || fallbackRole),
+          personName: String(entry.personName || entry.name || "").trim(),
+          email: normalizeEmail(entry.email),
+          mobile: normalizeContactNumber(entry.mobile || entry.whatsapp || entry.phone)
+        };
+      }
+
+      const parts = String(entry)
+        .split(/[|,;]/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      return {
+        role: normalizeRole(fallbackRole),
+        personName: parts[0] || "",
+        email: normalizeEmail(parts.find((part) => part.includes("@")) || ""),
+        mobile: normalizeContactNumber(parts.find((part) => !part.includes("@") && /[0-9+]/.test(part) && part !== parts[0]) || "")
+      };
+    })
+    .filter((entry) => entry?.personName && (entry.email || entry.mobile));
+}
+
+function createTeamRolloutRecords(payload = {}, session = {}) {
+  const base = {
+    agencyName: payload.agencyName || payload.agency,
+    agencyId: payload.agencyId,
+    branchName: payload.branchName || payload.branch || payload.town,
+    branchId: payload.branchId,
+    town: payload.town || payload.branchName || payload.branch,
+    province: payload.province || payload.provinceId,
+    packageLabel: payload.packageLabel || "Axiom Mission Control"
+  };
+  const admins = parseRolloutPeople(payload.admins || payload.officeAdmins || payload.concierges, "office_admin");
+  const agents = parseRolloutPeople(payload.agents, "agent");
+  const people = [...admins, ...agents];
+
+  if (!people.length) {
+    throw new Error("Add at least one concierge/admin or agent before creating a branch rollout.");
+  }
+
+  const onboarding = people.map((person) =>
+    createRoleOnboardingRecord(
+      {
+        ...base,
+        role: person.role,
+        personName: person.personName,
+        email: person.email,
+        mobile: person.mobile
+      },
+      session
+    )
+  );
+
+  return {
+    agencyName: String(base.agencyName || "Agency to confirm").trim(),
+    branchName: String(base.branchName || base.town || "Branch to confirm").trim(),
+    provinceId: normalizeProvinceId(base.province || session.provinceId || "north-west"),
+    counts: {
+      admins: onboarding.filter((item) => item.role === "office_admin").length,
+      agents: onboarding.filter((item) => item.role === "agent").length,
+      total: onboarding.length
+    },
+    onboarding
+  };
+}
+
+async function handleTeamRollout(request, response) {
+  const session = requirePermission(request, response, ["org.manage_assigned", "rollups.view_all"], ["principal", "office_admin"]);
+  if (!session) return;
+
+  try {
+    const body = await readBody(request, 128 * 1024);
+    const operations = getOperationsState();
+    const rollout = createTeamRolloutRecords(body, session);
+    const mutations = rollout.onboarding.map((onboarding) => applyRoleOnboarding(operations, onboarding, session));
+
+    operations.tasks.unshift({
+      id: createOpsId("task"),
+      caseId: rollout.onboarding[0]?.agency?.id || "agency-rollout",
+      title: `Complete ${rollout.branchName} team rollout`,
+      category: "branch-rollout",
+      priority: "high",
+      status: "open",
+      ownerId: session.userId,
+      ownerName: session.name || "Axiom",
+      dueLabel: "Before first branch lead import",
+      nextAction: `Confirm ${rollout.counts.admins} admin and ${rollout.counts.agents} agent invite${rollout.counts.total === 1 ? "" : "s"} were accepted, then import their active leads.`,
+      agencyId: rollout.onboarding[0]?.agency?.id || "",
+      branchId: rollout.onboarding[0]?.branch?.id || "",
+      provinceId: rollout.provinceId,
+      createdAt: nowIso()
+    });
+
+    audit("branch-team-rollout-created", {
+      agencyName: rollout.agencyName,
+      branchName: rollout.branchName,
+      provinceId: rollout.provinceId,
+      admins: rollout.counts.admins,
+      agents: rollout.counts.agents,
+      createdBy: session.userId
+    });
+    await persistState();
+
+    sendJson(response, 200, {
+      ok: true,
+      rollout: {
+        agencyName: rollout.agencyName,
+        branchName: rollout.branchName,
+        provinceId: rollout.provinceId,
+        counts: rollout.counts,
+        created: rollout.onboarding.map((item, index) => ({
+          role: item.role,
+          roleLabel: item.roleLabel,
+          name: item.accessRecord.name,
+          contact: item.signIn.contact,
+          scope: item.signIn.accessScope,
+          mutation: mutations[index]
+        })),
+        inviteQueue: "WhatsApp invites queued for human approval"
+      },
+      snapshot: buildOperationsSnapshot(session)
+    });
+  } catch (error) {
+    sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : "Branch team rollout failed." });
+  }
 }
 
 async function handleRoleOnboarding(request, response) {
@@ -6427,9 +6623,11 @@ function handleAccessModel(_request, response) {
     },
     onboardingModel: {
       route: "/api/admin/onboard-role",
+      branchRolloutRoute: "/api/admin/onboard-team",
       signInMethod: "OTP to verified email or mobile",
       verificationRule: "Access is created only after an existing principal, concierge/admin, or Axiom operator confirms the person and scope.",
       scopePattern: "Every new user is linked to agency, branch, province, role and, where relevant, agent or case.",
+      rolloutPattern: "After the principal is verified, a branch admin and agent group can be loaded together under the same agency, branch and province.",
       internalRoles: [
         {
           role: "principal",
@@ -6928,6 +7126,10 @@ async function handleRequest(request, response) {
     }
     if (pathname === "/api/admin/onboard-role" && request.method === "POST") {
       await handleRoleOnboarding(request, response);
+      return;
+    }
+    if (pathname === "/api/admin/onboard-team" && request.method === "POST") {
+      await handleTeamRollout(request, response);
       return;
     }
     if (pathname === "/api/admin/onboard-principal" && request.method === "POST") {
