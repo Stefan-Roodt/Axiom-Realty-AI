@@ -481,6 +481,118 @@
         background: rgba(15, 23, 42, 0.56);
       }
 
+      .mission-control-ops-panel {
+        padding: 1.15rem 1.2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.84), rgba(12, 24, 44, 0.76)),
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 34%);
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.22);
+      }
+
+      .mission-control-ops-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.95rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .mission-control-ops-copy span,
+      .mission-control-note span,
+      .mission-control-intelligence-card span {
+        display: block;
+        margin-bottom: 0.28rem;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .mission-control-ops-copy strong,
+      .mission-control-role-step strong,
+      .mission-control-intelligence-card strong,
+      .mission-control-note strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .mission-control-ops-copy p,
+      .mission-control-role-step p,
+      .mission-control-intelligence-card p,
+      .mission-control-note p {
+        color: #9fb0c8;
+      }
+
+      .mission-control-role-rail {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        position: relative;
+      }
+
+      .mission-control-role-rail::before {
+        content: "";
+        position: absolute;
+        left: 1.15rem;
+        right: 1.15rem;
+        top: 1.25rem;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.52), rgba(167, 139, 250, 0.6));
+      }
+
+      .mission-control-role-step {
+        position: relative;
+        z-index: 1;
+        padding: 0 0.15rem;
+      }
+
+      .mission-control-role-step span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 0.55rem;
+        border-radius: 999px;
+        background: #67e8f9;
+        color: #07111f;
+        font-size: 0.78rem;
+        font-weight: 800;
+        box-shadow: 0 0 0 7px rgba(34, 211, 238, 0.12);
+      }
+
+      .mission-control-role-step strong,
+      .mission-control-intelligence-card strong {
+        margin-bottom: 0.3rem;
+      }
+
+      .mission-control-intelligence-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .mission-control-intelligence-card {
+        padding: 1rem 1.05rem;
+        border-radius: 20px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(8, 16, 31, 0.7);
+      }
+
+      .mission-control-note {
+        margin-top: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.56);
+      }
+
       @media (min-width: 1240px) {
         .agent-hero-checkpoints {
           grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -536,18 +648,25 @@
         }
 
         .agent-office-rail,
-        .agent-capability-rail {
+        .agent-capability-rail,
+        .mission-control-role-rail,
+        .mission-control-intelligence-grid {
           grid-template-columns: 1fr;
         }
 
         .agent-office-rail::before,
-        .agent-capability-rail::before {
+        .agent-capability-rail::before,
+        .mission-control-role-rail::before {
           left: 15px;
           right: auto;
           top: 1rem;
           bottom: 1rem;
           width: 2px;
           height: auto;
+        }
+
+        .mission-control-ops-strip {
+          grid-template-columns: 1fr;
         }
       }
 
@@ -921,6 +1040,95 @@
               <p>Push the agent's name, mobile number, email, and office details to the buyer or seller at any time so direct contact feels easy without losing the office record.</p>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section class="section wrapper" id="mission-control-story">
+        <div class="section-heading product-heading">
+          <p class="eyebrow">Inside Mission Control</p>
+          <h2>This is where Axiom stops feeling like a lead form and starts behaving like the office operating system.</h2>
+          <p>
+            The agent sees the next move. Admin sees drift. The principal sees exposure, performance, and where support is needed across the desk.
+          </p>
+        </div>
+        <div class="mission-control-ops-panel" aria-label="Mission Control operating model">
+          <div class="mission-control-ops-strip">
+            <div class="mission-control-ops-copy">
+              <span>Operating view</span>
+              <strong>Agent -> Admin -> Principal -> Client share layer.</strong>
+              <p>One live matter, different useful views, and a cleaner command rhythm than scattered phones, inboxes, and memory.</p>
+            </div>
+            <a class="btn btn-secondary" href="mission-control.html">Open Mission Control</a>
+          </div>
+          <div class="mission-control-role-rail">
+            <article class="mission-control-role-step">
+              <span>01</span>
+              <strong>Agent</strong>
+              <p>Gets the brief, the WhatsApp context, the diary prompts, and the next live action.</p>
+            </article>
+            <article class="mission-control-role-step">
+              <span>02</span>
+              <strong>Admin desk</strong>
+              <p>Sees missing documents, overdue updates, and stalled matters before they drift.</p>
+            </article>
+            <article class="mission-control-role-step">
+              <span>03</span>
+              <strong>Principal</strong>
+              <p>Sees performance, exposure, protected commission, and which branch or agent needs help.</p>
+            </article>
+            <article class="mission-control-role-step">
+              <span>04</span>
+              <strong>Client layer</strong>
+              <p>Gets a cleaner progress view without the office oversharing its internal working notes.</p>
+            </article>
+          </div>
+        </div>
+        <div class="mission-control-intelligence-grid" aria-label="Mission Control feature set">
+          <article class="mission-control-intelligence-card">
+            <span>Case Brain</span>
+            <strong>One shared case file</strong>
+            <p>Scoring, seller updates, WhatsApp drafts, Deal Room status, and protection checks all stay attached to the same matter.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>Lead Action Centre</span>
+            <strong>Rank the next move</strong>
+            <p>Every lead becomes a priority action card with the reason, owner, urgency, and next task already visible.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>WhatsApp Drafts</span>
+            <strong>Say the next thing faster</strong>
+            <p>Axiom drafts the follow-up, reminder, or progress message from case history so the office is not typing from scratch all day.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>09:30 Digest</span>
+            <strong>Weekday action email</strong>
+            <p>Agents get a concise morning brief built from their live cases, not from an admin manually stitching updates together.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>Source to Sale</span>
+            <strong>See what converts</strong>
+            <p>Track which leads became qualified, viewed, offered, sold, and commission-protected across sources and teams.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>Service Pulse</span>
+            <strong>Score the client experience</strong>
+            <p>Buyer and seller feedback rolls into agent and office service signals so quality becomes visible, not guessed.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>Budget vs Forecast</span>
+            <strong>See the money line earlier</strong>
+            <p>Monthly budget, projected collections, and AI-informed variance can sit in the same command layer as the pipeline.</p>
+          </article>
+          <article class="mission-control-intelligence-card">
+            <span>Protection Desk</span>
+            <strong>Guard commission properly</strong>
+            <p>Referral acceptance, proof items, due dates, and payment status stay visible before they become awkward recovery work.</p>
+          </article>
+        </div>
+        <div class="mission-control-note">
+          <span>What makes it different</span>
+          <strong>Axiom is not just sending reminders. It is ranking work, drafting the next move, protecting commission, and giving the office a clearer view of where revenue or service can slip.</strong>
+          <p>That is what lets one admin support one agent or twenty without losing the plot.</p>
         </div>
       </section>
 
