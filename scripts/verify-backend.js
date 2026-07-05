@@ -358,6 +358,9 @@ async function run() {
     const operationsAfterLead = await requestJson(baseUrl, "/api/admin/operations", {
       headers: { cookie }
     });
+    const reporting = await requestJson(baseUrl, "/api/admin/reporting", {
+      headers: { cookie }
+    });
     const queueMessage = await requestJson(baseUrl, "/api/admin/whatsapp/queue", {
       method: "POST",
       headers: {
@@ -500,6 +503,10 @@ async function run() {
       !agentNetworkPilot.ok && `/api/admin/agent-network/action promote_to_pilot returned ${agentNetworkPilot.status}`,
       !operationsAfterLead.ok && `/api/admin/operations after lead returned ${operationsAfterLead.status}`,
       !analytics.ok && `/api/analytics returned ${analytics.status}`,
+      !reporting.ok && `/api/admin/reporting returned ${reporting.status}`,
+      !reporting.body?.reporting?.rollups && "Reporting endpoint missing agency/branch/province/agent rollups",
+      reporting.body?.reporting?.rollups && !("agents" in reporting.body.reporting.rollups) &&
+        "Reporting endpoint missing agent rollups",
       !queueMessage.ok && `/api/admin/whatsapp/queue returned ${queueMessage.status}`,
       !processQueue.ok && `/api/admin/whatsapp/process returned ${processQueue.status}`,
       !logout.ok && `/api/auth/logout returned ${logout.status}`,
