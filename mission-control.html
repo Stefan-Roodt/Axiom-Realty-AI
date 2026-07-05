@@ -2267,6 +2267,98 @@
         margin-top: 0.45rem;
       }
 
+      .access-setup-panel {
+        margin: 0.95rem 0 1rem;
+        padding: clamp(0.95rem, 2vw, 1.15rem);
+        border-radius: 18px;
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.86), rgba(12, 24, 44, 0.76)),
+          radial-gradient(circle at top right, rgba(34, 211, 238, 0.1), transparent 34%);
+      }
+
+      .access-setup-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.8rem;
+        align-items: start;
+        margin-bottom: 0.85rem;
+      }
+
+      .access-setup-head h3 {
+        margin: 0.15rem 0 0.2rem;
+      }
+
+      .access-setup-pill,
+      .access-setup-result span {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        min-height: 28px;
+        padding: 0.18rem 0.66rem;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        background: rgba(8, 16, 31, 0.72);
+        color: #dbeafe;
+        font-size: 0.72rem;
+        font-weight: 800;
+      }
+
+      .access-setup-form {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.72rem;
+        align-items: end;
+      }
+
+      .access-setup-field {
+        display: grid;
+        gap: 0.28rem;
+      }
+
+      .access-setup-field label {
+        color: #e2e8f0;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .access-setup-field input,
+      .access-setup-field select {
+        min-height: 44px;
+        width: 100%;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.82);
+        color: #f8fafc;
+        padding: 0.72rem 0.82rem;
+        font: inherit;
+      }
+
+      .access-setup-field small,
+      .access-setup-result p {
+        color: #9fb0c8;
+      }
+
+      .access-setup-span-2 {
+        grid-column: span 2;
+      }
+
+      .access-setup-status {
+        margin: 0.8rem 0 0;
+      }
+
+      .access-setup-result {
+        display: grid;
+        gap: 0.45rem;
+        margin-top: 0.8rem;
+        padding: 0.82rem 0.9rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.68);
+      }
+
+      .access-setup-result strong {
+        color: #f8fafc;
+      }
+
       .admin-gate label {
         color: #e2e8f0;
         font-weight: 700;
@@ -2291,6 +2383,8 @@
         .access-command-strip,
         .access-route-grid,
         .access-flow-strip,
+        .access-setup-head,
+        .access-setup-form,
         .admin-row,
         .access-route-preview-grid,
         .market-update-strip,
@@ -2318,6 +2412,10 @@
 
         .access-route-preview-head {
           grid-template-columns: 1fr;
+        }
+
+        .access-setup-span-2 {
+          grid-column: auto;
         }
 
         .access-flow-node::after {
@@ -3180,6 +3278,71 @@
               <div class="mini-progress"><i class="p-100"></i></div>
             </article>
           </div>
+          <section class="access-setup-panel" aria-label="Access setup desk">
+            <div class="access-setup-head">
+              <div>
+                <p class="eyebrow">Access Setup Desk</p>
+                <h3>Sign up a principal, concierge, agent, or case party with the correct scope.</h3>
+                <p class="small-note">The operator verifies who they are, links them to the correct agency, branch, province, agent, or case, then Axiom queues the OTP invite.</p>
+              </div>
+              <span class="access-setup-pill">Verified route first</span>
+            </div>
+            <form class="access-setup-form" id="accessSetupForm">
+              <div class="access-setup-field">
+                <label for="accessSetupRole">Role</label>
+                <select id="accessSetupRole">
+                  <option value="principal">Principal</option>
+                  <option value="office_admin">Concierge / admin</option>
+                  <option value="agent">Agent</option>
+                  <option value="seller">Seller</option>
+                  <option value="buyer">Buyer</option>
+                  <option value="attorney">Attorney</option>
+                  <option value="bond_originator">Bond originator</option>
+                </select>
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupName">Person</label>
+                <input id="accessSetupName" type="text" value="L. Ferreira" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupEmail">Email</label>
+                <input id="accessSetupEmail" type="email" value="l.ferreira@remax-potch.example.co.za" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupMobile">Mobile / WhatsApp</label>
+                <input id="accessSetupMobile" type="text" value="+27 82 000 1100" />
+              </div>
+              <div class="access-setup-field access-setup-span-2">
+                <label for="accessSetupAgency">Agency</label>
+                <input id="accessSetupAgency" type="text" value="RE/MAX Potchefstroom" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupBranch">Branch / town</label>
+                <input id="accessSetupBranch" type="text" value="Potchefstroom" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupProvince">Province</label>
+                <input id="accessSetupProvince" type="text" value="North West" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupAgentId">Agent ID</label>
+                <input id="accessSetupAgentId" type="text" placeholder="Only if assigning case party" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupCaseId">Case / Deal Room</label>
+                <input id="accessSetupCaseId" type="text" placeholder="Required for buyer/seller/attorney/bond" />
+              </div>
+              <div class="access-setup-field">
+                <label for="accessSetupAgentSeats">Agent seats</label>
+                <input id="accessSetupAgentSeats" type="number" min="0" value="8" />
+              </div>
+              <div class="access-setup-field">
+                <button class="btn btn-primary" type="submit" id="accessSetupSubmit">Create Access</button>
+              </div>
+            </form>
+            <p class="small-note access-setup-status" id="accessSetupStatus">Example loaded: L. Ferreira, RE/MAX Potch principal. Change the role to set up admins, agents, sellers, buyers, attorneys, or bond originators.</p>
+            <div class="access-setup-result hidden" id="accessSetupResult"></div>
+          </section>
           <div class="operations-tabs" role="tablist" aria-label="Operations workspace tabs">
             <button class="operations-tab active" type="button" role="tab" aria-selected="true" data-operations-tab="inbox" data-tab-permissions="leads.view_all leads.view_assigned">Lead Radar</button>
             <button class="operations-tab" type="button" role="tab" aria-selected="false" data-operations-tab="progress" data-tab-permissions="progress.view_all progress.view_assigned">Progress Tracker</button>
@@ -7636,6 +7799,20 @@ Protect commission on the Durban North referral before noon.</textarea>
     <script>
       (function () {
         const operationsPanel = document.getElementById("operationsPanel");
+        const accessSetupForm = document.getElementById("accessSetupForm");
+        const accessSetupRole = document.getElementById("accessSetupRole");
+        const accessSetupName = document.getElementById("accessSetupName");
+        const accessSetupEmail = document.getElementById("accessSetupEmail");
+        const accessSetupMobile = document.getElementById("accessSetupMobile");
+        const accessSetupAgency = document.getElementById("accessSetupAgency");
+        const accessSetupBranch = document.getElementById("accessSetupBranch");
+        const accessSetupProvince = document.getElementById("accessSetupProvince");
+        const accessSetupAgentId = document.getElementById("accessSetupAgentId");
+        const accessSetupCaseId = document.getElementById("accessSetupCaseId");
+        const accessSetupAgentSeats = document.getElementById("accessSetupAgentSeats");
+        const accessSetupSubmit = document.getElementById("accessSetupSubmit");
+        const accessSetupStatus = document.getElementById("accessSetupStatus");
+        const accessSetupResult = document.getElementById("accessSetupResult");
         const inboxCommandDeck = document.getElementById("inboxCommandDeck");
         const agentAssistList = document.getElementById("agentAssistList");
         const caseBrainBadge = document.getElementById("caseBrainBadge");
@@ -7815,11 +7992,109 @@ Protect commission on the Durban North referral before noon.</textarea>
             .replace(/'/g, "&#39;");
         }
 
+        function isClientAccessRole(role) {
+          return ["seller", "buyer", "attorney", "bond_originator"].includes(String(role || ""));
+        }
+
+        function updateAccessSetupHint() {
+          if (!accessSetupStatus || !accessSetupRole) return;
+          const role = accessSetupRole.value;
+          const needsCase = isClientAccessRole(role);
+          accessSetupStatus.textContent = needsCase
+            ? "Client and professional party access is always case-based: confirm the person, link the case or Deal Room, then queue the OTP invite."
+            : "Internal office access is agency-based: confirm the person, agency, branch and province, then queue the OTP invite.";
+          if (accessSetupCaseId) {
+            accessSetupCaseId.required = needsCase;
+          }
+        }
+
+        function renderAccessSetupResult(data) {
+          if (!accessSetupResult) return;
+          const onboarding = data?.onboarding || {};
+          const record = onboarding.accessRecord || {};
+          const signIn = onboarding.signIn || {};
+          const scope = signIn.accessScope || {};
+          const scopeText = [
+            scope.agencyIds?.[0] && `Agency: ${scope.agencyIds[0]}`,
+            scope.branchIds?.[0] && `Branch: ${scope.branchIds[0]}`,
+            scope.provinceIds?.[0] && `Province: ${scope.provinceIds[0]}`,
+            scope.agentIds?.[0] && `Agent: ${scope.agentIds[0]}`,
+            scope.caseIds?.[0] && `Case: ${scope.caseIds[0]}`
+          ].filter(Boolean).join(" · ");
+
+          accessSetupResult.classList.remove("hidden");
+          accessSetupResult.innerHTML = `
+            <span>${escapeHtml(onboarding.roleLabel || "Access")} created</span>
+            <strong>${escapeHtml(record.name || "New user")} can sign in as ${escapeHtml(signIn.role || "role")} using ${escapeHtml(signIn.contact || "the verified contact")}.</strong>
+            <p>${escapeHtml(scopeText || "Scope recorded.")}</p>
+            <p>WhatsApp invite queued for human approval. OTP proves control of the verified email/mobile route.</p>
+          `;
+        }
+
+        async function submitAccessSetup(event) {
+          event.preventDefault();
+          if (!accessSetupForm || !accessSetupRole) return;
+
+          const role = accessSetupRole.value;
+          if (isClientAccessRole(role) && !accessSetupCaseId.value.trim()) {
+            accessSetupStatus.textContent = "Add the case or Deal Room ID first. Client access must be tied to a specific matter.";
+            accessSetupCaseId.focus();
+            return;
+          }
+
+          if (accessSetupSubmit) {
+            accessSetupSubmit.disabled = true;
+            accessSetupSubmit.textContent = "Creating...";
+          }
+          if (accessSetupStatus) {
+            accessSetupStatus.textContent = "Creating verified access route and queuing the OTP invite...";
+          }
+
+          try {
+            const data = await requestJson("/api/admin/onboard-role", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                role,
+                personName: accessSetupName.value,
+                email: accessSetupEmail.value,
+                mobile: accessSetupMobile.value,
+                agencyName: accessSetupAgency.value,
+                branchName: accessSetupBranch.value,
+                town: accessSetupBranch.value,
+                province: accessSetupProvince.value,
+                agentId: accessSetupAgentId.value,
+                caseId: accessSetupCaseId.value,
+                agentSeats: accessSetupAgentSeats.value,
+                packageLabel: "Axiom Mission Control"
+              })
+            });
+            renderAccessSetupResult(data);
+            if (accessSetupStatus) {
+              accessSetupStatus.textContent = "Access route created. The invite is queued for approval; first login uses OTP.";
+            }
+            await refreshOperations();
+          } catch (error) {
+            if (accessSetupStatus) {
+              accessSetupStatus.textContent = error?.message || "Access setup failed. Check the contact, role, and linked case.";
+            }
+          } finally {
+            if (accessSetupSubmit) {
+              accessSetupSubmit.disabled = false;
+              accessSetupSubmit.textContent = "Create Access";
+            }
+          }
+        }
+
         function cssToken(value) {
           return String(value || "")
             .toLowerCase()
             .replace(/[^a-z0-9_-]/g, "");
         }
+
+        updateAccessSetupHint();
+        accessSetupRole?.addEventListener("change", updateAccessSetupHint);
+        accessSetupForm?.addEventListener("submit", submitAccessSetup);
 
         function renderInbox(snapshot) {
           const leads = Array.isArray(snapshot.leads) ? snapshot.leads : [];
