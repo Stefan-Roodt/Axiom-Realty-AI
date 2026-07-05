@@ -37,6 +37,48 @@ window.AxiomPublicIntake =
       return data;
     });
 
+  const provinceLabels = {
+    "eastern-cape": "Eastern Cape",
+    "free-state": "Free State",
+    gauteng: "Gauteng",
+    "kwazulu-natal": "KwaZulu-Natal",
+    limpopo: "Limpopo",
+    mpumalanga: "Mpumalanga",
+    "north-west": "North West",
+    "northern-cape": "Northern Cape",
+    "western-cape": "Western Cape",
+  };
+
+  function slugifyProvince(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  function normalizeTownSource() {
+    const source = window.townsByProvince || window.townsByProvinceData || {};
+    return Object.entries(source).reduce((result, [province, towns]) => {
+      const provinceId = slugifyProvince(province);
+      if (!provinceId || !Array.isArray(towns)) return result;
+      result[provinceId] = Array.from(new Set(towns.filter(Boolean).map((town) => String(town).trim()))).sort((left, right) =>
+        left.localeCompare(right)
+      );
+      return result;
+    }, {});
+  }
+
+  function addOption(select, value, label) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  }
+
+  const townsByProvince = normalizeTownSource();
+
   const fieldSets = {
     sell: {
       eyebrow: "Seller Intake",
@@ -49,7 +91,8 @@ window.AxiomPublicIntake =
         { name: "clientName", label: "Your name", type: "text", required: true, autocomplete: "name" },
         { name: "mobile", label: "Mobile / WhatsApp", type: "tel", required: true, autocomplete: "tel" },
         { name: "email", label: "Email", type: "email", required: false, autocomplete: "email" },
-        { name: "area", label: "Property suburb / area", type: "text", required: true },
+        { name: "province", label: "Province", type: "provinceSelect", required: true },
+        { name: "area", label: "Property suburb / area", type: "townSelect", required: true },
         {
           name: "propertyType",
           label: "Property type",
@@ -58,7 +101,20 @@ window.AxiomPublicIntake =
           options: ["House", "Apartment", "Townhouse", "Vacant land", "Smallholding"],
         },
         { name: "price", label: "Expected price or valuation need", type: "text", required: true, placeholder: "e.g. Around R2.4m or need a valuation guide" },
-        { name: "timeline", label: "Selling timeline", type: "text", required: true, placeholder: "e.g. Want to list this month" },
+        {
+          name: "timeline",
+          label: "Selling timeline",
+          type: "select",
+          required: true,
+          options: [
+            "As soon as possible",
+            "Within 30 days",
+            "1 to 3 months",
+            "3 to 6 months",
+            "Just exploring for now",
+            "Need a valuation first",
+          ],
+        },
         { name: "reason", label: "Reason for selling", type: "text", required: true, placeholder: "Relocating, downsizing, upgrading..." },
       ],
     },
@@ -73,7 +129,8 @@ window.AxiomPublicIntake =
         { name: "clientName", label: "Your name", type: "text", required: true, autocomplete: "name" },
         { name: "mobile", label: "Mobile / WhatsApp", type: "tel", required: true, autocomplete: "tel" },
         { name: "email", label: "Email", type: "email", required: false, autocomplete: "email" },
-        { name: "area", label: "Preferred suburb / area", type: "text", required: true },
+        { name: "province", label: "Province", type: "provinceSelect", required: true },
+        { name: "area", label: "Preferred suburb / area", type: "townSelect", required: true },
         {
           name: "propertyType",
           label: "Property type",
@@ -89,7 +146,20 @@ window.AxiomPublicIntake =
           required: true,
           options: ["Cash", "Pre-approved bond", "Applying for finance", "Need guidance"],
         },
-        { name: "timeline", label: "Buying timeline", type: "text", required: true, placeholder: "e.g. Ready to view this week" },
+        {
+          name: "timeline",
+          label: "Buying timeline",
+          type: "select",
+          required: true,
+          options: [
+            "Ready to view now",
+            "Within 30 days",
+            "1 to 3 months",
+            "3 to 6 months",
+            "Just exploring for now",
+            "Need finance guidance first",
+          ],
+        },
       ],
     },
   };
@@ -109,6 +179,10 @@ window.AxiomPublicIntake =
   let successScoreNote = null;
   let successLink = null;
   let successClose = null;
+  let successWhatsappPanel = null;
+  let successWhatsappStatus = null;
+  let successWhatsappNote = null;
+  let successWhatsappLink = null;
   let routeSteps = [];
   let defaultSubmitLabel = submitButton.textContent;
 
@@ -180,6 +254,10 @@ window.AxiomPublicIntake =
         margin: 0.4rem 0 0;
         color: #9fb0c8;
         font-size: 0.92rem;
+      }
+      .intake-whatsapp-test .btn {
+        width: fit-content;
+        margin-top: 0.8rem;
       }
       .intake-route-rail {
         display: grid;
@@ -275,6 +353,9 @@ window.AxiomPublicIntake =
         .intake-success-actions .btn {
           width: 100%;
         }
+        .intake-whatsapp-test .btn {
+          width: 100%;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -337,6 +418,12 @@ window.AxiomPublicIntake =
         <span>What happens next</span>
         <strong id="intakeSuccessNext">-</strong>
       </div>
+      <div class="intake-success-card intake-whatsapp-test hidden" id="intakeWhatsappTest">
+        <span>WhatsApp test</span>
+        <strong id="intakeWhatsappStatus">Message queued</strong>
+        <p id="intakeWhatsappNote">Open the prepared WhatsApp message for testing.</p>
+        <a class="btn btn-primary" id="intakeWhatsappLink" href="#" target="_blank" rel="noopener">Open WhatsApp message</a>
+      </div>
       <div class="intake-success-grid">
         <article class="intake-success-card">
           <span>What Axiom already knows</span>
@@ -366,6 +453,10 @@ window.AxiomPublicIntake =
     successScoreNote = document.getElementById("intakeSuccessScoreNote");
     successLink = document.getElementById("intakeSuccessLink");
     successClose = document.getElementById("intakeSuccessClose");
+    successWhatsappPanel = document.getElementById("intakeWhatsappTest");
+    successWhatsappStatus = document.getElementById("intakeWhatsappStatus");
+    successWhatsappNote = document.getElementById("intakeWhatsappNote");
+    successWhatsappLink = document.getElementById("intakeWhatsappLink");
     routeSteps = [
       document.getElementById("intakeRouteStep1"),
       document.getElementById("intakeRouteStep2"),
@@ -379,18 +470,21 @@ window.AxiomPublicIntake =
     label.textContent = field.label;
 
     let input;
-    if (field.type === "select") {
+    if (field.type === "select" || field.type === "provinceSelect" || field.type === "townSelect") {
       input = document.createElement("select");
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = `Select ${field.label.toLowerCase()}`;
-      input.appendChild(placeholder);
-      field.options.forEach((optionLabel) => {
-        const option = document.createElement("option");
-        option.value = optionLabel;
-        option.textContent = optionLabel;
-        input.appendChild(option);
-      });
+      if (field.type === "provinceSelect") {
+        addOption(input, "", "Select province");
+        Object.keys(townsByProvince)
+          .sort((left, right) => (provinceLabels[left] || left).localeCompare(provinceLabels[right] || right))
+          .forEach((provinceId) => addOption(input, provinceId, provinceLabels[provinceId] || provinceId));
+      } else if (field.type === "townSelect") {
+        input.disabled = true;
+        input.dataset.townSelect = "true";
+        addOption(input, "", "Select province first");
+      } else {
+        addOption(input, "", `Select ${field.label.toLowerCase()}`);
+        field.options.forEach((optionLabel) => addOption(input, optionLabel, optionLabel));
+      }
     } else {
       input = document.createElement("input");
       input.type = field.type;
@@ -408,6 +502,29 @@ window.AxiomPublicIntake =
     return label;
   }
 
+  function wireTownDropdowns() {
+    const provinceSelect = dynamicFields.querySelector('select[name="province"]');
+    const townSelect = dynamicFields.querySelector('select[name="area"][data-town-select="true"]');
+    if (!provinceSelect || !townSelect) return;
+
+    function fillTowns() {
+      const provinceId = provinceSelect.value;
+      townSelect.innerHTML = "";
+      if (!provinceId || !townsByProvince[provinceId]?.length) {
+        townSelect.disabled = true;
+        addOption(townSelect, "", "Select province first");
+        return;
+      }
+
+      townSelect.disabled = false;
+      addOption(townSelect, "", "Select suburb / town");
+      townsByProvince[provinceId].forEach((town) => addOption(townSelect, town, town));
+    }
+
+    provinceSelect.addEventListener("change", fillTowns);
+    fillTowns();
+  }
+
   function renderFields(intent) {
     const config = fieldSets[intent] || fieldSets.sell;
     currentIntent = intent;
@@ -415,6 +532,7 @@ window.AxiomPublicIntake =
     config.fields.forEach((field) => {
       dynamicFields.appendChild(createField(field));
     });
+    wireTownDropdowns();
     eyebrow.textContent = config.eyebrow;
     title.textContent = config.title;
     progressNote.textContent = config.progress;
@@ -461,6 +579,7 @@ window.AxiomPublicIntake =
     const clientName = get("clientName");
     const mobile = get("mobile");
     const email = get("email");
+    const province = get("province");
     const area = get("area");
     const propertyType = get("propertyType");
     const timeline = get("timeline");
@@ -469,6 +588,7 @@ window.AxiomPublicIntake =
     answers.push({ label: "Client name", value: clientName });
     answers.push({ label: "Mobile", value: mobile });
     if (email) answers.push({ label: "Email", value: email });
+    if (province) answers.push({ label: "Province", value: provinceLabels[province] || province });
     answers.push({ label: "Area", value: area });
     answers.push({ label: "Property type", value: propertyType });
     answers.push({ label: "Timeline", value: timeline });
@@ -500,6 +620,7 @@ window.AxiomPublicIntake =
         mode: "website",
         sourceLabel: "Website enquiry",
         signal: timeline,
+        province,
         area,
       },
       answers,
@@ -565,6 +686,20 @@ window.AxiomPublicIntake =
       handoffReady,
     });
     setRouteState(handoffReady);
+
+    successBand.textContent = `${describeBand(outcome.band || leadQuality.band)}${leadQuality.score ? ` - ${leadQuality.score}/100` : ""}`;
+    const whatsapp = response.whatsapp || {};
+    if (whatsapp.manualTestLink && successWhatsappPanel && successWhatsappLink) {
+      successWhatsappStatus.textContent = whatsapp.realDeliveryConnected
+        ? "WhatsApp acknowledgement queued"
+        : "WhatsApp test message ready";
+      successWhatsappNote.textContent = whatsapp.note || "Open the prepared WhatsApp message for testing.";
+      successWhatsappLink.href = whatsapp.manualTestLink;
+      successWhatsappLink.textContent = whatsapp.realDeliveryConnected ? "Open WhatsApp copy" : "Open WhatsApp test message";
+      successWhatsappPanel.classList.remove("hidden");
+    } else if (successWhatsappPanel) {
+      successWhatsappPanel.classList.add("hidden");
+    }
 
     form.classList.add("hidden");
     successPanel.classList.remove("hidden");
