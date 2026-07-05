@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { applyPostgresSchema, syncPostgresReportingTables } from "../scripts/migrate-json-to-postgres.js";
 
 const DEFAULT_COLLECTIONS = {
   leads: "leads.json",
@@ -104,8 +105,16 @@ async function tryCreatePostgresStorage({ env, dataDir, collections, fallbackMod
     );
   `;
 
+  const reportingProjection = {
+    enabled: true,
+    lastSyncedAt: null,
+    lastCounts: null,
+    lastError: null
+  };
+
   try {
     await pool.query(bootstrapSql);
+    await applyPostgresSchema(pool);
   } catch (error) {
     await pool.end().catch(() => {});
     if (fallbackMode === "postgres") throw error;
@@ -140,6 +149,18 @@ async function tryCreatePostgresStorage({ env, dataDir, collections, fallbackMod
           [key, JSON.stringify(snapshot[key] ?? null)]
         );
       }
+
+      try {
+        const counts = await syncPostgresReportingTables(pool, snapshot, { includeBlobs: false });
+        reportingProjection.lastSyncedAt = new Date().toISOString();
+        reportingProjection.lastCounts = counts;
+        reportingProjection.lastError = null;
+      } catch (error) {
+        reportingProjection.lastError = error instanceof Error ? error.message : "Reporting projection failed.";
+        if (env.STORAGE_REPORTING_STRICT === "true") {
+          throw error;
+        }
+      }
     },
     async diagnostics() {
       const ping = await pool.query("SELECT NOW() AS now");
@@ -149,7 +170,8 @@ async function tryCreatePostgresStorage({ env, dataDir, collections, fallbackMod
         fallbackActive: false,
         tableName,
         connectedAt: ping.rows[0]?.now || null,
-        detail: "Using Postgres-backed blob persistence as the migration bridge."
+        reportingProjection,
+        detail: "Using Postgres persistence with live reporting-table projection."
       };
     },
     async close() {
