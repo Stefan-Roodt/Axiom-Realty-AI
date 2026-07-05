@@ -79,6 +79,124 @@
         background: linear-gradient(145deg, rgba(8, 16, 31, 0.8), rgba(12, 24, 44, 0.74));
       }
 
+      .seller-experience-panel,
+      .seller-journey-board {
+        padding: 1.15rem 1.2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.84), rgba(12, 24, 44, 0.76)),
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 34%);
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.22);
+      }
+
+      .seller-experience-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.95rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .seller-experience-copy span,
+      .seller-journey-note span {
+        display: block;
+        margin-bottom: 0.28rem;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .seller-experience-copy strong,
+      .seller-step strong,
+      .seller-guidance-note strong,
+      .seller-journey-note strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .seller-experience-copy p,
+      .seller-step p,
+      .seller-guidance-note p,
+      .seller-journey-note p {
+        color: #9fb0c8;
+      }
+
+      .seller-experience-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-height: 46px;
+        padding: 0.75rem 0.95rem;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        background: rgba(8, 16, 31, 0.72);
+        color: #dbeafe;
+        font-weight: 700;
+      }
+
+      .seller-experience-pill strong {
+        color: #67e8f9;
+        font-size: 1.05rem;
+      }
+
+      .seller-experience-rail,
+      .seller-journey-flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        position: relative;
+      }
+
+      .seller-experience-rail::before,
+      .seller-journey-flow::before {
+        content: "";
+        position: absolute;
+        left: 1.15rem;
+        right: 1.15rem;
+        top: 1.25rem;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.52), rgba(167, 139, 250, 0.6));
+      }
+
+      .seller-step {
+        position: relative;
+        z-index: 1;
+        padding: 0 0.15rem;
+      }
+
+      .seller-step span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 0.55rem;
+        border-radius: 999px;
+        background: #67e8f9;
+        color: #07111f;
+        font-size: 0.78rem;
+        font-weight: 800;
+        box-shadow: 0 0 0 7px rgba(34, 211, 238, 0.12);
+      }
+
+      .seller-step strong {
+        margin-bottom: 0.3rem;
+      }
+
+      .seller-guidance-note,
+      .seller-journey-note {
+        margin-top: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.56);
+      }
+
       .valuation-panel {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
@@ -350,6 +468,29 @@
           max-width: 100%;
         }
 
+        .seller-experience-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .seller-experience-rail,
+        .seller-journey-flow {
+          grid-template-columns: 1fr;
+        }
+
+        .seller-experience-rail::before,
+        .seller-journey-flow::before {
+          left: 15px;
+          right: auto;
+          top: 1rem;
+          bottom: 1rem;
+          width: 2px;
+          height: auto;
+        }
+
+        .seller-step {
+          padding-left: 0.15rem;
+        }
+
         .valuation-topline,
         .valuation-form,
         .valuation-metrics,
@@ -455,23 +596,41 @@
             the likely buyer pool, and the pace the sale is likely to take.
           </p>
         </div>
-        <div class="product-pain-grid">
-          <article class="product-pain-card">
-            <strong>Area-aware matching</strong>
-            <p>Your location and property context matter. Axiom helps line you up with the kind of expert your sale actually needs.</p>
-          </article>
-          <article class="product-pain-card">
-            <strong>Better first conversation</strong>
-            <p>The selling specialist starts with a cleaner brief instead of making you rebuild the story from scratch.</p>
-          </article>
-          <article class="product-pain-card">
-            <strong>Calmer progression</strong>
-            <p>Documents, milestones, next actions, and updates can move in a steadier, more reassuring rhythm.</p>
-          </article>
-          <article class="product-pain-card">
-            <strong>Human judgement</strong>
-            <p>A real person still checks the fit. Technology keeps things organised; judgement stays human.</p>
-          </article>
+        <div class="seller-experience-panel" aria-label="Seller experience flow">
+          <div class="seller-experience-strip">
+            <div class="seller-experience-copy">
+              <span>Seller route</span>
+              <strong>Brief -> fit -> first call -> live progress.</strong>
+              <p>You tell the story properly once, then the sale can move forward with context instead of patchwork.</p>
+            </div>
+            <div class="seller-experience-pill"><strong>1</strong> cleaner start for the mandate</div>
+          </div>
+          <div class="seller-experience-rail">
+            <article class="seller-step">
+              <span>01</span>
+              <strong>Area-aware matching</strong>
+              <p>Your location and property context matter. Axiom helps line you up with the kind of expert your sale actually needs.</p>
+            </article>
+            <article class="seller-step">
+              <span>02</span>
+              <strong>Better first conversation</strong>
+              <p>The selling specialist starts with a cleaner brief instead of making you rebuild the story from scratch.</p>
+            </article>
+            <article class="seller-step">
+              <span>03</span>
+              <strong>Calmer progression</strong>
+              <p>Documents, milestones, next actions, and updates can move in a steadier, more reassuring rhythm.</p>
+            </article>
+            <article class="seller-step">
+              <span>04</span>
+              <strong>Human judgement</strong>
+              <p>A real person still checks the fit. Technology keeps things organised; judgement stays human.</p>
+            </article>
+          </div>
+        </div>
+        <div class="seller-guidance-note">
+          <strong>What this changes in practice</strong>
+          <p>The first specialist call starts on firmer ground, the seller feels better held, and the deal has a cleaner rhythm from the opening step.</p>
         </div>
       </section>
 
@@ -481,27 +640,34 @@
             <p class="eyebrow">Seller Journey</p>
             <h2>What happens once you take the first step.</h2>
           </div>
-          <div class="concierge-feature-grid">
-            <article class="concierge-feature-card">
-              <span>01</span>
-              <strong>We shape the brief</strong>
-              <p>Your property type, area, timing, and key context are turned into one clear, usable starting point.</p>
-            </article>
-            <article class="concierge-feature-card">
-              <span>02</span>
-              <strong>We match with intent</strong>
-              <p>We line up the sale with a specialist who suits the area, the property, and the likely pace of the matter.</p>
-            </article>
-            <article class="concierge-feature-card">
-              <span>03</span>
-              <strong>You get a stronger follow-up</strong>
-              <p>The next conversation can begin with confidence and context instead of uncertainty and admin noise.</p>
-            </article>
-            <article class="concierge-feature-card">
-              <span>04</span>
-              <strong>The process stays visible</strong>
-              <p>As the matter progresses, updates, documents, and milestones can stay tied to the case.</p>
-            </article>
+          <div class="seller-journey-board" aria-label="Seller journey steps">
+            <div class="seller-journey-flow">
+              <article class="seller-step">
+                <span>01</span>
+                <strong>We shape the brief</strong>
+                <p>Your property type, area, timing, and key context are turned into one clear, usable starting point.</p>
+              </article>
+              <article class="seller-step">
+                <span>02</span>
+                <strong>We match with intent</strong>
+                <p>We line up the sale with a specialist who suits the area, the property, and the likely pace of the matter.</p>
+              </article>
+              <article class="seller-step">
+                <span>03</span>
+                <strong>You get a stronger follow-up</strong>
+                <p>The next conversation can begin with confidence and context instead of uncertainty and admin noise.</p>
+              </article>
+              <article class="seller-step">
+                <span>04</span>
+                <strong>The process stays visible</strong>
+                <p>As the matter progresses, updates, documents, and milestones can stay tied to the case.</p>
+              </article>
+            </div>
+            <div class="seller-journey-note">
+              <span>Why it feels calmer</span>
+              <strong>The same property story stays attached to the matter instead of getting rebuilt every time the next person joins.</strong>
+              <p>That means less repetition for the seller, a cleaner handover into the live mandate, and fewer loose ends from day one.</p>
+            </div>
           </div>
         </div>
       </section>
