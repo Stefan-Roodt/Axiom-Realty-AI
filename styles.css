@@ -297,7 +297,7 @@ button:not(.btn-primary) {
 }
 
 .hero-visual img {
-  width: min(100%, 560px);
+  width: min(100%, 420px);
   margin-left: auto;
   filter: drop-shadow(0 20px 40px rgba(3, 8, 20, 0.4));
 }
@@ -912,6 +912,97 @@ option {
   color: var(--ink);
 }
 
+.floating-concierge {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  width: min(342px, calc(100vw - 1.25rem));
+  padding: 0.78rem;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(5, 12, 24, 0.96), rgba(9, 22, 40, 0.94));
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.34);
+  backdrop-filter: blur(14px);
+}
+
+.floating-concierge__mark {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5bd5ff, #a78bfa);
+  color: #06111f;
+  font-weight: 900;
+  box-shadow: 0 12px 26px rgba(34, 211, 238, 0.22);
+}
+
+.floating-concierge__body {
+  min-width: 0;
+}
+
+.floating-concierge__body span,
+.floating-concierge__body strong,
+.floating-concierge__body small {
+  display: block;
+}
+
+.floating-concierge__body span {
+  color: #67e8f9;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.floating-concierge__body strong {
+  margin-top: 0.12rem;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.floating-concierge__body small {
+  margin-top: 0.18rem;
+  color: #aab8cf;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.floating-concierge__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.floating-concierge__actions a {
+  flex: 1 1 auto;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.42rem 0.64rem;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.floating-concierge__actions a:hover {
+  border-color: rgba(91, 213, 255, 0.46);
+  background: rgba(34, 211, 238, 0.12);
+  color: #ffffff;
+}
+
 .footer {
   padding: 2.4rem 0 3rem;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
@@ -1008,5 +1099,16 @@ option {
   button,
   input[type="submit"] {
     width: 100%;
+  }
+
+  .floating-concierge {
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    width: auto;
+  }
+
+  .floating-concierge__actions a {
+    width: auto;
   }
 }
