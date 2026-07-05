@@ -14,8 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260704-fix2" />
-    <link rel="stylesheet" href="route-header.css?v=20260704-fix2" />
+    <link rel="stylesheet" href="styles.css?v=20260705-clean1" />
+    <link rel="stylesheet" href="route-header.css?v=20260705-clean1" />
     <style>
       .import-lead-strip {
         display: grid;
@@ -1924,7 +1924,32 @@
 
       body.mission-control-route > .hero,
       body.mission-control-mode > .hero {
-        display: none !important;
+        display: block !important;
+        padding-top: clamp(2.4rem, 5vw, 4.6rem);
+        padding-bottom: clamp(1.4rem, 3vw, 2.2rem);
+      }
+
+      body.mission-control-route .hero-content,
+      body.mission-control-mode .hero-content {
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.78fr);
+        gap: clamp(1.25rem, 2.6vw, 2.2rem);
+        align-items: center;
+      }
+
+      body.mission-control-route .hero-proof-grid,
+      body.mission-control-mode .hero-proof-grid {
+        margin-top: 0.85rem;
+      }
+
+      body.mission-control-route .hero-visual img,
+      body.mission-control-mode .hero-visual img {
+        width: min(100%, 420px);
+      }
+
+      body.mission-control-route .hero-signal-panel,
+      body.mission-control-mode .hero-signal-panel {
+        max-width: 21rem;
+        margin: -1.15rem 0 0 auto;
       }
 
       body.mission-control-route main > section:not(#analytics),
@@ -2562,6 +2587,106 @@
         .scorecard-actions {
           flex-direction: column;
         }
+
+        body.mission-control-route .hero-content,
+        body.mission-control-mode .hero-content {
+          grid-template-columns: 1fr;
+        }
+
+        body.mission-control-route .hero-signal-panel,
+        body.mission-control-mode .hero-signal-panel {
+          max-width: 100%;
+          margin-top: -0.9rem;
+        }
+      }
+
+      .agent-benefit-panel,
+      .admin-gate,
+      .access-command-strip,
+      .access-flow-panel,
+      .access-route-preview,
+      .case-brain-panel,
+      .import-lead-strip,
+      .import-lead-result,
+      .command-layer-panel,
+      .morning-brief-panel,
+      .protect-deal-panel,
+      .protect-deal-summary,
+      .commission-timeline-panel,
+      .client-share-panel,
+      .market-update-panel,
+      .viewing-reminder-panel,
+      .feedback-capture-panel,
+      .contact-share-panel,
+      .finance-readiness-panel,
+      .referral-terms-panel,
+      .scorecard-panel,
+      .pilot-control-panel,
+      .valuation-panel,
+      .valuation-result-shell,
+      .valuation-json-shell,
+      .valuation-message-shell {
+        padding: 0.9rem 0.95rem;
+      }
+
+      .access-command-strip,
+      .command-layer-strip,
+      .import-lead-strip,
+      .protect-deal-strip,
+      .market-update-strip,
+      .viewing-reminder-strip,
+      .feedback-capture-strip,
+      .contact-share-strip,
+      .finance-readiness-strip,
+      .referral-terms-strip,
+      .scorecard-strip,
+      .morning-brief-grid,
+      .command-role-rail,
+      .command-intelligence-grid,
+      .case-brain-grid,
+      .case-brain-meta,
+      .import-lead-options,
+      .import-lead-result-grid,
+      .morning-brief-form,
+      .morning-brief-meta,
+      .protect-deal-summary-grid,
+      .protect-deal-checklist,
+      .client-share-meta-grid,
+      .market-update-meta,
+      .finance-readiness-meta-grid,
+      .referral-terms-copy-grid,
+      .referral-terms-meta-grid,
+      .scorecard-grid,
+      .scorecard-meta,
+      .scorecard-stats,
+      .scorecard-send-grid,
+      .pilot-control-grid,
+      .timeline-grid,
+      .analytics-grid,
+      .daily-control-grid,
+      .followup-control-grid,
+      .register-grid {
+        gap: 0.85rem;
+      }
+
+      .command-layer-strip,
+      .access-command-strip,
+      .scorecard-strip,
+      .agent-benefit-panel .cta-group {
+        margin-top: 0.85rem;
+      }
+
+      .command-intelligence-grid,
+      .protect-deal-summary,
+      .client-share-panel,
+      .market-update-panel,
+      .viewing-reminder-panel,
+      .feedback-capture-panel,
+      .contact-share-panel,
+      .finance-readiness-panel,
+      .referral-terms-panel,
+      .scorecard-panel {
+        margin-top: 0.85rem;
       }
     </style>
   </head>
@@ -2587,35 +2712,33 @@
       <div class="mesh" aria-hidden="true"></div>
       <div class="hero-content wrapper">
         <div class="copy">
-          <p class="eyebrow">Axiom Mission Control</p>
-          <h1>The operating system behind every live deal.</h1>
+          <p class="eyebrow">Buyer And Seller Concierge</p>
+          <h1>Mission Control sits behind every live seller and buyer matter.</h1>
           <p class="subtext">
-            Mission Control is where Axiom becomes the working system for the office: every lead, every WhatsApp follow-up, every document chase, every commission protection step, and every next action visible in one place for agents, admin teams, and principals.
+            The public concierge gathers the story first. Mission Control then gives agents, admin teams, and principals one protected office layer for the live case, the WhatsApp trail, the next action, and the commission record.
           </p>
           <div class="hero-proof-grid" aria-label="Quick reassurance">
-            <span><strong>Agents</strong> Run with a personal AI assistant bot and live case context</span>
-            <span><strong>Admin</strong> See the office queue, blockers, docs, and follow-up rhythm</span>
-            <span><strong>Principals</strong> Monitor exposure, performance, and protected commission</span>
+            <span><strong>Seller and buyer intake</strong> stays in one calmer front door</span>
+            <span><strong>Admin and agent action</strong> stays attached to the same live file</span>
+            <span><strong>Principal oversight</strong> stays visible without office noise</span>
           </div>
 
           <div class="cta-group">
             <a class="btn btn-primary" href="#analytics">Open access routes</a>
-            <a class="btn btn-secondary" href="agents.html#capabilities">See the agent workflow</a>
-            <a class="btn btn-secondary" href="index.html">Public homepage</a>
+            <a class="btn btn-secondary" href="sellers.html">Seller concierge</a>
+            <a class="btn btn-secondary" href="buyers.html">Buyer concierge</a>
           </div>
-
-          <p class="promise-text">Public concierge in front. Mission Control runs the work.</p>
         </div>
 
         <div class="hero-visual">
           <img src="ai-hero.svg" alt="AI real estate skyline visualization" />
           <div class="hero-signal-panel" aria-label="Concierge workflow preview">
-            <span>Operating system</span>
+            <span>Public concierge</span>
             <div class="hero-flow" aria-hidden="true">
               <b>1</b><i></i><b>2</b><i></i><b>3</b>
             </div>
-            <strong>Capture. Protect. Progress.</strong>
-            <small>Every lead lands in one working file, every next step stays visible, and every human override has a place to happen.</small>
+            <strong>Seller and buyer stories land here first.</strong>
+            <small>The brief is captured once, then Mission Control carries the live office work, visibility, and protection underneath.</small>
           </div>
         </div>
       </div>
@@ -2809,7 +2932,7 @@
               Email
               <input name="email" type="email" placeholder="agent@example.co.za" required />
             </label>
-            <p class="small-note form-helper-note">Agents need both mobile and email: WhatsApp for live concierge prompts, email for the weekday action digest and formal records.</p>
+            <p class="small-note form-helper-note expert-form-span-2">Agents need both mobile and email: WhatsApp for live concierge prompts, email for the weekday action digest and formal records.</p>
             <label>
               Province
               <select id="expertProvince" name="province" required>
@@ -2847,13 +2970,15 @@
                 <option value="Open to discuss">Open to discuss</option>
               </select>
             </label>
+            <label class="expert-form-span-2">
+              Notes
+              <textarea name="notes" rows="4" placeholder="Tell us about your focus areas, responsiveness, and ideal referrals"></textarea>
+            </label>
           </div>
-          <label>
-            Notes
-            <textarea name="notes" rows="4" placeholder="Tell us about your focus areas, responsiveness, and ideal referrals"></textarea>
-          </label>
-          <button class="btn btn-primary large" type="submit">Apply to partner with us</button>
-          <p class="next-step-message hidden" id="expertApplicationMessage"></p>
+          <div class="expert-form-actions">
+            <button class="btn btn-primary large" type="submit">Apply to partner with us</button>
+            <p class="next-step-message hidden" id="expertApplicationMessage"></p>
+          </div>
         </form>
       </section>
 
@@ -3815,6 +3940,44 @@ Close the Sandton buyer finance file before Tuesday.</textarea>
               <article class="card metric-card"><h3>Recovery Items</h3><p id="mPulseRecovery">-</p></article>
               <article class="card metric-card"><h3>Quarter Leader</h3><p id="mPrizeLeader">-</p></article>
               <article class="card metric-card"><h3>Match Ready</h3><p id="mMatchReady">-</p></article>
+            </div>
+            <div class="card risk-panel" aria-label="Office roll-up intelligence">
+              <div class="risk-topline">
+                <div>
+                  <h3>Office Roll-up Intelligence</h3>
+                  <p class="small-note">Agency, branch, province, agent and national views are kept in the reporting layer so a group like Remax can see one agent, one branch, one province, or the whole estate-agency operation from the same data.</p>
+                </div>
+                <span class="risk-badge" id="reportingModeBadge">Loading rollups</span>
+              </div>
+              <div class="timeline-metrics">
+                <article class="timeline-metric">
+                  <span>National leads</span>
+                  <strong id="reportingNationalLeads">-</strong>
+                </article>
+                <article class="timeline-metric">
+                  <span>Agency views</span>
+                  <strong id="reportingAgencyViews">-</strong>
+                </article>
+                <article class="timeline-metric">
+                  <span>Branch views</span>
+                  <strong id="reportingBranchViews">-</strong>
+                </article>
+                <article class="timeline-metric">
+                  <span>Agent views</span>
+                  <strong id="reportingAgentViews">-</strong>
+                </article>
+              </div>
+              <div class="timeline-card">
+                <div class="timeline-card-head">
+                  <div>
+                    <span>Live source</span>
+                    <strong id="reportingSourceTitle">Waiting for reporting data</strong>
+                    <small id="reportingSourceNote">Structured rollups load after sign-in.</small>
+                  </div>
+                  <div class="timeline-chip pending" id="reportingScopeBadge">Scope</div>
+                </div>
+                <div class="timeline-row-grid" id="reportingRollupList"></div>
+              </div>
             </div>
             <div class="card risk-panel" aria-label="Monthly budget, forecast and AI projection">
               <div class="risk-topline">
@@ -7596,6 +7759,15 @@ Protect commission on the Durban North referral before noon.</textarea>
         const servicePulseRecoveryTitle = document.getElementById("servicePulseRecoveryTitle");
         const servicePulseRecoveryCount = document.getElementById("servicePulseRecoveryCount");
         const servicePulseRecoveryList = document.getElementById("servicePulseRecoveryList");
+        const reportingModeBadge = document.getElementById("reportingModeBadge");
+        const reportingNationalLeads = document.getElementById("reportingNationalLeads");
+        const reportingAgencyViews = document.getElementById("reportingAgencyViews");
+        const reportingBranchViews = document.getElementById("reportingBranchViews");
+        const reportingAgentViews = document.getElementById("reportingAgentViews");
+        const reportingSourceTitle = document.getElementById("reportingSourceTitle");
+        const reportingSourceNote = document.getElementById("reportingSourceNote");
+        const reportingScopeBadge = document.getElementById("reportingScopeBadge");
+        const reportingRollupList = document.getElementById("reportingRollupList");
 
         if (!operationsPanel || !inboxCommandDeck || !taskQueueList || !whatsappCaseList) {
           return;
@@ -8205,6 +8377,76 @@ Protect commission on the Durban North referral before noon.</textarea>
           }).format(Number(value || 0));
         }
 
+        function rollupRows(label, rows) {
+          return (rows || [])
+            .slice(0, 3)
+            .map((row) => ({ ...row, viewLabel: label }));
+        }
+
+        function renderReporting(reporting) {
+          if (!reporting) return;
+          const rollups = reporting.rollups || {};
+          const agencyRows = rollups.agencies || [];
+          const branchRows = rollups.branches || [];
+          const provinceRows = rollups.provinces || [];
+          const agentRows = rollups.agents || [];
+          const national = rollups.national || {};
+          const primaryRows = [
+            ...rollupRows("Agency", agencyRows),
+            ...rollupRows("Province", provinceRows),
+            ...rollupRows("Branch", branchRows),
+            ...rollupRows("Agent", agentRows),
+          ].slice(0, 8);
+
+          if (reportingModeBadge) {
+            reportingModeBadge.textContent = reporting.mode === "postgres" ? "Postgres live" : "Scoped view";
+          }
+          setMetric(reportingNationalLeads, national.leads ?? reporting.totals?.leads ?? 0);
+          setMetric(reportingAgencyViews, agencyRows.length);
+          setMetric(reportingBranchViews, branchRows.length);
+          setMetric(reportingAgentViews, agentRows.length);
+
+          if (reportingSourceTitle) {
+            reportingSourceTitle.textContent = reporting.mode === "postgres"
+              ? "Structured reporting tables active"
+              : "Mission Control scoped state";
+          }
+          if (reportingSourceNote) {
+            const generated = reporting.generatedAt ? runtime.formatTimestamp(reporting.generatedAt) : "now";
+            reportingSourceNote.textContent = `${reporting.source || "Axiom reporting"} · refreshed ${generated}`;
+          }
+          if (reportingScopeBadge) {
+            reportingScopeBadge.textContent = reporting.mode === "postgres" ? "Agency / branch / province / agent" : "Current role scope";
+          }
+          if (reportingRollupList) {
+            reportingRollupList.innerHTML = primaryRows.length
+              ? primaryRows
+                  .map(
+                    (row) => `
+                      <article class="timeline-row">
+                        <span>${escapeHtml(row.viewLabel)}</span>
+                        <strong>${escapeHtml(row.label || row.id || "Unlabelled")}</strong>
+                        <small>${Number(row.leads || 0)} leads · ${Number(row.cases || 0)} cases · ${Number(row.openTasks || 0)} open actions · ${Number(row.protectedDeals || 0)} protected</small>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : '<p class="small-note">No rollup rows available yet. New leads and case activity will fill this automatically.</p>';
+          }
+        }
+
+        async function refreshReporting() {
+          if (!reportingRollupList) return;
+          try {
+            const data = await requestJson("/api/admin/reporting");
+            renderReporting(data.reporting);
+          } catch (error) {
+            if (reportingModeBadge) reportingModeBadge.textContent = "Principal/admin only";
+            if (reportingSourceTitle) reportingSourceTitle.textContent = "Rollups need principal or admin access";
+            if (reportingSourceNote) reportingSourceNote.textContent = "Sign in with a role that can see office reporting.";
+          }
+        }
+
         function renderScoreboard(snapshot) {
           const metrics = snapshot.metrics || {};
           const sourceSummary = snapshot.sourceToSale?.summary || {};
@@ -8594,6 +8836,7 @@ Protect commission on the Durban North referral before noon.</textarea>
           renderEscalations(snapshot);
           renderScoreboard(snapshot);
           renderWhatsapp(snapshot);
+          refreshReporting();
           window.dispatchEvent(
             new CustomEvent("axiom:operations-snapshot", {
               detail: { snapshot },
