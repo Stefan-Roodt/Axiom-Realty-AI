@@ -361,6 +361,62 @@ async function run() {
     const reporting = await requestJson(baseUrl, "/api/admin/reporting", {
       headers: { cookie }
     });
+    const principalOnboarding = await requestJson(baseUrl, "/api/admin/onboard-role", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie
+      },
+      body: JSON.stringify({
+        role: "principal",
+        personName: "L. Ferreira",
+        agencyName: "RE/MAX Potchefstroom",
+        branchName: "Potchefstroom",
+        town: "Potchefstroom",
+        province: "North West",
+        email: "l.ferreira@remax-potch.example.co.za",
+        mobile: "+27 82 000 1100",
+        agentSeats: 8,
+        adminSeats: 1,
+        packageLabel: "Axiom Mission Control"
+      })
+    });
+    const agentOnboarding = await requestJson(baseUrl, "/api/admin/onboard-role", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie
+      },
+      body: JSON.stringify({
+        role: "agent",
+        personName: "RE/MAX Potch Agent 1",
+        agencyName: "RE/MAX Potchefstroom",
+        branchName: "Potchefstroom",
+        town: "Potchefstroom",
+        province: "North West",
+        email: "agent1@remax-potch.example.co.za",
+        mobile: "+27 82 000 1101"
+      })
+    });
+    const sellerOnboarding = await requestJson(baseUrl, "/api/admin/onboard-role", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie
+      },
+      body: JSON.stringify({
+        role: "seller",
+        personName: "Verification Seller",
+        agencyName: "RE/MAX Potchefstroom",
+        branchName: "Potchefstroom",
+        town: "Potchefstroom",
+        province: "North West",
+        email: "seller.verify@example.co.za",
+        mobile: "+27 82 000 1102",
+        caseId: "verify-case",
+        agentId: "agent-re-max-potch-agent-1-re-max-potchefstroom"
+      })
+    });
     const queueMessage = await requestJson(baseUrl, "/api/admin/whatsapp/queue", {
       method: "POST",
       headers: {
@@ -507,6 +563,22 @@ async function run() {
       !reporting.body?.reporting?.rollups && "Reporting endpoint missing agency/branch/province/agent rollups",
       reporting.body?.reporting?.rollups && !("agents" in reporting.body.reporting.rollups) &&
         "Reporting endpoint missing agent rollups",
+      !principalOnboarding.ok && `/api/admin/onboard-role principal returned ${principalOnboarding.status}`,
+      principalOnboarding.body?.onboarding?.role !== "principal" && "Principal onboarding did not create principal role",
+      principalOnboarding.body?.onboarding?.signIn?.accessScope?.agencyIds?.[0] !== "agency-re-max-potchefstroom" &&
+        "Principal onboarding did not scope L. Ferreira to RE/MAX Potchefstroom",
+      principalOnboarding.body?.onboarding?.signIn?.accessScope?.provinceIds?.[0] !== "north-west" &&
+        "Principal onboarding did not scope L. Ferreira to North West",
+      !agentOnboarding.ok && `/api/admin/onboard-role agent returned ${agentOnboarding.status}`,
+      agentOnboarding.body?.onboarding?.role !== "agent" && "Agent onboarding did not create agent role",
+      !sellerOnboarding.ok && `/api/admin/onboard-role seller returned ${sellerOnboarding.status}`,
+      sellerOnboarding.body?.onboarding?.recordType !== "partyUser" && "Seller onboarding did not create a case party user",
+      sellerOnboarding.body?.onboarding?.signIn?.accessScope?.caseIds?.[0] !== "verify-case" &&
+        "Seller onboarding did not bind seller to the linked case",
+      !accessModel.body?.onboardingModel?.caseRoles?.some((item) => item.role === "buyer") &&
+        "Access model missing buyer onboarding path",
+      !accessModel.body?.onboardingModel?.internalRoles?.some((item) => item.role === "agent") &&
+        "Access model missing agent onboarding path",
       !queueMessage.ok && `/api/admin/whatsapp/queue returned ${queueMessage.status}`,
       !processQueue.ok && `/api/admin/whatsapp/process returned ${processQueue.status}`,
       !logout.ok && `/api/auth/logout returned ${logout.status}`,
