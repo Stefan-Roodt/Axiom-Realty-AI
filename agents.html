@@ -14,8 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="route-header.css" />
+    <link rel="stylesheet" href="styles.css?v=20260704-fix2" />
+    <link rel="stylesheet" href="route-header.css?v=20260704-fix2" />
     <style>
       .agent-hero-stage {
         position: relative;
@@ -351,6 +351,136 @@
         font: 700 12px "Outfit", sans-serif;
       }
 
+      .agent-office-panel {
+        padding: 1.15rem 1.2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background:
+          linear-gradient(145deg, rgba(8, 16, 31, 0.84), rgba(12, 24, 44, 0.76)),
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 34%);
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.22);
+      }
+
+      .agent-office-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.95rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .agent-office-copy span,
+      .agent-capability-note span {
+        display: block;
+        margin-bottom: 0.28rem;
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .agent-office-copy strong,
+      .agent-office-step strong,
+      .agent-office-note strong,
+      .agent-capability-step strong,
+      .agent-capability-note strong {
+        display: block;
+        color: #f8fafc;
+      }
+
+      .agent-office-copy p,
+      .agent-office-step p,
+      .agent-office-note p,
+      .agent-capability-step p,
+      .agent-capability-note p {
+        color: #9fb0c8;
+      }
+
+      .agent-office-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-height: 46px;
+        padding: 0.75rem 0.95rem;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        background: rgba(8, 16, 31, 0.72);
+        color: #dbeafe;
+        font-weight: 700;
+      }
+
+      .agent-office-pill strong {
+        color: #67e8f9;
+        font-size: 1.05rem;
+      }
+
+      .agent-office-rail,
+      .agent-capability-rail {
+        display: grid;
+        gap: 1rem;
+        position: relative;
+      }
+
+      .agent-office-rail {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      .agent-capability-rail {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-bottom: 1rem;
+      }
+
+      .agent-office-rail::before,
+      .agent-capability-rail::before {
+        content: "";
+        position: absolute;
+        left: 1.15rem;
+        right: 1.15rem;
+        top: 1.25rem;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(34, 211, 238, 0.52), rgba(167, 139, 250, 0.6));
+      }
+
+      .agent-office-step,
+      .agent-capability-step {
+        position: relative;
+        z-index: 1;
+        padding: 0 0.15rem;
+      }
+
+      .agent-office-step span,
+      .agent-capability-step span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-bottom: 0.55rem;
+        border-radius: 999px;
+        background: #67e8f9;
+        color: #07111f;
+        font-size: 0.78rem;
+        font-weight: 800;
+        box-shadow: 0 0 0 7px rgba(34, 211, 238, 0.12);
+      }
+
+      .agent-office-step strong,
+      .agent-capability-step strong {
+        margin-bottom: 0.3rem;
+      }
+
+      .agent-office-note,
+      .agent-capability-note {
+        margin-top: 1rem;
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.56);
+      }
+
       @media (min-width: 1240px) {
         .agent-hero-checkpoints {
           grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -399,6 +529,25 @@
 
         .agent-hero-flowchart {
           padding: 0.75rem;
+        }
+
+        .agent-office-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .agent-office-rail,
+        .agent-capability-rail {
+          grid-template-columns: 1fr;
+        }
+
+        .agent-office-rail::before,
+        .agent-capability-rail::before {
+          left: 15px;
+          right: auto;
+          top: 1rem;
+          bottom: 1rem;
+          width: 2px;
+          height: auto;
         }
       }
 
@@ -653,23 +802,46 @@
             Axiom gives the principal agent or admin desk one operating system across the business: a personal AI Assistant bot for every agent, a live 24/7 WhatsApp follow-up layer, diary setup with agent scheduling reminders and done confirmation, automated reminder, escalation and deadline chase support, weekly seller activity summaries sent to the agent, visible lead stages, document control, stakeholder updates, commission protection, and human override when nuance matters.
           </p>
         </div>
-        <div class="product-pain-grid">
-          <article class="product-pain-card">
-            <strong>Stronger first contact</strong>
-            <p>Buyer and seller briefs arrive with enough context to make the first live conversation feel prepared.</p>
-          </article>
-          <article class="product-pain-card">
-            <strong>Document control</strong>
-            <p>FICA, IDs, OTPs, proof of address, and supporting files are requested and logged against the case.</p>
-          </article>
-          <article class="product-pain-card">
-            <strong>Deadline chasing</strong>
-            <p>Check-ins, missing updates, key gates, and payout dates stay visible before they go stale.</p>
-          </article>
-          <article class="product-pain-card">
-            <strong>Commission protection</strong>
-            <p>Referral acceptance, proof trails, payment dates and follow-through live in one admin thread.</p>
-          </article>
+        <div class="agent-office-panel" aria-label="Agency operating flow">
+          <div class="agent-office-strip">
+            <div class="agent-office-copy">
+              <span>Office route</span>
+              <strong>Lead in -> brief built -> WhatsApp follow-up -> risk surfaces -> principal sees the whole desk.</strong>
+              <p>Axiom does not just help one agent. It gives the admin desk and principal a calmer operating rhythm across the office.</p>
+            </div>
+            <div class="agent-office-pill"><strong>1</strong> command view across the agency</div>
+          </div>
+          <div class="agent-office-rail">
+            <article class="agent-office-step">
+              <span>01</span>
+              <strong>Stronger first contact</strong>
+              <p>Buyer and seller briefs arrive with enough context to make the first live conversation feel prepared.</p>
+            </article>
+            <article class="agent-office-step">
+              <span>02</span>
+              <strong>Document control</strong>
+              <p>FICA, IDs, OTPs, proof of address, and supporting files are requested and logged against the case.</p>
+            </article>
+            <article class="agent-office-step">
+              <span>03</span>
+              <strong>Deadline chasing</strong>
+              <p>Check-ins, missing updates, key gates, and payout dates stay visible before they go stale.</p>
+            </article>
+            <article class="agent-office-step">
+              <span>04</span>
+              <strong>Commission protection</strong>
+              <p>Referral acceptance, proof trails, payment dates and follow-through live in one admin thread.</p>
+            </article>
+            <article class="agent-office-step">
+              <span>05</span>
+              <strong>Visibility by role</strong>
+              <p>Agents, admin, and principal all see the same matter from the right lane without losing the office version of the truth.</p>
+            </article>
+          </div>
+        </div>
+        <div class="agent-office-note">
+          <strong>What this changes in practice</strong>
+          <p>Agents spend less time reconstructing cases, admin sees risk earlier, and principals can judge the health of the pipeline without chasing updates by hand.</p>
         </div>
       </section>
 
@@ -679,6 +851,33 @@
             <p class="eyebrow">What That Feels Like</p>
             <h2>The agency looks calmer, the client feels guided, and fewer details fall through the cracks.</h2>
             <p>That includes a personal AI Assistant bot for every agent, diary setup with viewing reminders the agent can mark done, automatic WhatsApp reminders that keep moving without admin lag, weekly seller activity summaries for the agent, one-tap Deal Room links agents can send to clients so progress stays visible without endless "any update?" messages, and a one-tap contact-card share whenever the buyer or seller should be able to reach the agent directly.</p>
+          </div>
+          <div class="agent-capability-rail" aria-label="Agent workflow benefits">
+            <article class="agent-capability-step">
+              <span>01</span>
+              <strong>Lead lands properly</strong>
+              <p>The assistant captures the case in WhatsApp so the agent starts with a real brief instead of scraps.</p>
+            </article>
+            <article class="agent-capability-step">
+              <span>02</span>
+              <strong>Routine follow-up runs</strong>
+              <p>Reminders, diary prompts, and document chases keep moving quietly in the background.</p>
+            </article>
+            <article class="agent-capability-step">
+              <span>03</span>
+              <strong>Risk surfaces early</strong>
+              <p>No-contact, no-update, and delay patterns become visible before the matter starts drifting.</p>
+            </article>
+            <article class="agent-capability-step">
+              <span>04</span>
+              <strong>Clients stay calmer</strong>
+              <p>Progress links, weekly summaries, and direct contact sharing reduce uncertainty without burying the office in admin.</p>
+            </article>
+          </div>
+          <div class="agent-capability-note">
+            <span>What runs quietly in the background</span>
+            <strong>The personal AI Assistant keeps nudging, checking, reminding, logging voice notes, and surfacing risk through WhatsApp while the office stays in control.</strong>
+            <p>That is what makes Axiom feel like a working operating system rather than another dashboard that still needs humans to babysit it all day.</p>
           </div>
           <div class="concierge-feature-grid">
             <article class="concierge-feature-card">
