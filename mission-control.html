@@ -4557,6 +4557,16 @@ Protect commission on the Durban North referral before noon.</textarea>
                   <p class="small-note">Scan with WhatsApp: Linked devices > Link a device.</p>
                 </div>
               </div>
+              <div class="feedback-log-panel whatsapp-outbox-panel" aria-label="WhatsApp outbox">
+                <div class="risk-topline">
+                  <div>
+                    <h3>Comms Outbox</h3>
+                    <p class="small-note" id="whatsappOutboxSummary">Messages prepared by Axiom will appear here with their delivery status and test links.</p>
+                  </div>
+                  <span class="risk-badge" id="whatsappOutboxBadge">Checking outbox</span>
+                </div>
+                <div class="feedback-log-list" id="whatsappOutboxList"></div>
+              </div>
               <div class="pilot-control-panel" aria-label="WhatsApp Pilot Control Room">
                 <div class="risk-topline">
                   <div>
@@ -7914,6 +7924,9 @@ Protect commission on the Durban North referral before noon.</textarea>
         const reminderStatus = document.getElementById("viewingReminderStatus");
         const whatsappBridgeBadge = document.getElementById("whatsappBridgeBadge");
         const whatsappBridgeStatus = document.getElementById("whatsappBridgeStatus");
+        const whatsappOutboxBadge = document.getElementById("whatsappOutboxBadge");
+        const whatsappOutboxSummary = document.getElementById("whatsappOutboxSummary");
+        const whatsappOutboxList = document.getElementById("whatsappOutboxList");
         const smartReminderStatus = document.getElementById("smartReminderStatus");
         const feedbackLogList = document.getElementById("feedbackLogList");
         const feedbackLogBadge = document.getElementById("feedbackLogBadge");
@@ -9019,6 +9032,68 @@ Protect commission on the Durban North referral before noon.</textarea>
           }
         }
 
+        function whatsappStatusLabel(status) {
+          const normalized = String(status || "queued").replace(/_/g, " ");
+          return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        }
+
+        function whatsappStatusClass(status) {
+          if (status === "delivered") return "paid";
+          if (status === "manual_test_ready") return "ready";
+          if (status === "send_failed") return "risk";
+          return "pending";
+        }
+
+        function renderWhatsappOutbox(snapshot) {
+          const queue = (snapshot.whatsapp?.queue || [])
+            .slice()
+            .sort((left, right) => Date.parse(right.processedAt || right.createdAt || 0) - Date.parse(left.processedAt || left.createdAt || 0));
+          const metrics = snapshot.whatsapp?.metrics || {};
+          const activeCount = (metrics.queuedCount || 0) + (metrics.awaitingApproval || 0) + (metrics.manualReady || 0) + (metrics.sendFailed || 0);
+
+          if (whatsappOutboxBadge) {
+            whatsappOutboxBadge.textContent = activeCount ? `${activeCount} active` : "Outbox clear";
+          }
+          if (whatsappOutboxSummary) {
+            whatsappOutboxSummary.textContent = queue.length
+              ? `${metrics.manualReady || 0} manual-ready, ${metrics.queuedCount || 0} queued, ${metrics.awaitingApproval || 0} awaiting approval, ${metrics.deliveredToday || 0} delivered.`
+              : "No prepared WhatsApp messages are waiting in this view.";
+          }
+          if (!whatsappOutboxList) return;
+
+          whatsappOutboxList.innerHTML = queue.length
+            ? queue
+                .slice(0, 12)
+                .map((item) => {
+                  const status = item.status || "queued";
+                  const manualLink = item.manualLink || "";
+                  const sentAt = item.processedAt || item.createdAt || item.scheduledFor;
+                  return `
+                    <article class="feedback-log-item">
+                      <div class="feedback-log-item-head">
+                        <div>
+                          <strong>${escapeHtml(item.caseName || "Office update")}</strong>
+                          <small>${escapeHtml(item.toName || "Contact")} · ${escapeHtml(item.category || "message")}</small>
+                        </div>
+                        <div class="feedback-log-meta">
+                          <span class="feedback-log-pill ${whatsappStatusClass(status)}">${escapeHtml(whatsappStatusLabel(status))}</span>
+                          <span class="feedback-log-pill">${sentAt ? runtime.formatTimestamp(sentAt) : "not timed"}</span>
+                        </div>
+                      </div>
+                      <p>${escapeHtml(item.body || "")}</p>
+                      ${
+                        manualLink
+                          ? `<div class="risk-actions left-actions"><a class="location-btn ghost-action" href="${escapeHtml(manualLink)}" target="_blank" rel="noopener">Open WhatsApp</a></div>`
+                          : ""
+                      }
+                      ${item.deliveryNote ? `<small>${escapeHtml(item.deliveryNote)}</small>` : ""}
+                    </article>
+                  `;
+                })
+                .join("")
+            : '<p class="small-note">No WhatsApp outbox messages yet.</p>';
+        }
+
         function renderThreads(snapshot) {
           const threads = (snapshot.whatsapp.threads || []).slice().sort((left, right) => Date.parse(right.lastAt) - Date.parse(left.lastAt));
           if (!threads.length) {
@@ -9215,13 +9290,15 @@ Protect commission on the Durban North referral before noon.</textarea>
         function renderWhatsapp(snapshot) {
           const bridge = snapshot.whatsapp.bridge;
           const metrics = snapshot.whatsapp.metrics;
+          const manualReady = metrics.manualReady || 0;
+          const sendFailed = metrics.sendFailed || 0;
           if (whatsappBridgeBadge) {
-            whatsappBridgeBadge.textContent = bridge.connected ? `${metrics.queuedCount} queued` : "Disconnected";
+            whatsappBridgeBadge.textContent = bridge.connected ? `${metrics.queuedCount} queued` : `${manualReady} manual-ready`;
           }
           if (whatsappBridgeStatus) {
             whatsappBridgeStatus.textContent = bridge.connected
               ? `WhatsApp delivery is live in ${bridge.mode}. ${metrics.deliveredToday} delivered, ${metrics.queuedCount} queued, ${metrics.awaitingApproval} awaiting approval.`
-              : "WhatsApp bridge is not connected.";
+              : `WhatsApp is in managed testing mode. ${manualReady} message${manualReady === 1 ? "" : "s"} ready to open manually, ${metrics.queuedCount || 0} queued, ${sendFailed} failed.`;
           }
           if (smartReminderStatus) {
             smartReminderStatus.textContent = `Smart reminders watch ${snapshot.metrics.pendingReminders} pending reminder${snapshot.metrics.pendingReminders === 1 ? "" : "s"} and can queue WhatsApp nudges when needed.`;
@@ -9234,6 +9311,7 @@ Protect commission on the Durban North referral before noon.</textarea>
           }
 
           renderLogs(snapshot);
+          renderWhatsappOutbox(snapshot);
           renderPilotControl(snapshot);
           renderThreads(snapshot);
         }
@@ -9431,7 +9509,7 @@ Protect commission on the Durban North referral before noon.</textarea>
       })();
     </script>
     <script src="towns-by-province.js"></script>
-    <script src="modules/public-ui.js?v=20260705-ops1"></script>
+    <script src="modules/public-ui.js?v=20260705-night2"></script>
     <script src="modules/admin-control.js"></script>
     <script src="modules/api-client.js"></script>
     <script src="modules/public-intake.js?v=20260705-ops1"></script>
