@@ -2555,6 +2555,47 @@ async function deliverWhatsappQueueItem(item, runtime = getWhatsappRuntime()) {
   };
 }
 
+async function processWhatsappQueueItem(item, runtime = getWhatsappRuntime()) {
+  const deliveredAt = nowIso();
+  const result = await deliverWhatsappQueueItem(item, runtime);
+  item.status = result.status;
+  item.deliveryMode = result.deliveryMode;
+  item.deliveryNote = result.note || result.error || "";
+  item.manualLink = result.manualLink || item.manualLink || "";
+  item.providerStatus = result.providerStatus || null;
+  item.providerMessageId = result.providerMessageId || null;
+  item.processedAt = deliveredAt;
+  if (result.status === "delivered") {
+    item.deliveredAt = deliveredAt;
+  }
+
+  const thread = ensureThread(item.caseId, item.caseName, [item.toName, item.ownerName]);
+  addThreadMessage(thread, {
+    id: createOpsId("wa"),
+    direction: result.status === "delivered" ? "outbound" : "system",
+    author: item.ownerName || "Axiom",
+    body:
+      result.status === "manual_test_ready"
+        ? `${item.category} is ready for manual WhatsApp testing.${result.manualLink ? ` Link: ${result.manualLink}` : " Add a mobile number before sending."}`
+        : result.status === "delivered"
+          ? item.body
+          : `${item.category} could not be sent: ${result.error || "delivery failed"}`,
+    at: deliveredAt,
+    status: result.status,
+    deliveryMode: result.deliveryMode
+  });
+
+  return {
+    id: item.id,
+    caseId: item.caseId,
+    toName: item.toName,
+    status: item.status,
+    deliveryMode: item.deliveryMode,
+    manualLink: item.manualLink || "",
+    error: result.error || ""
+  };
+}
+
 function authPayloadForRole(role, sessionOrIdentity = {}) {
   const normalizedRole = normalizeRole(typeof role === "object" ? role.role : role);
   const profile = getRoleProfile(normalizedRole);
@@ -5192,6 +5233,8 @@ async function handleLeadCreate(request, response) {
     at: nowIso(),
     status: clientAckQueue ? "queued" : "draft_stored"
   });
+  const whatsappRuntime = getWhatsappRuntime();
+  const clientAckDelivery = clientAckQueue ? await processWhatsappQueueItem(clientAckQueue, whatsappRuntime) : null;
   addThreadMessage(thread, {
     id: createOpsId("wa"),
     direction: "system",
@@ -5262,15 +5305,19 @@ async function handleLeadCreate(request, response) {
     reason: "Lead stored, assigned, and moved into the admin action queue.",
     whatsapp: {
       mode: config.whatsappMode,
-      realDeliveryConnected: config.whatsappMode !== "managed-simulation",
+      provider: whatsappRuntime.provider,
+      realDeliveryConnected: whatsappRuntime.liveDeliveryConnected,
       acknowledgementQueued: Boolean(clientAckQueue),
-      acknowledgementStatus: clientAckQueue?.status || "draft_stored",
+      acknowledgementStatus: clientAckDelivery?.status || clientAckQueue?.status || "draft_stored",
+      acknowledgementDeliveryMode: clientAckDelivery?.deliveryMode || clientAckQueue?.deliveryMode || "not_available",
       acknowledgementText: clientAckBody,
-      manualTestLink: buildWhatsappClickLink(lead.contact?.mobile, clientAckBody),
+      manualTestLink: clientAckDelivery?.manualLink || clientAckQueue?.manualLink || buildWhatsappClickLink(lead.contact?.mobile, clientAckBody),
       note:
-        config.whatsappMode === "managed-simulation"
-          ? "WhatsApp is in managed simulation. The message is queued and can be opened manually for testing."
-          : "WhatsApp acknowledgement has been queued for delivery."
+        clientAckDelivery?.status === "delivered"
+          ? "WhatsApp acknowledgement was delivered through the connected provider."
+          : clientAckDelivery?.status === "manual_test_ready"
+            ? "WhatsApp is in managed simulation. The message is stored and ready as a manual test link."
+            : clientAckDelivery?.error || whatsappRuntime.status
     },
     leadQuality: lead.leadQuality,
     briefCard: lead.briefCard,
@@ -7249,42 +7296,7 @@ async function handleWhatsappProcess(request, response) {
   const results = [];
 
   for (const item of processable) {
-    const deliveredAt = nowIso();
-    const result = await deliverWhatsappQueueItem(item, runtime);
-    item.status = result.status;
-    item.deliveryMode = result.deliveryMode;
-    item.deliveryNote = result.note || result.error || "";
-    item.manualLink = result.manualLink || item.manualLink || "";
-    item.providerStatus = result.providerStatus || null;
-    item.providerMessageId = result.providerMessageId || null;
-    item.processedAt = deliveredAt;
-    if (result.status === "delivered") {
-      item.deliveredAt = deliveredAt;
-    }
-    const thread = ensureThread(item.caseId, item.caseName, [item.toName, item.ownerName]);
-    addThreadMessage(thread, {
-      id: createOpsId("wa"),
-      direction: result.status === "delivered" ? "outbound" : "system",
-      author: item.ownerName || "Axiom",
-      body:
-        result.status === "manual_test_ready"
-          ? `${item.category} is ready for manual WhatsApp testing.${result.manualLink ? ` Link: ${result.manualLink}` : " Add a mobile number before sending."}`
-          : result.status === "delivered"
-            ? item.body
-            : `${item.category} could not be sent: ${result.error || "delivery failed"}`,
-      at: deliveredAt,
-      status: result.status,
-      deliveryMode: result.deliveryMode
-    });
-    results.push({
-      id: item.id,
-      caseId: item.caseId,
-      toName: item.toName,
-      status: item.status,
-      deliveryMode: item.deliveryMode,
-      manualLink: item.manualLink || "",
-      error: result.error || ""
-    });
+    results.push(await processWhatsappQueueItem(item, runtime));
   }
 
   operations.whatsapp.bridge.lastProcessedAt = nowIso();
