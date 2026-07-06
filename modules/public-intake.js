@@ -5,7 +5,46 @@ window.AxiomPublicIntake =
   };
 
 (function () {
-  const overlay = document.getElementById("intakeOverlay");
+  if (window.AxiomPublicIntake.initialized) return;
+  window.AxiomPublicIntake.initialized = true;
+
+  const triggerButtons = Array.from(document.querySelectorAll("[data-intent]"));
+  if (!triggerButtons.length) return;
+
+  function ensureIntakeOverlay() {
+    const existing = document.getElementById("intakeOverlay");
+    if (existing) return existing;
+
+    const panel = document.createElement("div");
+    panel.id = "intakeOverlay";
+    panel.className = "intake-overlay hidden";
+    panel.setAttribute("aria-hidden", "true");
+    panel.innerHTML = `
+      <div class="intake-modal" role="dialog" aria-modal="true" aria-labelledby="intakeTitle">
+        <button class="close-modal" id="closeModal" type="button" aria-label="Close">&times;</button>
+        <p class="eyebrow" id="intakeEyebrow">Seller Intake</p>
+        <h2 id="intakeTitle">Start the sale with a sharper first brief</h2>
+        <p class="small-note" id="progressNote">This should take about a minute.</p>
+        <form id="intakeForm">
+          <div id="dynamicFields"></div>
+          <label id="additionalInfoLabel">
+            Anything important? <span class="optional-label">Optional</span>
+          </label>
+          <textarea id="additionalInfo" name="additionalInfo"></textarea>
+          <p class="small-note hidden" id="nextStepMessage"></p>
+          <div class="cta-group">
+            <button class="btn btn-secondary" type="button" id="closeModalSecondary">Cancel</button>
+            <button class="btn btn-primary" type="submit" id="submitLeadBtn">Send Request</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    panel.querySelector("#closeModalSecondary")?.addEventListener("click", closeOverlay);
+    return panel;
+  }
+
+  const overlay = ensureIntakeOverlay();
   const form = document.getElementById("intakeForm");
   const dynamicFields = document.getElementById("dynamicFields");
   const closeButton = document.getElementById("closeModal");
@@ -16,9 +55,8 @@ window.AxiomPublicIntake =
   const additionalInfoLabel = document.getElementById("additionalInfoLabel");
   const nextStepMessage = document.getElementById("nextStepMessage");
   const submitButton = document.getElementById("submitLeadBtn");
-  const triggerButtons = Array.from(document.querySelectorAll("[data-intent]"));
 
-  if (!overlay || !form || !dynamicFields || !closeButton || !submitButton || !triggerButtons.length) {
+  if (!overlay || !form || !dynamicFields || !closeButton || !submitButton) {
     return;
   }
 
@@ -731,9 +769,10 @@ window.AxiomPublicIntake =
   }
 
   triggerButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
       const intent = button.getAttribute("data-intent");
       if (intent === "buy" || intent === "sell") {
+        event.preventDefault();
         openOverlay(intent);
       }
     });
