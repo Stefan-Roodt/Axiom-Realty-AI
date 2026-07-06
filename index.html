@@ -232,8 +232,8 @@
               <small>Tell me if you want to sell or buy, and I will start the right brief.</small>
             </div>
             <div class="hero-concierge-actions">
-              <a class="btn btn-primary" href="sellers.html#seller-intake">Help me sell</a>
-              <a class="btn btn-secondary" href="buyers.html#buyer-process">Help me buy</a>
+              <a class="btn btn-primary" href="sellers.html#seller-intake" data-intent="sell">Help me sell</a>
+              <a class="btn btn-secondary" href="buyers.html#buyer-intake" data-intent="buy">Help me buy</a>
             </div>
           </div>
 
@@ -271,12 +271,12 @@
           <article class="home-section-card">
             <strong>Selling a property?</strong>
             <p>Get your property brief shaped before the first specialist call, so the conversation starts with useful facts instead of guesswork.</p>
-            <a class="btn btn-primary" href="sellers.html#seller-intake">Start seller brief</a>
+            <a class="btn btn-primary" href="sellers.html#seller-intake" data-intent="sell">Start seller brief</a>
           </article>
           <article class="home-section-card">
             <strong>Buying a property?</strong>
             <p>Share your budget, timing, finance position, area, and must-haves once, then move forward with a cleaner buyer brief.</p>
-            <a class="btn btn-secondary" href="buyers.html#buyer-process">Start buyer brief</a>
+            <a class="btn btn-secondary" href="buyers.html#buyer-intake" data-intent="buy">Start buyer brief</a>
           </article>
           <article class="home-section-card">
             <strong>Running an estate agency?</strong>
@@ -290,5 +290,8 @@
     <footer class="footer wrapper">
       <p>Axiom Realty AI. POPIA compliant property concierge and estate agency operating system.</p>
     </footer>
+    <script src="towns-by-province.js"></script>
+    <script src="modules/api-client.js"></script>
+    <script src="modules/public-intake.js?v=20260706-intake1"></script>
   </body>
 </html>
