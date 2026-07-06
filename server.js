@@ -5060,6 +5060,8 @@ function buildOperationsSnapshot(sessionOrRole) {
   const deliveredToday = visibleQueue.filter((item) => item.status === "delivered").length;
   const queuedCount = visibleQueue.filter((item) => item.status === "queued").length;
   const awaitingApproval = visibleQueue.filter((item) => item.status === "awaiting_approval").length;
+  const manualReady = visibleQueue.filter((item) => item.status === "manual_test_ready").length;
+  const sendFailed = visibleQueue.filter((item) => item.status === "send_failed").length;
   const openTasks = visible.tasks.filter((task) => task.status === "open");
   const openEscalations = visible.escalations.length;
   const pendingReminders = visible.reminders.filter((item) => item.status !== "done").length;
@@ -5127,7 +5129,10 @@ function buildOperationsSnapshot(sessionOrRole) {
       metrics: {
         deliveredToday,
         queuedCount,
-        awaitingApproval
+        awaitingApproval,
+        manualReady,
+        sendFailed,
+        totalOutbox: visibleQueue.length
       }
     },
     metrics: {
