@@ -390,6 +390,9 @@ window.AxiomPublicIntake =
       #intakeForm {
         gap: 1rem;
       }
+      body.intake-open {
+        overflow: hidden;
+      }
       #intakeForm #dynamicFields {
         grid-template-columns: 1fr;
         gap: 0.8rem;
@@ -696,11 +699,13 @@ window.AxiomPublicIntake =
     successPanel.classList.add("hidden");
     overlay.classList.remove("hidden");
     overlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("intake-open");
   }
 
   function closeOverlay() {
     overlay.classList.add("hidden");
     overlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("intake-open");
   }
 
   function publicBandLabel(outcome) {
