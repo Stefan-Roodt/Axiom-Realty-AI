@@ -134,6 +134,72 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     fillTowns("");
   }
 
+  function initValuationLocationFields() {
+    const form = document.getElementById("valuationForm");
+    const suburbInput = document.getElementById("valuationSuburb");
+    if (!form || !suburbInput || form.dataset.locationReady === "true") return;
+
+    const townsByProvince = normalizeTownSource();
+    if (!Object.keys(townsByProvince).length) return;
+    form.dataset.locationReady = "true";
+
+    const suburbLabel = suburbInput.closest("label");
+    if (!suburbLabel) return;
+
+    const provinceField = createSelectField("valuationProvince", "valuationProvince", "Province", "Select province");
+    const suburbSelect = document.createElement("select");
+    suburbSelect.id = "valuationSuburbSelect";
+    suburbSelect.name = "valuationSuburbSelect";
+    suburbSelect.required = true;
+
+    suburbInput.type = "hidden";
+    suburbInput.required = false;
+    suburbLabel.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) node.textContent = "Town / suburb ";
+    });
+    suburbLabel.appendChild(suburbSelect);
+    suburbLabel.before(provinceField.label);
+
+    Object.keys(townsByProvince)
+      .sort((left, right) => (provinceLabels[left] || left).localeCompare(provinceLabels[right] || right))
+      .forEach((provinceId) => addOption(provinceField.select, provinceId, provinceLabels[provinceId] || provinceId));
+
+    function findProvinceForTown(town) {
+      const normalized = String(town || "").trim().toLowerCase();
+      return Object.keys(townsByProvince).find((provinceId) =>
+        townsByProvince[provinceId].some((item) => item.toLowerCase() === normalized)
+      ) || "";
+    }
+
+    function fillSuburbs(provinceId, selectedTown = "") {
+      suburbSelect.innerHTML = "";
+      addOption(suburbSelect, "", provinceId ? "Select town / suburb" : "Select province first");
+      suburbSelect.disabled = !provinceId;
+      (townsByProvince[provinceId] || []).forEach((town) => addOption(suburbSelect, town, town));
+      suburbSelect.value = selectedTown;
+      suburbInput.value = suburbSelect.value;
+    }
+
+    provinceField.select.addEventListener("change", () => fillSuburbs(provinceField.select.value));
+    suburbSelect.addEventListener("change", () => {
+      suburbInput.value = suburbSelect.value;
+    });
+
+    const initialTown = suburbInput.value;
+    const initialProvince = findProvinceForTown(initialTown);
+    provinceField.select.value = initialProvince;
+    fillSuburbs(initialProvince, initialTown);
+
+    document.getElementById("resetValuation")?.addEventListener("click", () => {
+      window.setTimeout(() => {
+        const resetTown = suburbInput.value;
+        const resetProvince = findProvinceForTown(resetTown);
+        provinceField.select.value = resetProvince;
+        fillSuburbs(resetProvince, resetTown);
+      });
+    });
+  }
+
   function pageIsPublicRoute() {
     const path = window.location.pathname.toLowerCase();
     if (["", "/", "/index.html"].includes(path)) return false;
@@ -255,6 +321,7 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
 
   function initPublicUi() {
     initExpertApplicationForm();
+    initValuationLocationFields();
     initFloatingConcierge();
     initMissionControlConcierge();
   }
