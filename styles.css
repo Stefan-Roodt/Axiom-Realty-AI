@@ -1197,3 +1197,52 @@ body.mission-control-route #adminGate > .small-note:not(#adminMessage):not(#admi
     font-size: 10px !important;
   }
 }
+
+
+/* Complete responsive live transaction map */
+.agent-hero-process-map {
+  overflow: hidden !important;
+  padding: clamp(0.4rem, 1.4vw, 0.75rem) !important;
+}
+
+.agent-hero-process-svg {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+}
+
+.agent-hero-process-svg .process-text {
+  font-size: 14px !important;
+}
+
+.agent-hero-process-svg .process-small {
+  font-size: 11px !important;
+}
+
+.agent-hero-process-svg .process-lane-label {
+  font-size: 11px !important;
+}
+
+@media (max-width: 640px) {
+  .agent-hero-process-map {
+    border-radius: 14px;
+  }
+
+  .agent-hero-process-svg .process-title {
+    font-size: 11px !important;
+  }
+
+  .agent-hero-process-svg .process-text {
+    font-size: 12px !important;
+  }
+
+  .agent-hero-process-svg .process-small,
+  .agent-hero-process-svg .process-lane-label {
+    font-size: 9px !important;
+  }
+
+  .agent-hero-process-svg .process-main {
+    stroke-width: 5px !important;
+  }
+}
