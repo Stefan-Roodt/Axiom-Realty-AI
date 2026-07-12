@@ -164,9 +164,71 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     document.body.appendChild(panel);
   }
 
+  function initMissionControlConcierge() {
+    const toggle = document.getElementById("conciergeToggle");
+    const panel = document.getElementById("conciergePanel");
+    const close = document.getElementById("conciergeClose");
+    const form = document.getElementById("conciergeForm");
+    const input = document.getElementById("conciergeInput");
+    const messages = document.getElementById("conciergeMessages");
+    if (!toggle || !panel) return;
+
+    if (messages && !messages.querySelector(".concierge-quick-actions")) {
+      const actions = document.createElement("div");
+      actions.className = "concierge-quick-actions cta-group";
+      actions.innerHTML = `
+        <button class="btn btn-secondary" type="button" data-intent="sell">I want to sell</button>
+        <button class="btn btn-secondary" type="button" data-intent="buy">I want to buy</button>
+      `;
+      messages.appendChild(actions);
+    }
+
+    function openPanel() {
+      panel.classList.remove("hidden");
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.setAttribute("aria-label", "Close AI concierge");
+      input?.focus();
+    }
+
+    function closePanel() {
+      panel.classList.add("hidden");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "Open AI concierge");
+    }
+
+    toggle.setAttribute("aria-controls", "conciergePanel");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.addEventListener("click", () => {
+      if (panel.classList.contains("hidden")) openPanel();
+      else closePanel();
+    });
+    close?.addEventListener("click", closePanel);
+
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const message = input?.value.trim() || "";
+      if (!message) return;
+      const intent = /sell|seller|selling/i.test(message) ? "sell" : /buy|buyer|buying/i.test(message) ? "buy" : "";
+      if (intent) {
+        panel.querySelector(`[data-intent="${intent}"]`)?.click();
+      } else if (messages) {
+        const reply = document.createElement("p");
+        reply.className = "bot-msg";
+        reply.textContent = "Are you looking to buy or sell? Choose one of the options above and I will open the right brief.";
+        messages.appendChild(reply);
+      }
+      if (input) input.value = "";
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !panel.classList.contains("hidden")) closePanel();
+    });
+  }
+
   function initPublicUi() {
     initExpertApplicationForm();
     initFloatingConcierge();
+    initMissionControlConcierge();
   }
 
   if (document.readyState === "loading") {
