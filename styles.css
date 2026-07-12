@@ -1445,3 +1445,9 @@ body.mission-control-route .operations-tab.active {
     display: none;
   }
 }
+
+
+/* Keep valuation debug payload out of the public UI */
+#seller-valuation .valuation-json-shell {
+  display: none !important;
+}
