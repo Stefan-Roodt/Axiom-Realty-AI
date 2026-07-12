@@ -200,6 +200,40 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     });
   }
 
+  function initIndicativePriceGuideTerminology() {
+    const section = document.getElementById("seller-valuation");
+    if (!section) return;
+
+    const eyebrow = section.querySelector(".section-heading .eyebrow");
+    const heading = section.querySelector(".section-heading h2");
+    const generateButton = document.querySelector("#valuationForm button[type='submit']");
+    const summaryTitle = document.getElementById("valuationSummaryTitle");
+    const statusLabels = Array.from(section.querySelectorAll(".valuation-status span"));
+    const messageHeadings = Array.from(section.querySelectorAll(".valuation-message-shell strong"));
+
+    if (eyebrow) eyebrow.textContent = "Indicative Price Guide";
+    if (heading) heading.textContent = "Get a grounded indicative price range for your property.";
+    if (generateButton) generateButton.textContent = "Generate Indicative Price Guide";
+    if (summaryTitle) summaryTitle.textContent = "Indicative price guide ready.";
+
+    statusLabels.forEach((label) => {
+      if (label.textContent.trim() === "Valuation date") label.textContent = "Guide date";
+    });
+    messageHeadings.forEach((headingNode) => {
+      if (headingNode.textContent.trim() === "WhatsApp prompt before valuation") {
+        headingNode.textContent = "WhatsApp prompt before the price guide";
+      }
+    });
+
+    if (summaryTitle) {
+      new MutationObserver(() => {
+        if (/^Valuation ready/i.test(summaryTitle.textContent)) {
+          summaryTitle.textContent = summaryTitle.textContent.replace(/^Valuation ready/i, "Indicative price guide ready");
+        }
+      }).observe(summaryTitle, { childList: true, characterData: true, subtree: true });
+    }
+  }
+
   function pageIsPublicRoute() {
     const path = window.location.pathname.toLowerCase();
     if (["", "/", "/index.html"].includes(path)) return false;
@@ -322,6 +356,7 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
   function initPublicUi() {
     initExpertApplicationForm();
     initValuationLocationFields();
+    initIndicativePriceGuideTerminology();
     initFloatingConcierge();
     initMissionControlConcierge();
   }
