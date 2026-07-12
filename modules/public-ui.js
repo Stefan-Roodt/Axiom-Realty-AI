@@ -318,10 +318,13 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     if (document.querySelector(".floating-concierge") || !pageIsPublicRoute()) return;
 
     const panel = document.createElement("aside");
-    panel.className = "floating-concierge";
+    panel.className = "floating-concierge is-collapsed";
     panel.setAttribute("aria-label", "Axiom floating concierge");
     panel.innerHTML = `
-      <div class="floating-concierge__mark" aria-hidden="true">A</div>
+      <button class="floating-concierge__toggle" type="button" aria-expanded="false" aria-label="Open Axiom Concierge">
+        <span class="floating-concierge__mark" aria-hidden="true">A</span>
+        <span class="floating-concierge__toggle-copy"><strong>Axiom Concierge</strong><small>Buy or sell</small></span>
+      </button>
       <div class="floating-concierge__body">
         <span>Axiom Concierge</span>
         <strong>Hi, I am here to help.</strong>
@@ -334,6 +337,12 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     `;
 
     document.body.appendChild(panel);
+    const toggle = panel.querySelector(".floating-concierge__toggle");
+    toggle?.addEventListener("click", () => {
+      const collapsed = panel.classList.toggle("is-collapsed");
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      toggle.setAttribute("aria-label", collapsed ? "Open Axiom Concierge" : "Minimise Axiom Concierge");
+    });
   }
 
   function initMissionControlConcierge() {
@@ -425,6 +434,28 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     });
   }
 
+  function initPublicFooter() {
+    if (document.querySelector("footer") || !pageIsPublicRoute()) return;
+    const footer = document.createElement("footer");
+    footer.className = "footer public-route-footer";
+    footer.innerHTML = `<div class="wrapper"><p>Axiom Realty AI · Property Concierge · POPIA-aware workflows</p><nav aria-label="Footer"><a href="index.html">Home</a><a href="sellers.html">Sell</a><a href="buyers.html">Buy</a><a href="agents.html">Agents</a><a href="mission-control.html">Mission Control</a></nav></div>`;
+    document.body.appendChild(footer);
+  }
+
+  function initUiPolish() {
+    const agentHeading = document.querySelector("body:has(.agent-hero-stage) h1");
+    if (agentHeading) agentHeading.textContent = "Your 24/7 AI Estate Agent Concierge.";
+
+    const qrImage = document.querySelector('img[alt="WhatsApp Web QR code"]');
+    if (qrImage) {
+      const syncQrVisibility = () => {
+        qrImage.hidden = !String(qrImage.getAttribute("src") || "").trim();
+      };
+      syncQrVisibility();
+      new MutationObserver(syncQrVisibility).observe(qrImage, { attributes: true, attributeFilter: ["src"] });
+    }
+  }
+
   function initPublicUi() {
     initExpertApplicationForm();
     initValuationLocationFields();
@@ -432,6 +463,8 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     initAgentFlowDiagram();
     initMissionControlLayout();
     initMissionControlTabs();
+    initPublicFooter();
+    initUiPolish();
     initFloatingConcierge();
     initMissionControlConcierge();
   }
