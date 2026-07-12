@@ -256,8 +256,8 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
         <small>Tell me if you want to sell or buy, and I will start the right brief.</small>
       </div>
       <div class="floating-concierge__actions">
-        <a href="sellers.html#seller-intake" data-intent="sell">I want to sell</a>
-        <a href="buyers.html#buyer-intake" data-intent="buy">I want to buy</a>
+        <a href="sellers.html?intent=sell#seller-intake" data-intent="sell">I want to sell</a>
+        <a href="buyers.html?intent=buy#buyer-intake" data-intent="buy">I want to buy</a>
       </div>
     `;
 
@@ -361,9 +361,5 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     initMissionControlConcierge();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initPublicUi);
-  } else {
-    initPublicUi();
-  }
+  initPublicUi();
 })();
