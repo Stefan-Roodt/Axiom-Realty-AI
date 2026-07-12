@@ -382,6 +382,70 @@ window.AxiomPublicIntake =
         gap: 0.8rem;
         flex-wrap: wrap;
       }
+      #intakeOverlay .intake-modal {
+        width: min(880px, 100%);
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+      }
+      #intakeForm {
+        gap: 1rem;
+      }
+      #intakeForm #dynamicFields {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+      }
+      .intake-field-section {
+        padding: 0.9rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(8, 16, 31, 0.52);
+      }
+      .intake-field-section-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.8rem;
+        margin-bottom: 0.7rem;
+      }
+      .intake-field-section-head strong {
+        color: #f8fafc;
+        font-size: 0.96rem;
+      }
+      .intake-field-section-head span {
+        color: #67e8f9;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .intake-field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+      }
+      .intake-field-grid label {
+        align-content: start;
+      }
+      .intake-label-text {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+      }
+      #additionalInfoLabel {
+        margin-bottom: -0.55rem;
+      }
+      #intakeForm > .cta-group {
+        position: sticky;
+        bottom: -1.4rem;
+        z-index: 2;
+        justify-content: flex-end;
+        margin: 0 -1.4rem -1.4rem;
+        padding: 0.9rem 1.4rem 1.1rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(6, 14, 29, 0.97);
+        backdrop-filter: blur(12px);
+      }
       @media (max-width: 820px) {
         .intake-route-rail,
         .intake-success-grid.intake-success-grid-wide,
@@ -393,6 +457,22 @@ window.AxiomPublicIntake =
         }
         .intake-whatsapp-test .btn {
           width: 100%;
+        }
+        .intake-field-grid {
+          grid-template-columns: 1fr;
+        }
+        #intakeOverlay .intake-modal {
+          max-height: calc(100vh - 1rem);
+          padding: 1rem;
+          border-radius: 20px;
+        }
+        #intakeForm > .cta-group {
+          bottom: -1rem;
+          margin: 0 -1rem -1rem;
+          padding: 0.8rem 1rem 1rem;
+        }
+        #intakeForm > .cta-group .btn {
+          flex: 1 1 0;
         }
       }
     `;
@@ -505,7 +585,16 @@ window.AxiomPublicIntake =
 
   function createField(field) {
     const label = document.createElement("label");
-    label.textContent = field.label;
+    const labelText = document.createElement("span");
+    labelText.className = "intake-label-text";
+    labelText.textContent = field.label;
+    if (!field.required) {
+      const optional = document.createElement("small");
+      optional.className = "optional-label";
+      optional.textContent = "Optional";
+      labelText.appendChild(optional);
+    }
+    label.appendChild(labelText);
 
     let input;
     if (field.type === "select" || field.type === "provinceSelect" || field.type === "townSelect") {
@@ -567,8 +656,28 @@ window.AxiomPublicIntake =
     const config = fieldSets[intent] || fieldSets.sell;
     currentIntent = intent;
     dynamicFields.innerHTML = "";
-    config.fields.forEach((field) => {
-      dynamicFields.appendChild(createField(field));
+    const groupDefinitions = [
+      { title: "Contact details", step: "01", fields: ["clientName", "mobile", "email"] },
+      { title: intent === "sell" ? "Property location" : "Search location", step: "02", fields: ["province", "area"] },
+      {
+        title: intent === "sell" ? "Property and price" : "Property and budget",
+        step: "03",
+        fields: ["propertyType", "price", "budget", "finance"],
+      },
+      { title: "Timing and context", step: "04", fields: ["timeline", "reason"] },
+    ];
+
+    groupDefinitions.forEach((group) => {
+      const groupFields = config.fields.filter((field) => group.fields.includes(field.name));
+      if (!groupFields.length) return;
+      const section = document.createElement("section");
+      section.className = "intake-field-section";
+      section.innerHTML = `<div class="intake-field-section-head"><strong>${group.title}</strong><span>Step ${group.step}</span></div>`;
+      const grid = document.createElement("div");
+      grid.className = "intake-field-grid";
+      groupFields.forEach((field) => grid.appendChild(createField(field)));
+      section.appendChild(grid);
+      dynamicFields.appendChild(section);
     });
     wireTownDropdowns();
     eyebrow.textContent = config.eyebrow;
