@@ -1451,3 +1451,122 @@ body.mission-control-route .operations-tab.active {
 #seller-valuation .valuation-json-shell {
   display: none !important;
 }
+
+
+/* Cohesive Agents page hierarchy */
+body:has(.agent-hero-stage) .agent-hero-flow-intro,
+body:has(.agent-hero-stage) .agent-hero-flowchart,
+body:has(.agent-hero-stage) .agent-capability-rail,
+body:has(.agent-hero-stage) .agent-capability-note,
+body:has(.agent-hero-stage) .mission-control-intelligence-grid,
+body:has(.agent-hero-stage) .mission-control-note {
+  display: none !important;
+}
+
+body:has(.agent-hero-stage) main {
+  display: grid;
+  gap: 0;
+}
+
+body:has(.agent-hero-stage) main > .section,
+body:has(.agent-hero-stage) main > section.section {
+  padding-block: clamp(3rem, 6vw, 5rem);
+}
+
+body:has(.agent-hero-stage) .section-heading {
+  max-width: 900px;
+  margin-bottom: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+body:has(.agent-hero-stage) .section-heading h2 {
+  max-width: 820px;
+}
+
+body:has(.agent-hero-stage) .agent-hero-stage {
+  min-height: 0;
+}
+
+body:has(.agent-hero-stage) .agent-hero-topline {
+  margin-bottom: 1rem;
+}
+
+body:has(.agent-hero-stage) .agent-hero-footer {
+  gap: 0;
+  padding: 1rem 0 0;
+  border-bottom: 0;
+}
+
+body:has(.agent-hero-stage) .agent-hero-stat {
+  min-height: 0;
+  padding: 0.15rem 1rem 0.15rem 0;
+  border-right: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+body:has(.agent-hero-stage) .agent-hero-stat:last-child {
+  border-right: 0;
+}
+
+body:has(.agent-hero-stage) .concierge-trust-panel {
+  margin-top: 0;
+  padding-block: 1.2rem;
+}
+
+body:has(.agent-hero-stage) .agent-office-panel,
+body:has(.agent-hero-stage) .mission-control-ops-panel {
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+}
+
+body:has(.agent-hero-stage) #capabilities .concierge-feature-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+body:has(.agent-hero-stage) #capabilities .concierge-feature-card {
+  min-height: 210px;
+  padding: 1rem;
+}
+
+body:has(.agent-hero-stage) #capabilities .concierge-feature-card p {
+  margin-bottom: 0;
+}
+
+body:has(.agent-hero-stage) .mission-control-role-rail {
+  margin-top: 1rem;
+}
+
+body:has(.agent-hero-stage) .agent-benefit-panel {
+  align-items: center;
+  padding: clamp(1.1rem, 3vw, 1.6rem);
+}
+
+@media (max-width: 1050px) {
+  body:has(.agent-hero-stage) #capabilities .concierge-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:has(.agent-hero-stage) #capabilities .concierge-feature-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  body:has(.agent-hero-stage) main > .section,
+  body:has(.agent-hero-stage) main > section.section {
+    padding-block: 2.5rem;
+  }
+
+  body:has(.agent-hero-stage) .agent-hero-footer,
+  body:has(.agent-hero-stage) #capabilities .concierge-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body:has(.agent-hero-stage) .agent-hero-stat {
+    padding: 0.7rem 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  }
+
+  body:has(.agent-hero-stage) .agent-hero-stat:last-child {
+    border-bottom: 0;
+  }
+}
