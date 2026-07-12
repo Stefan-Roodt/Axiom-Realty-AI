@@ -243,6 +243,25 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     note.setAttribute("text-anchor", "middle");
   }
 
+  function initMissionControlLayout() {
+    const operationsPanel = document.getElementById("operationsPanel");
+    if (!operationsPanel || operationsPanel.dataset.layoutReady === "true") return;
+    operationsPanel.dataset.layoutReady = "true";
+
+    const healthStrips = operationsPanel.querySelectorAll(".system-health-strip");
+    healthStrips[1]?.classList.add("mission-control-secondary-status");
+
+    const accessSetup = operationsPanel.querySelector(".access-setup-panel");
+    if (accessSetup && !accessSetup.closest(".mission-control-advanced")) {
+      const details = document.createElement("details");
+      details.className = "mission-control-advanced";
+      const summary = document.createElement("summary");
+      summary.innerHTML = "<strong>Access &amp; team setup</strong><span>Add people, roles, branches, or rollout teams</span>";
+      accessSetup.before(details);
+      details.append(summary, accessSetup);
+    }
+  }
+
   function pageIsPublicRoute() {
     const path = window.location.pathname.toLowerCase();
     if (["", "/", "/index.html"].includes(path)) return false;
@@ -367,6 +386,7 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     initValuationLocationFields();
     initIndicativePriceGuideTerminology();
     initAgentFlowDiagram();
+    initMissionControlLayout();
     initFloatingConcierge();
     initMissionControlConcierge();
   }
