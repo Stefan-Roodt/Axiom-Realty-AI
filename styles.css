@@ -1570,3 +1570,112 @@ body:has(.agent-hero-stage) .agent-benefit-panel {
     border-bottom: 0;
   }
 }
+
+
+/* Sitewide UI audit fixes 1-7 */
+/* 1. Compact floating concierge */
+.floating-concierge {
+  left: auto !important;
+  right: 1rem !important;
+  width: min(342px, calc(100vw - 1.25rem));
+  transition: width 180ms ease, transform 180ms ease;
+}
+
+.floating-concierge__toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+}
+
+.floating-concierge__toggle-copy strong,
+.floating-concierge__toggle-copy small {
+  display: block;
+}
+
+.floating-concierge__toggle-copy strong {
+  color: #f8fafc;
+  font-size: 0.82rem;
+}
+
+.floating-concierge__toggle-copy small {
+  color: #9fb0c8;
+  font-size: 0.7rem;
+}
+
+.floating-concierge.is-collapsed {
+  width: auto;
+  min-width: 190px;
+  padding: 0.55rem 0.65rem;
+}
+
+.floating-concierge.is-collapsed .floating-concierge__body,
+.floating-concierge.is-collapsed .floating-concierge__actions {
+  display: none;
+}
+
+/* 2. Put Mission Control access first */
+body.mission-control-route > .hero {
+  display: none !important;
+}
+
+body.mission-control-route #analytics {
+  padding-top: 1.5rem !important;
+}
+
+/* 3. Remove repeated Concierge sales sections */
+body:has(.concierge-cta-panel) main > section:nth-of-type(3),
+body:has(.concierge-cta-panel) main > section:nth-of-type(4),
+body:has(.concierge-cta-panel) main > section:nth-of-type(6) {
+  display: none !important;
+}
+
+/* 4. Consistent public footer */
+.public-route-footer .wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.public-route-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.85rem;
+}
+
+.public-route-footer a {
+  color: #9fb0c8;
+  text-decoration: none;
+}
+
+.public-route-footer a:hover {
+  color: #67e8f9;
+}
+
+@media (max-width: 700px) {
+  .floating-concierge,
+  .floating-concierge.is-collapsed {
+    left: auto !important;
+    right: 0.625rem !important;
+    width: auto;
+    max-width: calc(100vw - 1.25rem);
+  }
+
+  .public-route-footer .wrapper {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .public-route-footer nav {
+    justify-content: flex-start;
+  }
+}
