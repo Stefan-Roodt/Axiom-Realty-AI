@@ -1309,3 +1309,139 @@ body:has(.agent-hero-stage) .floating-concierge {
     width: auto;
   }
 }
+
+
+/* Simplified Mission Control hierarchy */
+body.mission-control-route #operationsPanel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+body.mission-control-route .operations-workspace-head {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) minmax(210px, 0.8fr) minmax(210px, 0.8fr);
+  gap: 0.65rem;
+  align-items: stretch;
+  margin-bottom: 0;
+}
+
+body.mission-control-route .operations-workspace-head > div:first-child {
+  grid-row: span 2;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(8, 16, 31, 0.68);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+body.mission-control-route .operations-workspace-head h3 {
+  margin-bottom: 0.35rem;
+}
+
+body.mission-control-route .system-health-strip,
+body.mission-control-route .operations-role-strip {
+  min-height: 0;
+  padding: 0.72rem 0.8rem;
+  border-radius: 14px;
+}
+
+body.mission-control-route .mission-control-secondary-status,
+body.mission-control-route .mission-control-band {
+  display: none !important;
+}
+
+body.mission-control-route .mission-control-advanced {
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 16px;
+  background: rgba(8, 16, 31, 0.58);
+  overflow: hidden;
+}
+
+body.mission-control-route .mission-control-advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.82rem 1rem;
+  color: #f8fafc;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.mission-control-route .mission-control-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.mission-control-route .mission-control-advanced > summary::after {
+  content: "+";
+  color: #67e8f9;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+body.mission-control-route .mission-control-advanced[open] > summary::after {
+  content: "–";
+}
+
+body.mission-control-route .mission-control-advanced > summary span {
+  margin-left: auto;
+  color: #9fb0c8;
+  font-size: 0.82rem;
+}
+
+body.mission-control-route .mission-control-advanced .access-setup-panel {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.mission-control-route .operations-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  padding: 0.45rem;
+  border-radius: 16px;
+  background: rgba(8, 16, 31, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  overflow: visible;
+}
+
+body.mission-control-route .operations-tab {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.62rem 0.7rem;
+  border-radius: 11px;
+  text-align: center;
+}
+
+body.mission-control-route .operations-tab.active {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(167, 139, 250, 0.16));
+  border-color: rgba(34, 211, 238, 0.34);
+}
+
+@media (max-width: 900px) {
+  body.mission-control-route .operations-workspace-head {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body.mission-control-route .operations-workspace-head > div:first-child {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  body.mission-control-route .operations-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  body.mission-control-route .operations-workspace-head {
+    grid-template-columns: 1fr;
+  }
+
+  body.mission-control-route .mission-control-advanced > summary span {
+    display: none;
+  }
+}
