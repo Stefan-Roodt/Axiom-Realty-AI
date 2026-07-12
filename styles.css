@@ -1686,3 +1686,17 @@ body:has(.concierge-cta-panel) main > section:nth-of-type(6) {
   background: rgba(10, 20, 40, 0.68);
   box-shadow: none;
 }
+
+
+/* Align Agents page to the standard public wrapper */
+body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
+  width: min(var(--max-width), calc(100% - 2rem));
+  max-width: var(--max-width);
+  margin-inline: auto;
+}
+
+@media (max-width: 700px) {
+  body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
+    width: min(var(--max-width), calc(100% - 1rem));
+  }
+}
