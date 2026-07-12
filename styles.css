@@ -1246,3 +1246,66 @@ body.mission-control-route #adminGate > .small-note:not(#adminMessage):not(#admi
     stroke-width: 5px !important;
   }
 }
+
+
+/* Full-width Agents hero and transaction map */
+body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
+  width: min(1400px, calc(100% - 2rem));
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 1.5rem;
+}
+
+body:has(.agent-hero-stage) .concierge-hero-copy {
+  max-width: 980px;
+}
+
+body:has(.agent-hero-stage) .concierge-visual,
+body:has(.agent-hero-stage) .agent-hero-stage,
+body:has(.agent-hero-stage) .agent-hero-board,
+body:has(.agent-hero-stage) .agent-hero-process-map {
+  width: 100%;
+  max-width: none;
+}
+
+body:has(.agent-hero-stage) .agent-hero-process-map,
+body:has(.agent-hero-stage) .agent-hero-flowchart {
+  overflow: hidden !important;
+}
+
+body:has(.agent-hero-stage) .agent-hero-process-svg,
+body:has(.agent-hero-stage) .agent-hero-flow-svg {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+body:has(.agent-hero-stage) .agent-hero-footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body:has(.agent-hero-stage) .floating-concierge {
+  left: 1rem;
+  right: auto;
+}
+
+@media (max-width: 700px) {
+  body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
+    width: min(100% - 1rem, 1400px);
+  }
+
+  body:has(.agent-hero-stage) .agent-hero-stage {
+    padding: 0.6rem;
+  }
+
+  body:has(.agent-hero-stage) .agent-hero-footer {
+    grid-template-columns: 1fr;
+  }
+
+  body:has(.agent-hero-stage) .floating-concierge {
+    left: 0.625rem;
+    right: 0.625rem;
+    width: auto;
+  }
+}
