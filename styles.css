@@ -1152,3 +1152,48 @@ body.mission-control-route #adminGate .access-route-option {
 body.mission-control-route #adminGate > .small-note:not(#adminMessage):not(#adminMessageAction) {
   display: none;
 }
+
+
+/* Responsive agent lead-to-close diagram */
+.agent-hero-flowchart {
+  overflow: hidden !important;
+  padding: clamp(0.45rem, 1.5vw, 0.75rem) !important;
+}
+
+.agent-hero-flow-svg {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+}
+
+.agent-hero-flow-svg .flow-title {
+  font-size: 15px !important;
+}
+
+.agent-hero-flow-svg .flow-copy,
+.agent-hero-flow-svg .flow-note {
+  font-size: 11px !important;
+}
+
+@media (max-width: 640px) {
+  .agent-hero-flowchart {
+    margin-inline: 0;
+    border-radius: 14px;
+  }
+
+  .agent-hero-flow-svg .flow-kicker {
+    font-size: 10px !important;
+  }
+
+  .agent-hero-flow-svg .flow-title {
+    font-size: 14px !important;
+  }
+
+  .agent-hero-flow-svg .flow-copy {
+    font-size: 10px !important;
+  }
+
+  .agent-hero-flow-svg .flow-note {
+    font-size: 10px !important;
+  }
+}
