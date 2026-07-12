@@ -204,20 +204,48 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     });
     close?.addEventListener("click", closePanel);
 
-    form?.addEventListener("submit", (event) => {
+    form?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const message = input?.value.trim() || "";
       if (!message) return;
-      const intent = /sell|seller|selling/i.test(message) ? "sell" : /buy|buyer|buying/i.test(message) ? "buy" : "";
-      if (intent) {
-        panel.querySelector(`[data-intent="${intent}"]`)?.click();
-      } else if (messages) {
-        const reply = document.createElement("p");
-        reply.className = "bot-msg";
-        reply.textContent = "Are you looking to buy or sell? Choose one of the options above and I will open the right brief.";
-        messages.appendChild(reply);
-      }
       if (input) input.value = "";
+
+      if (!messages) return;
+      const userMessage = document.createElement("p");
+      userMessage.className = "user-msg";
+      userMessage.textContent = message;
+      messages.appendChild(userMessage);
+
+      const reply = document.createElement("p");
+      reply.className = "bot-msg";
+      reply.textContent = "Thinking...";
+      messages.appendChild(reply);
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const response = await fetch("/api/ai/concierge-draft", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            purpose: "Respond as the conversational Mission Control property concierge.",
+            audience: "Signed-in Axiom Mission Control user",
+            prompt: message,
+            instructions:
+              "Answer the user's property or caseflow question directly and concisely. If they want to buy or sell, invite them to use the matching quick action. Ask one useful question at a time. Do not give legal, financial, or formal valuation advice.",
+            fallback:
+              "I can help with a buyer or seller brief, caseflow questions, and the next action. Choose Buy or Sell above, or tell me what you need help with."
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "Concierge request failed.");
+        reply.textContent = data?.draft?.text || "Tell me whether you are buying, selling, or need help with an active case.";
+      } catch (error) {
+        reply.textContent = /sign|session|permission|author/i.test(error?.message || "")
+          ? "Please sign in to Mission Control before using the NVIDIA-powered concierge."
+          : "The AI concierge is temporarily unavailable. You can still use the Buy or Sell options above.";
+      }
+      messages.scrollTop = messages.scrollHeight;
     });
 
     document.addEventListener("keydown", (event) => {
