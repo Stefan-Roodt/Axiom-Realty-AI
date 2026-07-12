@@ -786,4 +786,11 @@ window.AxiomPublicIntake =
   });
   form.addEventListener("submit", handleSubmit);
   renderFields("sell");
+
+  const requestedIntent = new URLSearchParams(window.location.search).get("intent");
+  if (requestedIntent === "buy" || requestedIntent === "sell") {
+    openOverlay(requestedIntent);
+    const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
 })();
