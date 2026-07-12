@@ -1700,3 +1700,17 @@ body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
     width: min(var(--max-width), calc(100% - 1rem));
   }
 }
+
+
+/* Match Agents hero edges to the fixed header shell */
+body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
+  width: var(--route-header-nav-width);
+  max-width: none;
+  margin-inline: auto;
+}
+
+@media (max-width: 700px) {
+  body:has(.agent-hero-stage) .concierge-page-hero .concierge-hero-grid {
+    width: var(--route-header-nav-width);
+  }
+}
