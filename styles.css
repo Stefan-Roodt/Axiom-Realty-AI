@@ -1112,3 +1112,43 @@ option {
     width: auto;
   }
 }
+
+
+/* Compact Caseflow Command sign-in */
+body.mission-control-route #adminGate .access-command-strip,
+body.mission-control-route #adminGate .access-flow-panel {
+  display: none;
+}
+
+body.mission-control-route #adminGate .access-route-intro small,
+body.mission-control-route #adminGate .access-route-preview-grid,
+body.mission-control-route #adminGate .access-route-preview-list {
+  display: none;
+}
+
+body.mission-control-route #adminGate .access-route-preview {
+  padding: 0.75rem 0.9rem;
+  margin-block: 0.8rem;
+}
+
+body.mission-control-route #adminGate .access-route-preview-head {
+  align-items: center;
+}
+
+body.mission-control-route #adminGate .access-route-preview p {
+  margin-bottom: 0;
+}
+
+body.mission-control-route #adminGate .access-route-grid {
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.55rem;
+}
+
+body.mission-control-route #adminGate .access-route-option {
+  min-height: auto;
+  padding: 0.7rem 0.75rem;
+}
+
+body.mission-control-route #adminGate > .small-note:not(#adminMessage):not(#adminMessageAction) {
+  display: none;
+}
