@@ -234,6 +234,15 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     }
   }
 
+  function initAgentFlowDiagram() {
+    const note = document.querySelector(".agent-hero-flow-svg .flow-note");
+    if (!note) return;
+    note.textContent = "Human review loops back when judgement is needed.";
+    note.setAttribute("x", "490");
+    note.setAttribute("y", "310");
+    note.setAttribute("text-anchor", "middle");
+  }
+
   function pageIsPublicRoute() {
     const path = window.location.pathname.toLowerCase();
     if (["", "/", "/index.html"].includes(path)) return false;
@@ -357,6 +366,7 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     initExpertApplicationForm();
     initValuationLocationFields();
     initIndicativePriceGuideTerminology();
+    initAgentFlowDiagram();
     initFloatingConcierge();
     initMissionControlConcierge();
   }
