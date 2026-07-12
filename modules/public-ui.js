@@ -262,6 +262,50 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     }
   }
 
+  function initMissionControlTabs() {
+    const tabs = Array.from(document.querySelectorAll("[data-operations-tab]"));
+    const panels = Array.from(document.querySelectorAll("[data-operations-panel]"));
+    if (!tabs.length || !panels.length) return;
+
+    function activateTab(tabKey) {
+      const targetTab = tabs.find((tab) => tab.dataset.operationsTab === tabKey);
+      if (!targetTab || targetTab.disabled || targetTab.hidden) return;
+
+      tabs.forEach((tab) => {
+        const active = tab === targetTab;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel) => {
+        const active = panel.dataset.operationsPanel === tabKey;
+        panel.classList.toggle("active", active);
+        panel.hidden = !active;
+      });
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activateTab(tab.dataset.operationsTab));
+      tab.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        const availableTabs = tabs.filter((item) => !item.disabled && !item.hidden);
+        const currentIndex = availableTabs.indexOf(tab);
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        const nextTab = availableTabs[(currentIndex + direction + availableTabs.length) % availableTabs.length];
+        if (nextTab) {
+          activateTab(nextTab.dataset.operationsTab);
+          nextTab.focus();
+        }
+      });
+      if (!tab.classList.contains("active")) tab.tabIndex = -1;
+    });
+
+    document.querySelectorAll("[data-open-operations-tab]").forEach((button) => {
+      button.addEventListener("click", () => activateTab(button.dataset.openOperationsTab));
+    });
+  }
+
   function pageIsPublicRoute() {
     const path = window.location.pathname.toLowerCase();
     if (["", "/", "/index.html"].includes(path)) return false;
@@ -387,6 +431,7 @@ window.AxiomPublicUi = window.AxiomPublicUi || {
     initIndicativePriceGuideTerminology();
     initAgentFlowDiagram();
     initMissionControlLayout();
+    initMissionControlTabs();
     initFloatingConcierge();
     initMissionControlConcierge();
   }
